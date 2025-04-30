@@ -20,29 +20,28 @@ type UniverseStore interface {
 	Update(ctx *gofr.Context, id int, universe *Universe) (*Universe, error)
 }
 
-type Universe struct {
-	ID        int
-	UserID    sql.NullInt64
-	Name      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-
-	SecurityIDs []int
+type UniverseFilter struct {
+	UserIDs []int
 }
 
-type UniverseFilter struct {
-	UserID int
+type Universe struct {
+	ID                 int
+	UserID             int
+	Name               string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	UniverseSecurities []*UniverseSecurity
 }
 
 type universeStore struct {
-	universeSecurityMappingStore UniverseSecurityMappingStore
+	universeSecurityStore UniverseSecurityStore
 }
 
-func NewUniverseStore(universeSecurityMappingStore UniverseSecurityMappingStore) *universeStore {
-	return &universeStore{universeSecurityMappingStore: universeSecurityMappingStore}
+func NewUniverseStore(universeSecurityStore UniverseSecurityStore) *universeStore {
+	return &universeStore{universeSecurityStore: universeSecurityStore}
 }
 
-func (s *universeStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, offset int) ([]*Universe, error) {
+func (s *universeStore) Index(ctx *gofr.Context, filter *UniverseFilter, limit, offset int) ([]*Universe, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, user_id, name, created_at, updated_at
@@ -78,27 +77,17 @@ func (s *universeStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, 
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
-	for _, universe := range universes {
-		mappings, err := s.universeSecurityMappingStore.Index(ctx, &UniverseSecurityMappingFilter{UniverseID: universe.ID}, 0, 0)
+	for _, u := range universes {
+		u.UniverseSecurities, err = s.universeSecurityStore.Index(ctx, &UniverseSecurityFilter{UniverseIDs: []int{u.ID}}, 0, 0)
 		if err != nil {
 			return nil, err
-		}
-
-		if len(mappings) == 0 {
-			continue
-		}
-
-		universe.SecurityIDs = make([]int, len(mappings))
-
-		for i := range mappings {
-			universe.SecurityIDs[i] = mappings[i].SecurityID
 		}
 	}
 
 	return universes, nil
 }
 
-func (s *universeStore) Count(ctx *gofr.Context, filter *SecurityFilter) (int, error) {
+func (s *universeStore) Count(ctx *gofr.Context, filter *UniverseFilter) (int, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT COUNT(*) FROM universes %s`
@@ -128,19 +117,9 @@ func (s *universeStore) Retrieve(ctx *gofr.Context, id int) (*Universe, error) {
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
-	mappings, err := s.universeSecurityMappingStore.Index(ctx, &UniverseSecurityMappingFilter{UniverseID: id}, 0, 0)
+	u.UniverseSecurities, err = s.universeSecurityStore.Index(ctx, &UniverseSecurityFilter{UniverseIDs: []int{id}}, 0, 0)
 	if err != nil {
 		return nil, err
-	}
-
-	if len(mappings) == 0 {
-		return &u, nil
-	}
-
-	u.SecurityIDs = make([]int, len(mappings))
-
-	for i := range mappings {
-		u.SecurityIDs[i] = mappings[i].SecurityID
 	}
 
 	return &u, nil
@@ -159,12 +138,9 @@ func (s *universeStore) Create(ctx *gofr.Context, u *Universe) (*Universe, error
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
-	for _, securityID := range u.SecurityIDs {
-		_, err := s.universeSecurityMappingStore.Create(ctx, &UniverseSecurityMapping{
-			UniverseID: int(id),
-			SecurityID: securityID})
-		if err != nil {
-			return nil, err
+	for i := range u.UniverseSecurities {
+		if _, err = s.universeSecurityStore.Create(ctx, u.UniverseSecurities[i]); err != nil {
+			return nil, datasource.ErrorDB{Err: err}
 		}
 	}
 
@@ -180,34 +156,17 @@ func (s *universeStore) Update(ctx *gofr.Context, id int, u *Universe) (*Univers
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
-	mappings, err := s.universeSecurityMappingStore.Index(ctx, &UniverseSecurityMappingFilter{UniverseID: id}, 0, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	var mappingsMap = make(map[int]*UniverseSecurityMapping)
-
-	for i := range mappings {
-		mappingsMap[mappings[i].SecurityID] = mappings[i]
-	}
-
-	for _, securityID := range u.SecurityIDs {
-		if _, exists := mappingsMap[securityID]; exists {
-			_, err := s.universeSecurityMappingStore.Create(ctx, &UniverseSecurityMapping{
-				UniverseID: id,
-				SecurityID: securityID})
-			if err != nil {
-				return nil, err
+	for i := range u.UniverseSecurities {
+		if u.UniverseSecurities[i].ID != 0 {
+			if _, err = s.universeSecurityStore.Create(ctx, u.UniverseSecurities[i]); err != nil {
+				return nil, datasource.ErrorDB{Err: err}
 			}
-		} else {
-			delete(mappingsMap, securityID)
-		}
-	}
 
-	for _, mapping := range mappingsMap {
-		err := s.universeSecurityMappingStore.Delete(ctx, mapping.ID)
-		if err != nil {
-			return nil, err
+			continue
+		}
+
+		if _, err = s.universeSecurityStore.Update(ctx, u.UniverseSecurities[i].ID, u.UniverseSecurities[i]); err != nil {
+			return nil, datasource.ErrorDB{Err: err}
 		}
 	}
 
@@ -215,10 +174,15 @@ func (s *universeStore) Update(ctx *gofr.Context, id int, u *Universe) (*Univers
 }
 
 func (f *UniverseFilter) buildWhereClause() (clause string, values []interface{}) {
-	if f.UserID != 0 {
-		clause += " AND user_id = ?"
+	if len(f.UserIDs) > 0 {
+		var placeHolders []string
 
-		values = append(values, f.UserID)
+		for i := range f.UserIDs {
+			placeHolders = append(placeHolders, "?")
+			values = append(values, f.UserIDs[i])
+		}
+
+		clause += " AND id IN (" + strings.Join(placeHolders, ", ") + ")"
 	}
 
 	if clause != "" {

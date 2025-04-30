@@ -12,23 +12,18 @@ type SecurityService interface {
 	Index(ctx *gofr.Context, f *SecurityFilter, page, perPage int) ([]*Security, int, error)
 	Read(ctx *gofr.Context, id int) (*Security, error)
 	Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error)
+	Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error)
 }
 
-type SecurityCreate struct {
-	ISIN     string
-	Symbol   string
-	Exchange string
-	Industry string
-	Name     string
-	Image    string
-	LTP      float64
+type SecurityFilter struct {
+	IDs    []int
+	Symbol string
 }
 
 type Security struct {
 	ID        int
 	ISIN      string
 	Symbol    string
-	Exchange  string
 	Industry  string
 	Name      string
 	Image     string
@@ -37,10 +32,23 @@ type Security struct {
 	UpdatedAt time.Time
 }
 
-type SecurityFilter struct {
-	ID       []int
+type SecurityCreate struct {
+	UserID   int
+	ISIN     string
 	Symbol   string
-	Exchange string
+	Industry string
+	Name     string
+	Image    string
+	LTP      float64
+}
+
+type SecurityUpdate struct {
+	UserID   int
+	Symbol   string
+	Industry string
+	Name     string
+	Image    string
+	LTP      float64
 }
 
 type securityService struct {
@@ -56,18 +64,8 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 	offset := limit * (page - 1)
 
 	filter := &stores.SecurityFilter{
-		ID:       f.ID,
-		Symbol:   f.Symbol,
-		Exchange: nil,
-	}
-
-	if f.Exchange != "" {
-		exchange, err := stores.ExchangeFromString(f.Exchange)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		filter.Exchange = &exchange
+		IDs:    f.IDs,
+		Symbol: f.Symbol,
 	}
 
 	securities, err := s.store.Index(ctx, filter, limit, offset)
@@ -103,9 +101,8 @@ func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 }
 
 func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error) {
-	exchange, err := stores.ExchangeFromString(payload.Exchange)
-	if err != nil {
-		return nil, err
+	if payload.UserID != 1 {
+		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
 	}
 
 	industry, err := stores.IndustryFromString(payload.Industry)
@@ -116,7 +113,6 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 	model := &stores.Security{
 		ISIN:      payload.ISIN,
 		Symbol:    payload.Symbol,
-		Exchange:  exchange,
 		Industry:  industry,
 		Name:      payload.Name,
 		Image:     payload.Image,
@@ -133,12 +129,54 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 	return s.buildResp(security), nil
 }
 
+func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
+	if payload.UserID != 1 {
+		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+	}
+
+	oldSecurity, err := s.store.Retrieve(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	newSecurity := *oldSecurity
+
+	if payload.Symbol != "" {
+		newSecurity.Symbol = payload.Symbol
+	}
+
+	if payload.Industry != "" {
+		newSecurity.Industry, err = stores.IndustryFromString(payload.Industry)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if payload.Name != "" {
+		newSecurity.Name = payload.Name
+	}
+
+	if payload.Image != "" {
+		newSecurity.Image = payload.Image
+	}
+
+	if payload.LTP != 0 {
+		newSecurity.LTP = payload.LTP
+	}
+
+	security, err := s.store.Update(ctx, id, &newSecurity)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.buildResp(security), nil
+}
+
 func (s *securityService) buildResp(model *stores.Security) *Security {
 	security := &Security{
 		ID:        model.ID,
 		ISIN:      model.ISIN,
 		Symbol:    model.Symbol,
-		Exchange:  model.Exchange.String(),
 		Industry:  model.Industry.String(),
 		Name:      model.Name,
 		Image:     model.Image,

@@ -12,27 +12,35 @@ import (
 	"github.com/stratifyr/security-service/services"
 )
 
-type SecurityCreate struct {
-	ISIN     string  `json:"isin"`
-	Symbol   string  `json:"symbol"`
-	Exchange string  `json:"exchange"`
-	Industry string  `json:"industry"`
-	Name     string  `json:"name"`
-	Image    string  `json:"image"`
-	LTP      float64 `json:"ltp"`
-}
-
 type Security struct {
 	ID        int    `json:"id"`
 	ISIN      string `json:"isin"`
 	Symbol    string `json:"symbol"`
-	Exchange  string `json:"exchange"`
 	Industry  string `json:"industry"`
 	Name      string `json:"name"`
 	Image     string `json:"image"`
 	LTP       string `json:"ltp"`
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
+}
+
+type SecurityCreate struct {
+	UserID   int     `json:"userId"`
+	ISIN     string  `json:"isin"`
+	Symbol   string  `json:"symbol"`
+	Industry string  `json:"industry"`
+	Name     string  `json:"name"`
+	Image    string  `json:"image"`
+	LTP      float64 `json:"ltp"`
+}
+
+type SecurityUpdate struct {
+	UserID   int     `json:"userId"`
+	Symbol   string  `json:"symbol"`
+	Industry string  `json:"industry"`
+	Name     string  `json:"name"`
+	Image    string  `json:"image"`
+	LTP      float64 `json:"ltp"`
 }
 
 type securityHandler struct {
@@ -48,10 +56,6 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 
 	if ctx.Param("symbol") != "" {
 		filter.Symbol = ctx.Param("symbol")
-	}
-
-	if ctx.Param("exchange") != "" {
-		filter.Exchange = ctx.Param("exchange")
 	}
 
 	var err error
@@ -117,9 +121,9 @@ func (h *securityHandler) Create(ctx *gofr.Context) (interface{}, error) {
 	}
 
 	model := &services.SecurityCreate{
+		UserID:   payload.UserID,
 		ISIN:     payload.ISIN,
 		Symbol:   payload.Symbol,
-		Exchange: payload.Exchange,
 		Industry: payload.Industry,
 		Name:     payload.Name,
 		Image:    payload.Image,
@@ -136,12 +140,42 @@ func (h *securityHandler) Create(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
+func (h *securityHandler) Patch(ctx *gofr.Context) (interface{}, error) {
+	id, err := strconv.Atoi(ctx.PathParam("id"))
+	if err != nil {
+		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
+	}
+
+	var payload SecurityUpdate
+
+	if err := ctx.Bind(&payload); err != nil {
+		return nil, http.ErrorInvalidParam{Params: []string{"request-body"}}
+	}
+
+	model := &services.SecurityUpdate{
+		UserID:   payload.UserID,
+		Symbol:   payload.Symbol,
+		Industry: payload.Industry,
+		Name:     payload.Name,
+		Image:    payload.Image,
+		LTP:      payload.LTP,
+	}
+
+	security, err := h.svc.Patch(ctx, id, model)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Raw{Data: map[string]any{
+		"data": h.buildResp(security),
+	}}, nil
+}
+
 func (h *securityHandler) buildResp(model *services.Security) *Security {
 	resp := &Security{
 		ID:        model.ID,
 		ISIN:      model.ISIN,
 		Symbol:    model.Symbol,
-		Exchange:  model.Exchange,
 		Industry:  model.Industry,
 		Name:      model.Name,
 		Image:     model.Image,

@@ -5,6 +5,10 @@ import (
 	"gofr.dev/pkg/gofr/http"
 )
 
+type IndustryStore interface {
+	Index(ctx *gofr.Context) []Industry
+}
+
 const (
 	AutomobileAndAutoComponents Industry = iota
 	CapitalGoods
@@ -31,17 +35,13 @@ const (
 
 type Industry int
 
-type IndustryStore interface {
-	Index(ctx *gofr.Context) ([]Industry, error)
-}
-
 type industryStore struct{}
 
 func NewIndustryStore() IndustryStore {
 	return &industryStore{}
 }
 
-func (s *industryStore) Index(ctx *gofr.Context) ([]Industry, error) {
+func (s *industryStore) Index(ctx *gofr.Context) []Industry {
 	return []Industry{
 		AutomobileAndAutoComponents,
 		CapitalGoods,
@@ -64,7 +64,7 @@ func (s *industryStore) Index(ctx *gofr.Context) ([]Industry, error) {
 		Services,
 		Telecommunication,
 		Textiles,
-	}, nil
+	}
 }
 
 func (ex Industry) String() string {
