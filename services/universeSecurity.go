@@ -114,7 +114,7 @@ func (s *universeSecurityService) Read(ctx *gofr.Context, id, userID int) (*Univ
 	}
 
 	isUsersUniverse := slices.ContainsFunc(universes, func(universe *Universe) bool {
-		return universe.ID == universeSecurity.ID
+		return universe.ID == universeSecurity.UniverseID
 	})
 
 	if !isUsersUniverse {

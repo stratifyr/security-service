@@ -139,6 +139,8 @@ func (s *universeStore) Create(ctx *gofr.Context, u *Universe) (*Universe, error
 	}
 
 	for i := range u.UniverseSecurities {
+		u.UniverseSecurities[i].UniverseID = int(id)
+
 		if _, err = s.universeSecurityStore.Create(ctx, u.UniverseSecurities[i]); err != nil {
 			return nil, datasource.ErrorDB{Err: err}
 		}

@@ -44,7 +44,7 @@ func (h *universeSecurityHandler) Index(ctx *gofr.Context) (interface{}, error) 
 	)
 
 	if ctx.Param("userId") != "" {
-		filter.UserID, err = strconv.Atoi(ctx.Param("symbol"))
+		filter.UserID, err = strconv.Atoi(ctx.Param("userId"))
 		if err != nil || filter.UserID < 1 {
 			return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
 		}
@@ -168,12 +168,12 @@ func (h *universeSecurityHandler) Delete(ctx *gofr.Context) (interface{}, error)
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
 	}
 
-	userId, err := strconv.Atoi(ctx.Param("userId"))
+	userID, err := strconv.Atoi(ctx.Param("userId"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
 	}
 
-	err = h.svc.Delete(ctx, id, userId)
+	err = h.svc.Delete(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
