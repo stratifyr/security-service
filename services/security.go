@@ -21,15 +21,37 @@ type SecurityFilter struct {
 }
 
 type Security struct {
-	ID        int
-	ISIN      string
-	Symbol    string
-	Industry  string
-	Name      string
-	Image     string
-	LTP       float64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID           int
+	ISIN         string
+	Symbol       string
+	Industry     string
+	Name         string
+	Image        string
+	LTP          float64
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	SecurityStat *struct {
+		ID         int
+		SecurityID int
+		Date       time.Time
+		Open       float64
+		Close      float64
+		High       float64
+		Low        float64
+		Volume     int
+	}
+	SecurityMetrics []*struct {
+		ID         int
+		SecurityID int
+		MetricID   int
+		Date       time.Time
+		Value      float64
+		Metric     *struct {
+			ID   int
+			Name string
+			Type string
+		}
+	}
 }
 
 type SecurityCreate struct {
@@ -52,11 +74,20 @@ type SecurityUpdate struct {
 }
 
 type securityService struct {
-	store stores.SecurityStore
+	securityStatService   SecurityStatService
+	metricsService        MetricService
+	securityMetricService SecurityMetricService
+	store                 stores.SecurityStore
 }
 
-func NewSecurityService(store stores.SecurityStore) *securityService {
-	return &securityService{store: store}
+func NewSecurityService(securityStatService SecurityStatService, metricsService MetricService,
+	securityMetricService SecurityMetricService, store stores.SecurityStore) *securityService {
+	return &securityService{
+		securityStatService:   securityStatService,
+		metricsService:        metricsService,
+		securityMetricService: securityMetricService,
+		store:                 store,
+	}
 }
 
 func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perPage int) ([]*Security, int, error) {
@@ -85,7 +116,10 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 	var resp = make([]*Security, len(securities))
 
 	for i := range securities {
-		resp[i] = s.buildResp(securities[i])
+		resp[i], err = s.buildResp(ctx, securities[i])
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
 	return resp, count, nil
@@ -97,7 +131,7 @@ func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 		return nil, err
 	}
 
-	return s.buildResp(security), nil
+	return s.buildResp(ctx, security)
 }
 
 func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error) {
@@ -126,7 +160,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		return nil, err
 	}
 
-	return s.buildResp(security), nil
+	return s.buildResp(ctx, security)
 }
 
 func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
@@ -169,21 +203,133 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		return nil, err
 	}
 
-	return s.buildResp(security), nil
+	return s.buildResp(ctx, security)
 }
 
-func (s *securityService) buildResp(model *stores.Security) *Security {
-	security := &Security{
-		ID:        model.ID,
-		ISIN:      model.ISIN,
-		Symbol:    model.Symbol,
-		Industry:  model.Industry.String(),
-		Name:      model.Name,
-		Image:     model.Image,
-		LTP:       model.LTP,
-		CreatedAt: model.CreatedAt,
-		UpdatedAt: model.CreatedAt,
+func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security) (*Security, error) {
+	resp := &Security{
+		ID:              model.ID,
+		ISIN:            model.ISIN,
+		Symbol:          model.Symbol,
+		Industry:        model.Industry.String(),
+		Name:            model.Name,
+		Image:           model.Image,
+		LTP:             model.LTP,
+		CreatedAt:       model.CreatedAt,
+		UpdatedAt:       model.CreatedAt,
+		SecurityStat:    nil,
+		SecurityMetrics: nil,
 	}
 
-	return security
+	if err := s.bindSecurityStat(ctx, resp); err != nil {
+		return nil, err
+	}
+
+	if err := s.bindSecurityMetricsDetails(ctx, resp); err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (s *securityService) bindSecurityStat(ctx *gofr.Context, resp *Security) error {
+	securityStat, _, err := s.securityStatService.Index(ctx, &SecurityStatFilter{SecurityID: resp.ID}, 1, 0)
+	if err != nil {
+		return err
+	}
+
+	if len(securityStat) < 1 {
+		return nil
+	}
+
+	resp.SecurityStat = &struct {
+		ID         int
+		SecurityID int
+		Date       time.Time
+		Open       float64
+		Close      float64
+		High       float64
+		Low        float64
+		Volume     int
+	}{
+		ID:         securityStat[0].ID,
+		SecurityID: securityStat[0].SecurityID,
+		Date:       securityStat[0].Date,
+		Open:       securityStat[0].Open,
+		Close:      securityStat[0].Close,
+		High:       securityStat[0].High,
+		Low:        securityStat[0].Low,
+		Volume:     securityStat[0].Volume,
+	}
+
+	return nil
+}
+
+func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Security) error {
+	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	if err != nil {
+		return err
+	}
+
+	var metricsMap = make(map[int]*Metric)
+
+	for i := range metrics {
+		metricsMap[metrics[i].ID] = metrics[i]
+	}
+
+	if resp.SecurityStat == nil {
+		return nil
+	}
+
+	date := resp.SecurityStat.Date
+
+	securityMetrics, _, err := s.securityMetricService.Index(ctx, &SecurityMetricFilter{SecurityID: resp.ID, Date: date}, 0, 0)
+	if err != nil {
+		return err
+	}
+
+	resp.SecurityMetrics = make([]*struct {
+		ID         int
+		SecurityID int
+		MetricID   int
+		Date       time.Time
+		Value      float64
+		Metric     *struct {
+			ID   int
+			Name string
+			Type string
+		}
+	}, len(securityMetrics))
+
+	for i := range securityMetrics {
+		resp.SecurityMetrics[i] = &struct {
+			ID         int
+			SecurityID int
+			MetricID   int
+			Date       time.Time
+			Value      float64
+			Metric     *struct {
+				ID   int
+				Name string
+				Type string
+			}
+		}{
+			ID:         securityMetrics[i].ID,
+			SecurityID: securityMetrics[i].SecurityID,
+			MetricID:   securityMetrics[i].MetricID,
+			Date:       securityMetrics[i].Date,
+			Value:      securityMetrics[i].Value,
+			Metric: &struct {
+				ID   int
+				Name string
+				Type string
+			}{
+				ID:   securityMetrics[i].MetricID,
+				Name: metricsMap[securityMetrics[i].MetricID].Name,
+				Type: metricsMap[securityMetrics[i].MetricID].Type,
+			},
+		}
+	}
+
+	return nil
 }

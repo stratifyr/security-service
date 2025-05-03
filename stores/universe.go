@@ -159,7 +159,7 @@ func (s *universeStore) Update(ctx *gofr.Context, id int, u *Universe) (*Univers
 	}
 
 	for i := range u.UniverseSecurities {
-		if u.UniverseSecurities[i].ID != 0 {
+		if u.UniverseSecurities[i].ID == 0 {
 			if _, err = s.universeSecurityStore.Create(ctx, u.UniverseSecurities[i]); err != nil {
 				return nil, datasource.ErrorDB{Err: err}
 			}

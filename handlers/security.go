@@ -13,15 +13,28 @@ import (
 )
 
 type Security struct {
-	ID        int    `json:"id"`
-	ISIN      string `json:"isin"`
-	Symbol    string `json:"symbol"`
-	Industry  string `json:"industry"`
-	Name      string `json:"name"`
-	Image     string `json:"image"`
-	LTP       string `json:"ltp"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+	ID         int    `json:"id"`
+	ISIN       string `json:"isin"`
+	Symbol     string `json:"symbol"`
+	Industry   string `json:"industry"`
+	Name       string `json:"name"`
+	Image      string `json:"image"`
+	LTP        string `json:"ltp"`
+	CreatedAt  string `json:"createdAt"`
+	UpdatedAt  string `json:"updatedAt"`
+	MarketData *struct {
+		Date    string `json:"date"`
+		Open    string `json:"open"`
+		Close   string `json:"close"`
+		High    string `json:"high"`
+		Low     string `json:"low"`
+		Volume  int    `json:"volume"`
+		Metrics []*struct {
+			Name  string `json:"name"`
+			Type  string `json:"type"`
+			Value string `json:"value"`
+		} `json:"metrics"`
+	} `json:"marketData"`
 }
 
 type SecurityCreate struct {
@@ -173,15 +186,58 @@ func (h *securityHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 
 func (h *securityHandler) buildResp(model *services.Security) *Security {
 	resp := &Security{
-		ID:        model.ID,
-		ISIN:      model.ISIN,
-		Symbol:    model.Symbol,
-		Industry:  model.Industry,
-		Name:      model.Name,
-		Image:     model.Image,
-		LTP:       fmt.Sprintf("%0.2f", model.LTP),
-		CreatedAt: model.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: model.UpdatedAt.Format(time.RFC3339),
+		ID:         model.ID,
+		ISIN:       model.ISIN,
+		Symbol:     model.Symbol,
+		Industry:   model.Industry,
+		Name:       model.Name,
+		Image:      model.Image,
+		LTP:        fmt.Sprintf("%0.2f", model.LTP),
+		CreatedAt:  model.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:  model.UpdatedAt.Format(time.RFC3339),
+		MarketData: nil,
+	}
+
+	if model.SecurityStat == nil {
+		return resp
+	}
+
+	resp.MarketData = &struct {
+		Date    string `json:"date"`
+		Open    string `json:"open"`
+		Close   string `json:"close"`
+		High    string `json:"high"`
+		Low     string `json:"low"`
+		Volume  int    `json:"volume"`
+		Metrics []*struct {
+			Name  string `json:"name"`
+			Type  string `json:"type"`
+			Value string `json:"value"`
+		} `json:"metrics"`
+	}{
+		Date:   model.SecurityStat.Date.Format(time.DateOnly),
+		Open:   fmt.Sprintf("%0.2f", model.SecurityStat.Open),
+		Close:  fmt.Sprintf("%0.2f", model.SecurityStat.Close),
+		High:   fmt.Sprintf("%0.2f", model.SecurityStat.High),
+		Low:    fmt.Sprintf("%0.2f", model.SecurityStat.Low),
+		Volume: model.SecurityStat.Volume,
+		Metrics: make([]*struct {
+			Name  string `json:"name"`
+			Type  string `json:"type"`
+			Value string `json:"value"`
+		}, len(model.SecurityMetrics)),
+	}
+
+	for i := range model.SecurityMetrics {
+		resp.MarketData.Metrics[i] = &struct {
+			Name  string `json:"name"`
+			Type  string `json:"type"`
+			Value string `json:"value"`
+		}{
+			Name:  model.SecurityMetrics[i].Metric.Name,
+			Type:  model.SecurityMetrics[i].Metric.Type,
+			Value: fmt.Sprintf("%0.2f", model.SecurityMetrics[i].Value),
+		}
 	}
 
 	return resp

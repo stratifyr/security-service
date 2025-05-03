@@ -28,9 +28,20 @@ type Universe struct {
 		Name       string `json:"name"`
 		Image      string `json:"image"`
 		LTP        string `json:"ltp"`
-		CreatedAt  string `json:"createdAt"`
-		UpdatedAt  string `json:"updatedAt"`
-	}
+		MarketData *struct {
+			Date    string `json:"date"`
+			Open    string `json:"open"`
+			Close   string `json:"close"`
+			High    string `json:"high"`
+			Low     string `json:"low"`
+			Volume  int    `json:"volume"`
+			Metrics []*struct {
+				Name  string `json:"name"`
+				Type  string `json:"type"`
+				Value string `json:"value"`
+			} `json:"metrics"`
+		} `json:"marketData"`
+	} `json:"universeSecurities"`
 }
 
 type UniverseCreate struct {
@@ -59,7 +70,7 @@ func (h *universeHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	)
 
 	if ctx.Param("userId") != "" {
-		filter.UserID, err = strconv.Atoi(ctx.Param("symbol"))
+		filter.UserID, err = strconv.Atoi(ctx.Param("userId"))
 		if err != nil || filter.UserID < 1 {
 			return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
 		}
@@ -194,8 +205,19 @@ func (h *universeHandler) buildResp(model *services.Universe) *Universe {
 			Name       string `json:"name"`
 			Image      string `json:"image"`
 			LTP        string `json:"ltp"`
-			CreatedAt  string `json:"createdAt"`
-			UpdatedAt  string `json:"updatedAt"`
+			MarketData *struct {
+				Date    string `json:"date"`
+				Open    string `json:"open"`
+				Close   string `json:"close"`
+				High    string `json:"high"`
+				Low     string `json:"low"`
+				Volume  int    `json:"volume"`
+				Metrics []*struct {
+					Name  string `json:"name"`
+					Type  string `json:"type"`
+					Value string `json:"value"`
+				} `json:"metrics"`
+			} `json:"marketData"`
 		}, len(model.UniverseSecurities)),
 	}
 
@@ -210,21 +232,72 @@ func (h *universeHandler) buildResp(model *services.Universe) *Universe {
 			Name       string `json:"name"`
 			Image      string `json:"image"`
 			LTP        string `json:"ltp"`
-			CreatedAt  string `json:"createdAt"`
-			UpdatedAt  string `json:"updatedAt"`
+			MarketData *struct {
+				Date    string `json:"date"`
+				Open    string `json:"open"`
+				Close   string `json:"close"`
+				High    string `json:"high"`
+				Low     string `json:"low"`
+				Volume  int    `json:"volume"`
+				Metrics []*struct {
+					Name  string `json:"name"`
+					Type  string `json:"type"`
+					Value string `json:"value"`
+				} `json:"metrics"`
+			} `json:"marketData"`
 		}{}
 
 		resp.UniverseSecurities[i].ID = model.UniverseSecurities[i].ID
 		resp.UniverseSecurities[i].SecurityID = model.UniverseSecurities[i].SecurityID
 		resp.UniverseSecurities[i].Status = model.UniverseSecurities[i].Status
-		resp.UniverseSecurities[i].ISIN = model.UniverseSecurities[i].ISIN
-		resp.UniverseSecurities[i].Symbol = model.UniverseSecurities[i].Symbol
-		resp.UniverseSecurities[i].Industry = model.UniverseSecurities[i].Industry
-		resp.UniverseSecurities[i].Name = model.UniverseSecurities[i].Name
-		resp.UniverseSecurities[i].Image = model.UniverseSecurities[i].Image
-		resp.UniverseSecurities[i].LTP = fmt.Sprintf("%0.2f", model.UniverseSecurities[i].LTP)
-		resp.UniverseSecurities[i].CreatedAt = model.UniverseSecurities[i].CreatedAt.Format(time.RFC3339)
-		resp.UniverseSecurities[i].UpdatedAt = model.UniverseSecurities[i].UpdatedAt.Format(time.RFC3339)
+		resp.UniverseSecurities[i].ISIN = model.UniverseSecurities[i].Security.ISIN
+		resp.UniverseSecurities[i].Symbol = model.UniverseSecurities[i].Security.Symbol
+		resp.UniverseSecurities[i].Industry = model.UniverseSecurities[i].Security.Industry
+		resp.UniverseSecurities[i].Name = model.UniverseSecurities[i].Security.Name
+		resp.UniverseSecurities[i].Image = model.UniverseSecurities[i].Security.Image
+		resp.UniverseSecurities[i].LTP = fmt.Sprintf("%0.2f", model.UniverseSecurities[i].Security.LTP)
+
+		if model.UniverseSecurities[i].Security.SecurityStat == nil {
+			return resp
+		}
+
+		resp.UniverseSecurities[i].MarketData = &struct {
+			Date    string `json:"date"`
+			Open    string `json:"open"`
+			Close   string `json:"close"`
+			High    string `json:"high"`
+			Low     string `json:"low"`
+			Volume  int    `json:"volume"`
+			Metrics []*struct {
+				Name  string `json:"name"`
+				Type  string `json:"type"`
+				Value string `json:"value"`
+			} `json:"metrics"`
+		}{
+			Date:   model.UniverseSecurities[i].Security.SecurityStat.Date.Format(time.DateOnly),
+			Open:   fmt.Sprintf("%0.2f", model.UniverseSecurities[i].Security.SecurityStat.Open),
+			Close:  fmt.Sprintf("%0.2f", model.UniverseSecurities[i].Security.SecurityStat.Close),
+			High:   fmt.Sprintf("%0.2f", model.UniverseSecurities[i].Security.SecurityStat.High),
+			Low:    fmt.Sprintf("%0.2f", model.UniverseSecurities[i].Security.SecurityStat.Low),
+			Volume: model.UniverseSecurities[i].Security.SecurityStat.Volume,
+			Metrics: make([]*struct {
+				Name  string `json:"name"`
+				Type  string `json:"type"`
+				Value string `json:"value"`
+			}, len(model.UniverseSecurities[i].Security.SecurityMetrics)),
+		}
+
+		for j := range model.UniverseSecurities[i].Security.SecurityMetrics {
+			resp.UniverseSecurities[i].MarketData.Metrics[j] = &struct {
+				Name  string `json:"name"`
+				Type  string `json:"type"`
+				Value string `json:"value"`
+			}{
+				Name:  model.UniverseSecurities[i].Security.SecurityMetrics[j].Metric.Name,
+				Type:  model.UniverseSecurities[i].Security.SecurityMetrics[j].Metric.Type,
+				Value: fmt.Sprintf("%0.2f", model.UniverseSecurities[i].Security.SecurityMetrics[j].Value),
+			}
+		}
 	}
 
 	return resp

@@ -31,16 +31,40 @@ type Universe struct {
 	UpdatedAt          time.Time
 	UniverseSecurities []*struct {
 		ID         int
+		UniverseID int
 		SecurityID int
 		Status     string
-		ISIN       string
-		Symbol     string
-		Industry   string
-		Name       string
-		Image      string
-		LTP        float64
-		CreatedAt  time.Time
-		UpdatedAt  time.Time
+		Security   *struct {
+			ID           int
+			ISIN         string
+			Symbol       string
+			Industry     string
+			Name         string
+			Image        string
+			LTP          float64
+			SecurityStat *struct {
+				ID         int
+				SecurityID int
+				Date       time.Time
+				Open       float64
+				Close      float64
+				High       float64
+				Low        float64
+				Volume     int
+			}
+			SecurityMetrics []*struct {
+				ID         int
+				SecurityID int
+				MetricID   int
+				Date       time.Time
+				Value      float64
+				Metric     *struct {
+					ID   int
+					Name string
+					Type string
+				}
+			}
+		}
 	}
 }
 
@@ -60,8 +84,11 @@ type universeService struct {
 	store           stores.UniverseStore
 }
 
-func NewUniverseService(store stores.UniverseStore) *universeService {
-	return &universeService{store: store}
+func NewUniverseService(securityService SecurityService, store stores.UniverseStore) *universeService {
+	return &universeService{
+		securityService: securityService,
+		store:           store,
+	}
 }
 
 func (s *universeService) Index(ctx *gofr.Context, f *UniverseFilter, page, perPage int) ([]*Universe, int, error) {
@@ -192,16 +219,40 @@ func (s *universeService) buildResp(ctx *gofr.Context, model *stores.Universe) (
 
 	resp.UniverseSecurities = make([]*struct {
 		ID         int
+		UniverseID int
 		SecurityID int
 		Status     string
-		ISIN       string
-		Symbol     string
-		Industry   string
-		Name       string
-		Image      string
-		LTP        float64
-		CreatedAt  time.Time
-		UpdatedAt  time.Time
+		Security   *struct {
+			ID           int
+			ISIN         string
+			Symbol       string
+			Industry     string
+			Name         string
+			Image        string
+			LTP          float64
+			SecurityStat *struct {
+				ID         int
+				SecurityID int
+				Date       time.Time
+				Open       float64
+				Close      float64
+				High       float64
+				Low        float64
+				Volume     int
+			}
+			SecurityMetrics []*struct {
+				ID         int
+				SecurityID int
+				MetricID   int
+				Date       time.Time
+				Value      float64
+				Metric     *struct {
+					ID   int
+					Name string
+					Type string
+				}
+			}
+		}
 	}, len(model.UniverseSecurities))
 
 	var securityIDs []int
@@ -215,7 +266,7 @@ func (s *universeService) buildResp(ctx *gofr.Context, model *stores.Universe) (
 		return nil, err
 	}
 
-	var securityMapping map[int]*Security
+	var securityMapping = make(map[int]*Security)
 
 	for i := range securities {
 		securityMapping[securities[i].ID] = securities[i]
@@ -224,17 +275,89 @@ func (s *universeService) buildResp(ctx *gofr.Context, model *stores.Universe) (
 	for i := range model.UniverseSecurities {
 		security := securityMapping[model.UniverseSecurities[i].SecurityID]
 
-		resp.UniverseSecurities[i].ID = model.UniverseSecurities[i].ID
-		resp.UniverseSecurities[i].SecurityID = model.UniverseSecurities[i].SecurityID
-		resp.UniverseSecurities[i].Status = model.UniverseSecurities[i].Status
-		resp.UniverseSecurities[i].ISIN = security.ISIN
-		resp.UniverseSecurities[i].Symbol = security.Symbol
-		resp.UniverseSecurities[i].Industry = security.Industry
-		resp.UniverseSecurities[i].Name = security.Name
-		resp.UniverseSecurities[i].Image = security.Image
-		resp.UniverseSecurities[i].LTP = security.LTP
-		resp.UniverseSecurities[i].CreatedAt = model.UniverseSecurities[i].CreatedAt
-		resp.UniverseSecurities[i].UpdatedAt = model.UniverseSecurities[i].UpdatedAt
+		resp.UniverseSecurities[i] = &struct {
+			ID         int
+			UniverseID int
+			SecurityID int
+			Status     string
+			Security   *struct {
+				ID           int
+				ISIN         string
+				Symbol       string
+				Industry     string
+				Name         string
+				Image        string
+				LTP          float64
+				SecurityStat *struct {
+					ID         int
+					SecurityID int
+					Date       time.Time
+					Open       float64
+					Close      float64
+					High       float64
+					Low        float64
+					Volume     int
+				}
+				SecurityMetrics []*struct {
+					ID         int
+					SecurityID int
+					MetricID   int
+					Date       time.Time
+					Value      float64
+					Metric     *struct {
+						ID   int
+						Name string
+						Type string
+					}
+				}
+			}
+		}{
+			ID:         model.UniverseSecurities[i].ID,
+			UniverseID: model.UniverseSecurities[i].UniverseID,
+			SecurityID: model.UniverseSecurities[i].SecurityID,
+			Status:     model.UniverseSecurities[i].Status,
+			Security: &struct {
+				ID           int
+				ISIN         string
+				Symbol       string
+				Industry     string
+				Name         string
+				Image        string
+				LTP          float64
+				SecurityStat *struct {
+					ID         int
+					SecurityID int
+					Date       time.Time
+					Open       float64
+					Close      float64
+					High       float64
+					Low        float64
+					Volume     int
+				}
+				SecurityMetrics []*struct {
+					ID         int
+					SecurityID int
+					MetricID   int
+					Date       time.Time
+					Value      float64
+					Metric     *struct {
+						ID   int
+						Name string
+						Type string
+					}
+				}
+			}{
+				ID:              security.ID,
+				ISIN:            security.ISIN,
+				Symbol:          security.Symbol,
+				Industry:        security.Industry,
+				Name:            security.Name,
+				Image:           security.Image,
+				LTP:             security.LTP,
+				SecurityStat:    security.SecurityStat,
+				SecurityMetrics: security.SecurityMetrics,
+			},
+		}
 	}
 
 	return resp, nil

@@ -132,7 +132,7 @@ func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, erro
 }
 
 func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Security, error) {
-	query := `UPDATE securities SET isin = ?, symbol = ?, industry = ?, name = ?, image = ?, last_traded_price = ?, created_at = ?, updated_at = ?
+	query := `UPDATE securities SET isin = ?, symbol = ?, industry = ?, name = ?, image = ?, ltp = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
 	_, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.CreatedAt, st.UpdatedAt, id)
