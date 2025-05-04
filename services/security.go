@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strings"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -41,12 +42,13 @@ type Security struct {
 		Volume     int
 	}
 	SecurityMetrics []*struct {
-		ID         int
-		SecurityID int
-		MetricID   int
-		Date       time.Time
-		Value      float64
-		Metric     *struct {
+		ID              int
+		SecurityID      int
+		MetricID        int
+		Date            time.Time
+		Value           float64
+		NormalizedValue float64
+		Metric          *struct {
 			ID   int
 			Name string
 			Type string
@@ -229,6 +231,8 @@ func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security) (
 		return nil, err
 	}
 
+	s.computeAndSetNormalizedValues(resp)
+
 	return resp, nil
 }
 
@@ -289,12 +293,13 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 	}
 
 	resp.SecurityMetrics = make([]*struct {
-		ID         int
-		SecurityID int
-		MetricID   int
-		Date       time.Time
-		Value      float64
-		Metric     *struct {
+		ID              int
+		SecurityID      int
+		MetricID        int
+		Date            time.Time
+		Value           float64
+		NormalizedValue float64
+		Metric          *struct {
 			ID   int
 			Name string
 			Type string
@@ -303,22 +308,24 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 
 	for i := range securityMetrics {
 		resp.SecurityMetrics[i] = &struct {
-			ID         int
-			SecurityID int
-			MetricID   int
-			Date       time.Time
-			Value      float64
-			Metric     *struct {
+			ID              int
+			SecurityID      int
+			MetricID        int
+			Date            time.Time
+			Value           float64
+			NormalizedValue float64
+			Metric          *struct {
 				ID   int
 				Name string
 				Type string
 			}
 		}{
-			ID:         securityMetrics[i].ID,
-			SecurityID: securityMetrics[i].SecurityID,
-			MetricID:   securityMetrics[i].MetricID,
-			Date:       securityMetrics[i].Date,
-			Value:      securityMetrics[i].Value,
+			ID:              securityMetrics[i].ID,
+			SecurityID:      securityMetrics[i].SecurityID,
+			MetricID:        securityMetrics[i].MetricID,
+			Date:            securityMetrics[i].Date,
+			Value:           securityMetrics[i].Value,
+			NormalizedValue: 0,
 			Metric: &struct {
 				ID   int
 				Name string
@@ -332,4 +339,23 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 	}
 
 	return nil
+}
+
+func (s *securityService) computeAndSetNormalizedValues(resp *Security) {
+	for _, metric := range resp.SecurityMetrics {
+		switch {
+		case strings.HasPrefix(metric.Metric.Name, "sma") || strings.HasPrefix(metric.Metric.Name, "ema"):
+			metric.NormalizedValue = (resp.SecurityStat.Close - metric.Value) / resp.SecurityStat.Close
+		case strings.HasPrefix(metric.Metric.Name, "rsi"):
+			metric.NormalizedValue = metric.Value / 100
+
+			if metric.Value > 70 || metric.Value < 30 {
+				metric.NormalizedValue = 0
+			}
+		case strings.HasPrefix(metric.Metric.Name, "rsi"):
+			metric.NormalizedValue = metric.Value / resp.SecurityStat.Close
+		default:
+			metric.NormalizedValue = metric.Value
+		}
+	}
 }

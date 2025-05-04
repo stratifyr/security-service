@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -13,26 +12,28 @@ import (
 )
 
 type Security struct {
-	ID         int    `json:"id"`
-	ISIN       string `json:"isin"`
-	Symbol     string `json:"symbol"`
-	Industry   string `json:"industry"`
-	Name       string `json:"name"`
-	Image      string `json:"image"`
-	LTP        string `json:"ltp"`
-	CreatedAt  string `json:"createdAt"`
-	UpdatedAt  string `json:"updatedAt"`
+	ID         int     `json:"id"`
+	ISIN       string  `json:"isin"`
+	Symbol     string  `json:"symbol"`
+	Industry   string  `json:"industry"`
+	Name       string  `json:"name"`
+	Image      string  `json:"image"`
+	LTP        float64 `json:"ltp"`
+	CreatedAt  string  `json:"createdAt"`
+	UpdatedAt  string  `json:"updatedAt"`
 	MarketData *struct {
-		Date    string `json:"date"`
-		Open    string `json:"open"`
-		Close   string `json:"close"`
-		High    string `json:"high"`
-		Low     string `json:"low"`
-		Volume  int    `json:"volume"`
+		Date    string  `json:"date"`
+		Open    float64 `json:"open"`
+		Close   float64 `json:"close"`
+		High    float64 `json:"high"`
+		Low     float64 `json:"low"`
+		Volume  int     `json:"volume"`
 		Metrics []*struct {
-			Name  string `json:"name"`
-			Type  string `json:"type"`
-			Value string `json:"value"`
+			ID              int     `json:"id"`
+			Name            string  `json:"name"`
+			Type            string  `json:"type"`
+			Value           float64 `json:"value"`
+			NormalizedValue float64 `json:"normalizedValue"`
 		} `json:"metrics"`
 	} `json:"marketData"`
 }
@@ -192,7 +193,7 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 		Industry:   model.Industry,
 		Name:       model.Name,
 		Image:      model.Image,
-		LTP:        fmt.Sprintf("%0.2f", model.LTP),
+		LTP:        model.LTP,
 		CreatedAt:  model.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:  model.UpdatedAt.Format(time.RFC3339),
 		MarketData: nil,
@@ -203,40 +204,48 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 	}
 
 	resp.MarketData = &struct {
-		Date    string `json:"date"`
-		Open    string `json:"open"`
-		Close   string `json:"close"`
-		High    string `json:"high"`
-		Low     string `json:"low"`
-		Volume  int    `json:"volume"`
+		Date    string  `json:"date"`
+		Open    float64 `json:"open"`
+		Close   float64 `json:"close"`
+		High    float64 `json:"high"`
+		Low     float64 `json:"low"`
+		Volume  int     `json:"volume"`
 		Metrics []*struct {
-			Name  string `json:"name"`
-			Type  string `json:"type"`
-			Value string `json:"value"`
+			ID              int     `json:"id"`
+			Name            string  `json:"name"`
+			Type            string  `json:"type"`
+			Value           float64 `json:"value"`
+			NormalizedValue float64 `json:"normalizedValue"`
 		} `json:"metrics"`
 	}{
 		Date:   model.SecurityStat.Date.Format(time.DateOnly),
-		Open:   fmt.Sprintf("%0.2f", model.SecurityStat.Open),
-		Close:  fmt.Sprintf("%0.2f", model.SecurityStat.Close),
-		High:   fmt.Sprintf("%0.2f", model.SecurityStat.High),
-		Low:    fmt.Sprintf("%0.2f", model.SecurityStat.Low),
+		Open:   model.SecurityStat.Open,
+		Close:  model.SecurityStat.Close,
+		High:   model.SecurityStat.High,
+		Low:    model.SecurityStat.Low,
 		Volume: model.SecurityStat.Volume,
 		Metrics: make([]*struct {
-			Name  string `json:"name"`
-			Type  string `json:"type"`
-			Value string `json:"value"`
+			ID              int     `json:"id"`
+			Name            string  `json:"name"`
+			Type            string  `json:"type"`
+			Value           float64 `json:"value"`
+			NormalizedValue float64 `json:"normalizedValue"`
 		}, len(model.SecurityMetrics)),
 	}
 
 	for i := range model.SecurityMetrics {
 		resp.MarketData.Metrics[i] = &struct {
-			Name  string `json:"name"`
-			Type  string `json:"type"`
-			Value string `json:"value"`
+			ID              int     `json:"id"`
+			Name            string  `json:"name"`
+			Type            string  `json:"type"`
+			Value           float64 `json:"value"`
+			NormalizedValue float64 `json:"normalizedValue"`
 		}{
-			Name:  model.SecurityMetrics[i].Metric.Name,
-			Type:  model.SecurityMetrics[i].Metric.Type,
-			Value: fmt.Sprintf("%0.2f", model.SecurityMetrics[i].Value),
+			ID:              model.SecurityMetrics[i].Metric.ID,
+			Name:            model.SecurityMetrics[i].Metric.Name,
+			Type:            model.SecurityMetrics[i].Metric.Type,
+			Value:           model.SecurityMetrics[i].Value,
+			NormalizedValue: model.SecurityMetrics[i].NormalizedValue,
 		}
 	}
 

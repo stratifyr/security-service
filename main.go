@@ -19,24 +19,18 @@ func main() {
 	securityStatStore := stores.NewSecurityStatStore()
 	metricStore := stores.NewMetricStore()
 	securityMetricStore := stores.NewSecurityMetricStore()
-	universeSecurityStore := stores.NewUniverseSecurityStore()
-	universeStore := stores.NewUniverseStore(universeSecurityStore)
 
 	industryService := services.NewIndustryService(industryStore)
 	securityStatService := services.NewSecurityStatService(securityStatStore)
 	metricService := services.NewMetricService(metricStore)
 	securityMetricService := services.NewSecurityMetricService(securityMetricStore)
 	securityService := services.NewSecurityService(securityStatService, metricService, securityMetricService, securityStore)
-	universeService := services.NewUniverseService(securityService, universeStore)
-	universeSecurityService := services.NewUniverseSecurityService(securityService, universeService, universeSecurityStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)
 	metricHandler := handlers.NewMetricHandler(metricService)
 	securityHandler := handlers.NewSecurityHandler(securityService)
 	securityStatHandler := handlers.NewSecurityStatHandler(securityStatService)
 	securityMetricHandler := handlers.NewSecurityMetricHandler(securityMetricService)
-	universeHandler := handlers.NewUniverseHandler(universeService)
-	universeSecurityHandler := handlers.NewUniverseSecurityHandler(universeSecurityService)
 
 	app.GET("/industries", industryHandler.Index)
 
@@ -59,17 +53,6 @@ func main() {
 	app.POST("/security-metrics", securityMetricHandler.Create)
 	app.GET("/security-metrics/{id}", securityMetricHandler.Read)
 	app.PATCH("/security-metrics/{id}", securityMetricHandler.Patch)
-
-	app.GET("/universes", universeHandler.Index)
-	app.POST("/universes", universeHandler.Create)
-	app.GET("/universes/{id}", universeHandler.Read)
-	app.PATCH("/universes/{id}", universeHandler.Patch)
-
-	app.GET("/universe-securities", universeSecurityHandler.Index)
-	app.POST("/universe-securities", universeSecurityHandler.Create)
-	app.GET("/universe-securities/{id}", universeSecurityHandler.Read)
-	app.PATCH("/universe-securities/{id}", universeSecurityHandler.Patch)
-	app.DELETE("/universe-securities/{id}", universeSecurityHandler.Delete)
 
 	app.Run()
 }
