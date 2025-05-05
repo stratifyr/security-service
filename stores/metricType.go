@@ -10,10 +10,12 @@ type MetricTypeStore interface {
 }
 
 const (
-	Trend MetricType = iota
-	Momentum
-	Volatility
-	Volume
+	SMA MetricType = iota
+	EMA
+	RSI
+	ROC
+	ATR
+	VMA
 )
 
 type MetricType int
@@ -26,19 +28,23 @@ func NewMetricTypeStore() *metricTypeStore {
 
 func (s *metricTypeStore) Index(ctx *gofr.Context) []MetricType {
 	return []MetricType{
-		Trend,
-		Momentum,
-		Volatility,
-		Volume,
+		SMA,
+		EMA,
+		RSI,
+		ROC,
+		ATR,
+		VMA,
 	}
 }
 
 func (m MetricType) String() string {
 	var conversionMap = map[MetricType]string{
-		Trend:      "Trend",
-		Momentum:   "Momentum",
-		Volatility: "Volatility",
-		Volume:     "Volume",
+		SMA: "Simple Moving Average",
+		EMA: "Exponential Moving Average",
+		RSI: "Relative Strength Index",
+		ROC: "Rate of Change of Price",
+		ATR: "Average True Range",
+		VMA: "Volume Moving Average",
 	}
 
 	return conversionMap[m]
@@ -46,10 +52,12 @@ func (m MetricType) String() string {
 
 func MetricTypeFromString(str string) (MetricType, error) {
 	var conversionMap = map[string]MetricType{
-		"Trend":      Trend,
-		"Momentum":   Momentum,
-		"Volatility": Volatility,
-		"Volume":     Volume,
+		"Simple Moving Average":      SMA,
+		"Exponential Moving Average": EMA,
+		"Relative Strength Index":    RSI,
+		"Rate of Change of Price":    ROC,
+		"Average True Range":         ATR,
+		"Volume Moving Average":      VMA,
 	}
 
 	metricType, ok := conversionMap[str]

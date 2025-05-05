@@ -1,7 +1,6 @@
 package services
 
 import (
-	"strings"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -49,9 +48,11 @@ type Security struct {
 		Value           float64
 		NormalizedValue float64
 		Metric          *struct {
-			ID   int
-			Name string
-			Type string
+			ID        int
+			Name      string
+			Type      string
+			Period    int
+			Indicator string
 		}
 	}
 }
@@ -300,9 +301,11 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 		Value           float64
 		NormalizedValue float64
 		Metric          *struct {
-			ID   int
-			Name string
-			Type string
+			ID        int
+			Name      string
+			Type      string
+			Period    int
+			Indicator string
 		}
 	}, len(securityMetrics))
 
@@ -315,9 +318,11 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 			Value           float64
 			NormalizedValue float64
 			Metric          *struct {
-				ID   int
-				Name string
-				Type string
+				ID        int
+				Name      string
+				Type      string
+				Period    int
+				Indicator string
 			}
 		}{
 			ID:              securityMetrics[i].ID,
@@ -327,13 +332,17 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 			Value:           securityMetrics[i].Value,
 			NormalizedValue: 0,
 			Metric: &struct {
-				ID   int
-				Name string
-				Type string
+				ID        int
+				Name      string
+				Type      string
+				Period    int
+				Indicator string
 			}{
-				ID:   securityMetrics[i].MetricID,
-				Name: metricsMap[securityMetrics[i].MetricID].Name,
-				Type: metricsMap[securityMetrics[i].MetricID].Type,
+				ID:        securityMetrics[i].MetricID,
+				Name:      metricsMap[securityMetrics[i].MetricID].Name,
+				Type:      metricsMap[securityMetrics[i].MetricID].Type,
+				Period:    metricsMap[securityMetrics[i].MetricID].Period,
+				Indicator: metricsMap[securityMetrics[i].MetricID].Indicator,
 			},
 		}
 	}
@@ -343,17 +352,25 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 
 func (s *securityService) computeAndSetNormalizedValues(resp *Security) {
 	for _, metric := range resp.SecurityMetrics {
-		switch {
-		case strings.HasPrefix(metric.Metric.Name, "sma") || strings.HasPrefix(metric.Metric.Name, "ema"):
+		metricType, _ := stores.MetricTypeFromString(metric.Metric.Type)
+
+		switch metricType {
+		case stores.SMA, stores.EMA:
 			metric.NormalizedValue = (resp.SecurityStat.Close - metric.Value) / resp.SecurityStat.Close
-		case strings.HasPrefix(metric.Metric.Name, "rsi"):
+
+		case stores.RSI:
 			metric.NormalizedValue = metric.Value / 100
 
 			if metric.Value > 70 || metric.Value < 30 {
 				metric.NormalizedValue = 0
 			}
-		case strings.HasPrefix(metric.Metric.Name, "rsi"):
+
+		case stores.ATR:
 			metric.NormalizedValue = metric.Value / resp.SecurityStat.Close
+
+		case stores.VMA:
+			metric.NormalizedValue = metric.Value / float64(resp.SecurityStat.Volume)
+
 		default:
 			metric.NormalizedValue = metric.Value
 		}

@@ -23,7 +23,7 @@ func main() {
 	industryService := services.NewIndustryService(industryStore)
 	securityStatService := services.NewSecurityStatService(securityStatStore)
 	metricService := services.NewMetricService(metricStore)
-	securityMetricService := services.NewSecurityMetricService(securityMetricStore)
+	securityMetricService := services.NewSecurityMetricService(metricStore, securityStatStore, securityMetricStore)
 	securityService := services.NewSecurityService(securityStatService, metricService, securityMetricService, securityStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)

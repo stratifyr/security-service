@@ -28,6 +28,8 @@ type Metric struct {
 	ID        int
 	Name      string
 	Type      MetricType
+	Period    int
+	Indicator MetricIndicator
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -41,7 +43,7 @@ func NewMetricStore() *metricStore {
 func (s *metricStore) Index(ctx *gofr.Context, filter *MetricFilter, limit, offset int) ([]*Metric, error) {
 	whereClause, values := filter.buildWhereClause()
 
-	query := `SELECT id, name, type, created_at, updated_at
+	query := `SELECT id, name, type, period, indicator, created_at, updated_at
               FROM metrics %s`
 
 	if limit > 0 {
@@ -62,7 +64,7 @@ func (s *metricStore) Index(ctx *gofr.Context, filter *MetricFilter, limit, offs
 	for rows.Next() {
 		var m Metric
 
-		err = rows.Scan(&m.ID, &m.Name, &m.Type, &m.CreatedAt, &m.UpdatedAt)
+		err = rows.Scan(&m.ID, &m.Name, &m.Type, &m.Period, &m.Indicator, &m.CreatedAt, &m.UpdatedAt)
 		if err != nil {
 			return nil, datasource.ErrorDB{Err: err}
 		}
@@ -95,10 +97,10 @@ func (s *metricStore) Count(ctx *gofr.Context, filter *MetricFilter) (int, error
 func (s *metricStore) Retrieve(ctx *gofr.Context, id int) (*Metric, error) {
 	var m Metric
 
-	query := `SELECT id, name, type, created_at, updated_at
+	query := `SELECT id, name, type, period, indicator, created_at, updated_at
               FROM metrics WHERE id = ?`
 
-	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&m.ID, &m.Name, &m.Type, &m.CreatedAt, &m.UpdatedAt)
+	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&m.ID, &m.Name, &m.Type, &m.Period, &m.Indicator, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, http.ErrorEntityNotFound{Name: "metrics", Value: strconv.Itoa(id)}
@@ -111,9 +113,9 @@ func (s *metricStore) Retrieve(ctx *gofr.Context, id int) (*Metric, error) {
 }
 
 func (s *metricStore) Create(ctx *gofr.Context, m *Metric) (*Metric, error) {
-	query := "INSERT INTO metrics (name, type, created_at, updated_at) VALUES (?, ?, ?, ?)"
+	query := "INSERT INTO metrics (name, type, period, indicator, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
 
-	result, err := ctx.SQL.ExecContext(ctx, query, m.Name, m.Type, m.CreatedAt, m.UpdatedAt)
+	result, err := ctx.SQL.ExecContext(ctx, query, m.Name, m.Type, m.Period, m.Indicator, m.CreatedAt, m.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -127,10 +129,10 @@ func (s *metricStore) Create(ctx *gofr.Context, m *Metric) (*Metric, error) {
 }
 
 func (s *metricStore) Update(ctx *gofr.Context, id int, m *Metric) (*Metric, error) {
-	query := `UPDATE metrics SET name = ?, type = ?, created_at = ?, updated_at = ?
+	query := `UPDATE metrics SET name = ?, type = ?, period = ?, indicator = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
-	_, err := ctx.SQL.ExecContext(ctx, query, m.Name, m.Type, m.CreatedAt, m.UpdatedAt, id)
+	_, err := ctx.SQL.ExecContext(ctx, query, m.Name, m.Type, m.Period, m.Indicator, m.CreatedAt, m.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}

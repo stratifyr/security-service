@@ -15,6 +15,8 @@ type Metric struct {
 	ID        int    `json:"id"`
 	Name      string `json:"name"`
 	Type      string `json:"type"`
+	Period    int    `json:"period"`
+	Indicator string `json:"indicator"`
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
 }
@@ -23,12 +25,12 @@ type MetricCreate struct {
 	UserID int    `json:"userId"`
 	Name   string `json:"name"`
 	Type   string `json:"type"`
+	Period int    `json:"period"`
 }
 
 type MetricUpdate struct {
 	UserID int    `json:"userId"`
 	Name   string `json:"name"`
-	Type   string `json:"type"`
 }
 
 type metricHandler struct {
@@ -112,6 +114,7 @@ func (h *metricHandler) Create(ctx *gofr.Context) (interface{}, error) {
 		UserID: payload.UserID,
 		Name:   payload.Name,
 		Type:   payload.Type,
+		Period: payload.Period,
 	}
 
 	metric, err := h.svc.Create(ctx, model)
@@ -139,7 +142,6 @@ func (h *metricHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 	model := &services.MetricUpdate{
 		UserID: payload.UserID,
 		Name:   payload.Name,
-		Type:   payload.Type,
 	}
 
 	metric, err := h.svc.Patch(ctx, id, model)
@@ -157,6 +159,8 @@ func (h *metricHandler) buildResp(model *services.Metric) *Metric {
 		ID:        model.ID,
 		Name:      model.Name,
 		Type:      model.Type,
+		Period:    model.Period,
+		Indicator: model.Indicator,
 		CreatedAt: model.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: model.UpdatedAt.Format(time.RFC3339),
 	}

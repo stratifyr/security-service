@@ -23,6 +23,8 @@ type Metric struct {
 	ID        int
 	Name      string
 	Type      string
+	Period    int
+	Indicator string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -31,12 +33,21 @@ type MetricCreate struct {
 	UserID int
 	Name   string
 	Type   string
+	Period int
 }
 
 type MetricUpdate struct {
 	UserID int
 	Name   string
-	Type   string
+}
+
+var MetricTypeIndicator = map[stores.MetricType]stores.MetricIndicator{
+	stores.SMA: stores.Trend,
+	stores.EMA: stores.Trend,
+	stores.RSI: stores.Trend,
+	stores.ROC: stores.Trend,
+	stores.ATR: stores.Volatility,
+	stores.VMA: stores.Volume,
 }
 
 type metricService struct {
@@ -109,6 +120,8 @@ func (s *metricService) Create(ctx *gofr.Context, payload *MetricCreate) (*Metri
 	model := &stores.Metric{
 		Name:      payload.Name,
 		Type:      metricType,
+		Period:    payload.Period,
+		Indicator: MetricTypeIndicator[metricType],
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
@@ -137,13 +150,6 @@ func (s *metricService) Patch(ctx *gofr.Context, id int, payload *MetricUpdate) 
 		newMetric.Name = payload.Name
 	}
 
-	if payload.Type != "" {
-		newMetric.Type, err = stores.MetricTypeFromString(payload.Type)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	metric, err := s.store.Update(ctx, id, &newMetric)
 	if err != nil {
 		return nil, err
@@ -157,6 +163,8 @@ func (s *metricService) buildResp(model *stores.Metric) *Metric {
 		ID:        model.ID,
 		Name:      model.Name,
 		Type:      model.Type.String(),
+		Period:    model.Period,
+		Indicator: model.Indicator.String(),
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,
 	}

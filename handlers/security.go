@@ -32,6 +32,8 @@ type Security struct {
 			ID              int     `json:"id"`
 			Name            string  `json:"name"`
 			Type            string  `json:"type"`
+			Period          int     `json:"period"`
+			Indicator       string  `json:"indicator"`
 			Value           float64 `json:"value"`
 			NormalizedValue float64 `json:"normalizedValue"`
 		} `json:"metrics"`
@@ -214,6 +216,8 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 			ID              int     `json:"id"`
 			Name            string  `json:"name"`
 			Type            string  `json:"type"`
+			Period          int     `json:"period"`
+			Indicator       string  `json:"indicator"`
 			Value           float64 `json:"value"`
 			NormalizedValue float64 `json:"normalizedValue"`
 		} `json:"metrics"`
@@ -228,6 +232,8 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 			ID              int     `json:"id"`
 			Name            string  `json:"name"`
 			Type            string  `json:"type"`
+			Period          int     `json:"period"`
+			Indicator       string  `json:"indicator"`
 			Value           float64 `json:"value"`
 			NormalizedValue float64 `json:"normalizedValue"`
 		}, len(model.SecurityMetrics)),
@@ -238,12 +244,16 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 			ID              int     `json:"id"`
 			Name            string  `json:"name"`
 			Type            string  `json:"type"`
+			Period          int     `json:"period"`
+			Indicator       string  `json:"indicator"`
 			Value           float64 `json:"value"`
 			NormalizedValue float64 `json:"normalizedValue"`
 		}{
 			ID:              model.SecurityMetrics[i].Metric.ID,
 			Name:            model.SecurityMetrics[i].Metric.Name,
 			Type:            model.SecurityMetrics[i].Metric.Type,
+			Period:          model.SecurityMetrics[i].Metric.Period,
+			Indicator:       model.SecurityMetrics[i].Metric.Indicator,
 			Value:           model.SecurityMetrics[i].Value,
 			NormalizedValue: model.SecurityMetrics[i].NormalizedValue,
 		}

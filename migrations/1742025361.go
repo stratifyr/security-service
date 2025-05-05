@@ -44,6 +44,8 @@ func setupInitialSchemas() migration.Migrate {
 										id INT PRIMARY KEY AUTO_INCREMENT,
 										name varchar(50) NOT NULL,
 										type INT NOT NULL,
+										period INT NOT NULL,
+										indicator INT NOT NULL,
 										created_at TIMESTAMP NOT NULL,
 										updated_at TIMESTAMP NOT NULL,
 										
