@@ -4,6 +4,8 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strconv"
@@ -18,31 +20,31 @@ type client struct {
 	clientID              string
 	isinSecurityIDMapping map[string]int
 	securityIDISINMapping map[int]string
-	lastMarketFeedAPICall time.Time
+	lastAPICallTime       time.Time
 	mu                    *sync.Mutex
 }
 
-func NewDhanHQClient(app *gofr.App) *client {
+func NewDhanHQClient(app *gofr.App) (*client, error) {
 	apiKey := app.Config.Get("DHAN_API_KEY")
 	if apiKey == "" {
-		app.Logger().Fatalf("missing DHAN_API_KEY")
+		return nil, errors.New("missing DHAN_API_KEY")
 	}
 
 	clientID := app.Config.Get("DHAN_CLIENT_ID")
 	if clientID == "" {
-		app.Logger().Fatalf("missing DHAN_CLIENT_ID")
+		return nil, errors.New("missing DHAN_CLIENT_ID")
 	}
 
-	file, err := os.Open("./dhan-scrip-master_NSE_EQ.csv")
+	file, err := os.Open("./data-providers/dhan-scrip-master_NSE_EQ.csv")
 	if err != nil {
-		app.Logger().Fatalf("failed to load dhan-scrip-master_NSE_EQ.csv")
+		return nil, errors.New("failed to load dhan-scrip-master_NSE_EQ.csv")
 	}
 
 	defer file.Close()
 
 	records, err := csv.NewReader(file).ReadAll()
 	if err != nil {
-		app.Logger().Fatalf("failed to read dhan-scrip-master_NSE_EQ.csv")
+		return nil, errors.New("failed to read dhan-scrip-master_NSE_EQ.csv")
 	}
 
 	isinSecurityIDMapping := make(map[string]int)
@@ -65,9 +67,9 @@ func NewDhanHQClient(app *gofr.App) *client {
 		clientID:              clientID,
 		isinSecurityIDMapping: isinSecurityIDMapping,
 		securityIDISINMapping: securityIDISINMapping,
-		lastMarketFeedAPICall: time.Date(2001, 1, 1, 1, 1, 1, 1, time.UTC),
+		lastAPICallTime:       time.Date(2001, 1, 1, 1, 1, 1, 1, time.UTC),
 		mu:                    &sync.Mutex{},
-	}
+	}, nil
 }
 
 func (c *client) GetLTP(ctx *gofr.Context, isin string) (*LTPData, error) {
@@ -81,8 +83,8 @@ func (c *client) GetLTP(ctx *gofr.Context, isin string) (*LTPData, error) {
 	body, _ := json.Marshal(payload)
 	headers := map[string]string{"Content-Type": "application/json", "access-token": c.apiKey, "client-id": c.clientID}
 
-	if time.Now().UTC().Sub(c.lastMarketFeedAPICall) <= 2*time.Second {
-		time.Sleep(2 * time.Second)
+	if time.Now().UTC().Sub(c.lastAPICallTime) <= time.Second {
+		time.Sleep(time.Second)
 	}
 
 	resp, err := ctx.GetHTTPService("dhan-api").PostWithHeaders(ctx, "v2/marketfeed/ltp", nil, body, headers)
@@ -90,9 +92,15 @@ func (c *client) GetLTP(ctx *gofr.Context, isin string) (*LTPData, error) {
 		return nil, errors.New("failed POST /v2/marketfeed/ltp, err: " + err.Error())
 	}
 
-	c.lastMarketFeedAPICall = time.Now().UTC()
-
 	defer resp.Body.Close()
+
+	c.lastAPICallTime = time.Now().UTC()
+
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return nil, errors.New("non 200 resp POST /v2/marketfeed/ltp, resp: " + string(b))
+	}
 
 	var res struct {
 		Data struct {
@@ -114,9 +122,6 @@ func (c *client) GetLTP(ctx *gofr.Context, isin string) (*LTPData, error) {
 }
 
 func (c *client) GetLTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if len(isins) > 1000 {
 		return nil, errors.New("max limit is 1000 for bulk ltp fetch")
 	}
@@ -132,8 +137,11 @@ func (c *client) GetLTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, erro
 	body, _ := json.Marshal(payload)
 	headers := map[string]string{"Content-Type": "application/json", "access-token": c.apiKey, "client-id": c.clientID}
 
-	if time.Now().UTC().Sub(c.lastMarketFeedAPICall) <= 2*time.Second {
-		time.Sleep(2 * time.Second)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if time.Now().UTC().Sub(c.lastAPICallTime) <= time.Second {
+		time.Sleep(time.Second)
 	}
 
 	resp, err := ctx.GetHTTPService("dhan-api").PostWithHeaders(ctx, "v2/marketfeed/ltp", nil, body, headers)
@@ -141,9 +149,15 @@ func (c *client) GetLTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, erro
 		return nil, errors.New("failed POST /v2/marketfeed/ltp, err: " + err.Error())
 	}
 
-	c.lastMarketFeedAPICall = time.Now().UTC()
-
 	defer resp.Body.Close()
+
+	c.lastAPICallTime = time.Now().UTC()
+
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return nil, errors.New("non 200 resp POST /v2/marketfeed/ltp, resp: " + string(b))
+	}
 
 	var res struct {
 		Data struct {
@@ -173,9 +187,6 @@ func (c *client) GetLTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, erro
 }
 
 func (c *client) GetMarketData(ctx *gofr.Context, isin string, date time.Time) (*MarketData, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	currentTime := time.Now().UTC()
 	today := currentTime.Format(time.DateOnly)
 
@@ -194,8 +205,11 @@ func (c *client) GetMarketData(ctx *gofr.Context, isin string, date time.Time) (
 	body, _ := json.Marshal(payload)
 	headers := map[string]string{"Content-Type": "application/json", "access-token": c.apiKey, "client-id": c.clientID}
 
-	if time.Now().UTC().Sub(c.lastMarketFeedAPICall) <= 2*time.Second {
-		time.Sleep(2 * time.Second)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if time.Now().UTC().Sub(c.lastAPICallTime) <= time.Second {
+		time.Sleep(time.Second)
 	}
 
 	resp, err := ctx.GetHTTPService("dhan-api").PostWithHeaders(ctx, "v2/marketfeed/quote", nil, body, headers)
@@ -203,9 +217,15 @@ func (c *client) GetMarketData(ctx *gofr.Context, isin string, date time.Time) (
 		return nil, errors.New("failed POST /v2/marketfeed/quote, err: " + err.Error())
 	}
 
-	c.lastMarketFeedAPICall = time.Now().UTC()
-
 	defer resp.Body.Close()
+
+	c.lastAPICallTime = time.Now().UTC()
+
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return nil, errors.New("non 200 resp POST /v2/marketfeed/quote, resp: " + string(b))
+	}
 
 	var res struct {
 		Data struct {
@@ -239,9 +259,6 @@ func (c *client) GetMarketData(ctx *gofr.Context, isin string, date time.Time) (
 }
 
 func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.Time) ([]*MarketData, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if len(isins) > 1000 {
 		return nil, errors.New("max limit is 1000 for bulk ltp fetch")
 	}
@@ -262,6 +279,8 @@ func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.
 				return nil, err
 			}
 
+			fmt.Println(md)
+
 			marketData = append(marketData, md)
 		}
 
@@ -279,8 +298,11 @@ func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.
 	body, _ := json.Marshal(payload)
 	headers := map[string]string{"Content-Type": "application/json", "access-token": c.apiKey, "client-id": c.clientID}
 
-	if time.Now().UTC().Sub(c.lastMarketFeedAPICall) <= 2*time.Second {
-		time.Sleep(2 * time.Second)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if time.Now().UTC().Sub(c.lastAPICallTime) <= time.Second {
+		time.Sleep(time.Second)
 	}
 
 	resp, err := ctx.GetHTTPService("dhan-api").PostWithHeaders(ctx, "v2/marketfeed/quote", nil, body, headers)
@@ -288,14 +310,20 @@ func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.
 		return nil, errors.New("failed POST /v2/marketfeed/quote, err: " + err.Error())
 	}
 
-	c.lastMarketFeedAPICall = time.Now().UTC()
-
 	defer resp.Body.Close()
+
+	c.lastAPICallTime = time.Now().UTC()
+
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return nil, errors.New("non 200 resp POST /v2/marketfeed/quote, resp: " + string(b))
+	}
 
 	var res struct {
 		Data struct {
 			NseEQ map[string]struct {
-				Volume int `json:"volume"`
+				Volume float64 `json:"volume"`
 				Ohlc   struct {
 					Open  float64 `json:"open"`
 					Close float64 `json:"close"`
@@ -311,7 +339,7 @@ func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.
 		return nil, errors.New("unexpected resp POST /v2/marketfeed/quote, err: " + err.Error())
 	}
 
-	var marketData = make([]*MarketData, len(res.Data.NseEQ))
+	var marketData []*MarketData
 
 	for securityIDStr, data := range res.Data.NseEQ {
 		securityID, _ := strconv.Atoi(securityIDStr)
@@ -322,7 +350,7 @@ func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.
 			Close:  data.Ohlc.Close,
 			High:   data.Ohlc.High,
 			Low:    data.Ohlc.Low,
-			Volume: data.Volume,
+			Volume: int(data.Volume),
 		})
 	}
 
@@ -343,9 +371,24 @@ func (c *client) getHistoricalData(ctx *gofr.Context, isin string, date time.Tim
 	body, _ := json.Marshal(payload)
 	headers := map[string]string{"Content-Type": "application/json", "access-token": c.apiKey}
 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if time.Now().UTC().Sub(c.lastAPICallTime) <= time.Second {
+		time.Sleep(time.Second)
+	}
+
+	c.lastAPICallTime = time.Now().UTC()
+
 	resp, err := ctx.GetHTTPService("dhan-api").PostWithHeaders(ctx, "v2/charts/historical", nil, body, headers)
 	if err != nil {
 		return nil, errors.New("failed POST /v2/charts/historical, err: " + err.Error())
+	}
+
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return nil, errors.New("non 200 resp POST /v2/charts/historical, resp: " + string(b))
 	}
 
 	defer resp.Body.Close()
@@ -355,7 +398,7 @@ func (c *client) getHistoricalData(ctx *gofr.Context, isin string, date time.Tim
 		High   []float64 `json:"high"`
 		Low    []float64 `json:"low"`
 		Close  []float64 `json:"close"`
-		Volume []int     `json:"volume"`
+		Volume []float64 `json:"volume"`
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&res)
@@ -369,6 +412,6 @@ func (c *client) getHistoricalData(ctx *gofr.Context, isin string, date time.Tim
 		Close:  res.Close[0],
 		High:   res.High[0],
 		Low:    res.Low[0],
-		Volume: res.Volume[0],
+		Volume: int(res.Volume[0]),
 	}, nil
 }

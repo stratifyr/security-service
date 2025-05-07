@@ -1,6 +1,7 @@
 package dataProviders
 
 import (
+	"errors"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -33,15 +34,13 @@ type MarketData struct {
 	Volume int
 }
 
-func New(app *gofr.App) DataProvider {
+func New(app *gofr.App) (DataProvider, error) {
 	switch app.Config.Get("MARKET_DATA_PROVIDER") {
 	case DhanHQ.String():
 		return NewDhanHQClient(app)
 	default:
-		app.Logger().Fatalf("invalid MARKET_DATA_PROVIDER")
+		return nil, errors.New("invalid MARKET_DATA_PROVIDER")
 	}
-
-	return nil
 }
 
 type Provider int
