@@ -3,7 +3,7 @@ package services
 import (
 	"gofr.dev/pkg/gofr"
 
-	"github.com/stratifyr/security-service/stores"
+	"github.com/stratifyr/security-service/internal/stores"
 )
 
 type IndustryService interface {

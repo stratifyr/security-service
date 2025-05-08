@@ -3,10 +3,10 @@ package main
 import (
 	"gofr.dev/pkg/gofr"
 
-	"github.com/stratifyr/security-service/handlers"
+	"github.com/stratifyr/security-service/internal/handlers"
+	"github.com/stratifyr/security-service/internal/services"
+	"github.com/stratifyr/security-service/internal/stores"
 	"github.com/stratifyr/security-service/migrations"
-	"github.com/stratifyr/security-service/services"
-	"github.com/stratifyr/security-service/stores"
 )
 
 func main() {

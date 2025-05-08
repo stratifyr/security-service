@@ -8,7 +8,7 @@ import (
 	"gofr.dev/pkg/gofr/http"
 	"gofr.dev/pkg/gofr/http/response"
 
-	"github.com/stratifyr/security-service/services"
+	"github.com/stratifyr/security-service/internal/services"
 )
 
 type Security struct {
