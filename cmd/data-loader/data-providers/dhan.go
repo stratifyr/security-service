@@ -1,19 +1,23 @@
 package dataProviders
 
 import (
+	_ "embed"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"gofr.dev/pkg/gofr"
 )
+
+//go:embed dhan-scrip-master_NSE_EQ.csv
+var dhanMasterScrip string
 
 type client struct {
 	apiKey                string
@@ -35,16 +39,9 @@ func NewDhanHQClient(app *gofr.App) (*client, error) {
 		return nil, errors.New("missing DHAN_CLIENT_ID")
 	}
 
-	file, err := os.Open("./data-providers/dhan-scrip-master_NSE_EQ.csv")
+	records, err := csv.NewReader(strings.NewReader(dhanMasterScrip)).ReadAll()
 	if err != nil {
-		return nil, errors.New("failed to load dhan-scrip-master_NSE_EQ.csv")
-	}
-
-	defer file.Close()
-
-	records, err := csv.NewReader(file).ReadAll()
-	if err != nil {
-		return nil, errors.New("failed to read dhan-scrip-master_NSE_EQ.csv")
+		return nil, errors.New("failed to read dhan master scrip")
 	}
 
 	isinSecurityIDMapping := make(map[string]int)
