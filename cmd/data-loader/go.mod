@@ -1,4 +1,4 @@
-module github.com/stratifyr/security-service/crons/marketdata-populator
+module github.com/stratifyr/security-service/cmd/data-loader
 
 go 1.24.1
 

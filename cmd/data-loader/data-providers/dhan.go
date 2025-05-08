@@ -72,7 +72,7 @@ func NewDhanHQClient(app *gofr.App) (*client, error) {
 	}, nil
 }
 
-func (c *client) GetLTP(ctx *gofr.Context, isin string) (*LTPData, error) {
+func (c *client) LTP(ctx *gofr.Context, isin string) (*LTPData, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -121,7 +121,7 @@ func (c *client) GetLTP(ctx *gofr.Context, isin string) (*LTPData, error) {
 	}, nil
 }
 
-func (c *client) GetLTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, error) {
+func (c *client) LTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, error) {
 	if len(isins) > 1000 {
 		return nil, errors.New("max limit is 1000 for bulk ltp fetch")
 	}
@@ -172,32 +172,26 @@ func (c *client) GetLTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, erro
 		return nil, errors.New("unexpected resp POST /v2/marketfeed/ltp, err: " + err.Error())
 	}
 
-	var ltps = make([]*LTPData, len(res.Data.NseEQ))
+	var ltpData = make([]*LTPData, len(isins))
 
-	for securityIDStr, data := range res.Data.NseEQ {
-		securityID, _ := strconv.Atoi(securityIDStr)
+	for i := range isins {
+		securityID := c.isinSecurityIDMapping[isins[i]]
 
-		ltps = append(ltps, &LTPData{
-			ISIN: c.securityIDISINMapping[securityID],
+		data, ok := res.Data.NseEQ[strconv.Itoa(securityID)]
+		if !ok {
+			return nil, errors.New(fmt.Sprintf("missing data for %s, POST /v2/marketfeed/ltp", isins[i]))
+		}
+
+		ltpData[i] = &LTPData{
+			ISIN: isins[i],
 			LTP:  data.LTP,
-		})
+		}
 	}
 
-	return ltps, nil
+	return ltpData, nil
 }
 
-func (c *client) GetMarketData(ctx *gofr.Context, isin string, date time.Time) (*MarketData, error) {
-	currentTime := time.Now().UTC()
-	today := currentTime.Format(time.DateOnly)
-
-	if date.After(currentTime) {
-		return nil, errors.New("cannot fetch market data for future date")
-	}
-
-	if date.Format(time.DateOnly) != today {
-		return c.getHistoricalData(ctx, isin, date)
-	}
-
+func (c *client) OHLC(ctx *gofr.Context, isin string) (*OHLCData, error) {
 	payload := map[string][]int{
 		"NSE_EQ": {c.isinSecurityIDMapping[isin]},
 	}
@@ -233,9 +227,9 @@ func (c *client) GetMarketData(ctx *gofr.Context, isin string, date time.Time) (
 				Volume int `json:"volume"`
 				Ohlc   struct {
 					Open  float64 `json:"open"`
-					Close float64 `json:"close"`
 					High  float64 `json:"high"`
 					Low   float64 `json:"low"`
+					Close float64 `json:"close"`
 				} `json:"ohlc"`
 			} `json:"NSE_EQ"`
 		} `json:"data"`
@@ -246,45 +240,24 @@ func (c *client) GetMarketData(ctx *gofr.Context, isin string, date time.Time) (
 		return nil, errors.New("unexpected resp POST /v2/marketfeed/quote, err: " + err.Error())
 	}
 
-	stats := res.Data.NseEQ[strconv.Itoa(c.isinSecurityIDMapping[isin])]
+	stats, ok := res.Data.NseEQ[strconv.Itoa(c.isinSecurityIDMapping[isin])]
+	if !ok {
+		return nil, errors.New("missing ohlc data /v2/marketfeed/quote, err: " + err.Error())
+	}
 
-	return &MarketData{
+	return &OHLCData{
 		ISIN:   isin,
 		Open:   stats.Ohlc.Open,
-		Close:  stats.Ohlc.Close,
 		High:   stats.Ohlc.High,
 		Low:    stats.Ohlc.Low,
+		Close:  stats.Ohlc.Close,
 		Volume: stats.Volume,
 	}, nil
 }
 
-func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.Time) ([]*MarketData, error) {
+func (c *client) OHLCBulk(ctx *gofr.Context, isins []string) ([]*OHLCData, error) {
 	if len(isins) > 1000 {
 		return nil, errors.New("max limit is 1000 for bulk ltp fetch")
-	}
-
-	currentTime := time.Now().UTC()
-	today := currentTime.Format(time.DateOnly)
-
-	if date.After(currentTime) {
-		return nil, errors.New("cannot fetch market data for future date")
-	}
-
-	if date.Format(time.DateOnly) != today {
-		var marketData = make([]*MarketData, len(isins))
-
-		for _, isin := range isins {
-			md, err := c.getHistoricalData(ctx, isin, date)
-			if err != nil {
-				return nil, err
-			}
-
-			fmt.Println(md)
-
-			marketData = append(marketData, md)
-		}
-
-		return marketData, nil
 	}
 
 	payload := map[string][]int{
@@ -326,9 +299,9 @@ func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.
 				Volume float64 `json:"volume"`
 				Ohlc   struct {
 					Open  float64 `json:"open"`
-					Close float64 `json:"close"`
 					High  float64 `json:"high"`
 					Low   float64 `json:"low"`
+					Close float64 `json:"close"`
 				} `json:"ohlc"`
 			} `json:"NSE_EQ"`
 		} `json:"data"`
@@ -339,33 +312,38 @@ func (c *client) GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.
 		return nil, errors.New("unexpected resp POST /v2/marketfeed/quote, err: " + err.Error())
 	}
 
-	var marketData []*MarketData
+	var ohlcData = make([]*OHLCData, len(isins))
 
-	for securityIDStr, data := range res.Data.NseEQ {
-		securityID, _ := strconv.Atoi(securityIDStr)
+	for i := range isins {
+		securityID := c.isinSecurityIDMapping[isins[i]]
 
-		marketData = append(marketData, &MarketData{
-			ISIN:   c.securityIDISINMapping[securityID],
+		data, ok := res.Data.NseEQ[strconv.Itoa(securityID)]
+		if !ok {
+			return nil, errors.New(fmt.Sprintf("missing data for %s, POST /v2/marketfeed/quote", isins[i]))
+		}
+
+		ohlcData[i] = &OHLCData{
+			ISIN:   isins[i],
 			Open:   data.Ohlc.Open,
-			Close:  data.Ohlc.Close,
 			High:   data.Ohlc.High,
 			Low:    data.Ohlc.Low,
+			Close:  data.Ohlc.Close,
 			Volume: int(data.Volume),
-		})
+		}
 	}
 
-	return marketData, nil
+	return ohlcData, nil
 }
 
-func (c *client) getHistoricalData(ctx *gofr.Context, isin string, date time.Time) (*MarketData, error) {
+func (c *client) HistoricalOHLC(ctx *gofr.Context, isin string, startDate, endDate time.Time) ([]*HistoricalOHLC, error) {
 	payload := map[string]any{
 		"securityId":      c.isinSecurityIDMapping[isin],
 		"exchangeSegment": "NSE_EQ",
 		"instrument":      "EQUITY",
 		"expiryCode":      0,
 		"oi":              false,
-		"fromDate":        date.Format(time.DateOnly),
-		"toDate":          date.AddDate(0, 0, 1).Format(time.DateOnly),
+		"fromDate":        startDate.Format(time.DateOnly),
+		"toDate":          endDate.AddDate(0, 0, 1).Format(time.DateOnly),
 	}
 
 	body, _ := json.Marshal(payload)
@@ -394,11 +372,12 @@ func (c *client) getHistoricalData(ctx *gofr.Context, isin string, date time.Tim
 	defer resp.Body.Close()
 
 	var res struct {
-		Open   []float64 `json:"open"`
-		High   []float64 `json:"high"`
-		Low    []float64 `json:"low"`
-		Close  []float64 `json:"close"`
-		Volume []float64 `json:"volume"`
+		Open      []float64 `json:"open"`
+		High      []float64 `json:"high"`
+		Low       []float64 `json:"low"`
+		Close     []float64 `json:"close"`
+		Volume    []float64 `json:"volume"`
+		Timestamp []float64 `json:"timestamp"`
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&res)
@@ -406,12 +385,23 @@ func (c *client) getHistoricalData(ctx *gofr.Context, isin string, date time.Tim
 		return nil, errors.New("unexpected resp POST /v2/charts/historical, err: " + err.Error())
 	}
 
-	return &MarketData{
-		ISIN:   isin,
-		Open:   res.Open[0],
-		Close:  res.Close[0],
-		High:   res.High[0],
-		Low:    res.Low[0],
-		Volume: int(res.Volume[0]),
-	}, nil
+	var historicalData = make([]*HistoricalOHLC, len(res.Timestamp))
+
+	istLocation, _ := time.LoadLocation("Asia/Kolkata")
+
+	for i := range res.Timestamp {
+		historicalData[i] = &HistoricalOHLC{
+			Date: time.Unix(int64(res.Timestamp[i]), 0).In(istLocation),
+			OHLCData: &OHLCData{
+				ISIN:   isin,
+				Open:   res.Open[i],
+				High:   res.Open[i],
+				Low:    res.Open[i],
+				Close:  res.Open[i],
+				Volume: int(res.Volume[i]),
+			},
+		}
+	}
+
+	return historicalData, nil
 }

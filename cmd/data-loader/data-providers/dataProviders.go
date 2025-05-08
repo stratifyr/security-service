@@ -14,10 +14,11 @@ const (
 )
 
 type DataProvider interface {
-	GetLTP(ctx *gofr.Context, isin string) (*LTPData, error)
-	GetLTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, error)
-	GetMarketData(ctx *gofr.Context, isin string, date time.Time) (*MarketData, error)
-	GetMarketDataBulk(ctx *gofr.Context, isins []string, date time.Time) ([]*MarketData, error)
+	LTP(ctx *gofr.Context, isin string) (*LTPData, error)
+	LTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, error)
+	OHLC(ctx *gofr.Context, isin string) (*OHLCData, error)
+	OHLCBulk(ctx *gofr.Context, isins []string) ([]*OHLCData, error)
+	HistoricalOHLC(ctx *gofr.Context, isin string, startDate, endDate time.Time) ([]*HistoricalOHLC, error)
 }
 
 type LTPData struct {
@@ -25,13 +26,18 @@ type LTPData struct {
 	LTP  float64
 }
 
-type MarketData struct {
+type OHLCData struct {
 	ISIN   string
 	Open   float64
-	Close  float64
 	High   float64
 	Low    float64
+	Close  float64
 	Volume int
+}
+
+type HistoricalOHLC struct {
+	Date time.Time
+	*OHLCData
 }
 
 func New(app *gofr.App) (DataProvider, error) {
