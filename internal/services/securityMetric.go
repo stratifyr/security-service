@@ -18,8 +18,9 @@ type SecurityMetricService interface {
 }
 
 type SecurityMetricFilter struct {
-	Date       time.Time
 	SecurityID int
+	MetricID   int
+	Date       time.Time
 }
 
 type SecurityMetric struct {
@@ -33,27 +34,30 @@ type SecurityMetric struct {
 }
 
 type SecurityMetricCreate struct {
-	UserID         int
-	SecurityID     int
-	MetricID       int
-	Date           time.Time
-	Value          float64
-	CalculateValue bool
+	UserID     int
+	SecurityID int
+	MetricID   int
+	Date       time.Time
+	Value      float64
 }
 
 type SecurityMetricUpdate struct {
-	UserID int
-	Value  float64
+	UserID         int
+	Value          float64
+	RecomputeValue bool
 }
 
 type securityMetricService struct {
+	marketDayService  MarketDayService
 	metricStore       stores.MetricStore
 	securityStatStore stores.SecurityStatStore
 	store             stores.SecurityMetricStore
 }
 
-func NewSecurityMetricService(metricStore stores.MetricStore, securityStatStore stores.SecurityStatStore, store stores.SecurityMetricStore) *securityMetricService {
+func NewSecurityMetricService(marketDayService MarketDayService, metricStore stores.MetricStore,
+	securityStatStore stores.SecurityStatStore, store stores.SecurityMetricStore) *securityMetricService {
 	return &securityMetricService{
+		marketDayService:  marketDayService,
 		metricStore:       metricStore,
 		securityStatStore: securityStatStore,
 		store:             store,
@@ -66,6 +70,7 @@ func (s *securityMetricService) Index(ctx *gofr.Context, f *SecurityMetricFilter
 
 	filter := &stores.SecurityMetricFilter{
 		SecurityID: f.SecurityID,
+		MetricID:   f.MetricID,
 		Date:       f.Date,
 	}
 
@@ -106,6 +111,22 @@ func (s *securityMetricService) Create(ctx *gofr.Context, payload *SecurityMetri
 		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
 	}
 
+	marketDays, count, err := s.marketDayService.Index(ctx,
+		&MarketDayFilter{DateBetween: &struct {
+			StartDate time.Time
+			EndDate   time.Time
+		}{StartDate: payload.Date, EndDate: payload.Date}})
+	if count != 1 || marketDays[0].Format(time.DateOnly) != payload.Date.Format(time.DateOnly) {
+		return nil, &ErrResp{Code: 400, Message: "cannot add metric for market holiday - " + payload.Date.Format(time.DateOnly)}
+	}
+
+	if payload.Value == 0 {
+		payload.Value, err = s.computeMetricValue(ctx, payload.SecurityID, payload.MetricID, payload.Date)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	model := &stores.SecurityMetric{
 		SecurityID: payload.SecurityID,
 		MetricID:   payload.MetricID,
@@ -113,15 +134,6 @@ func (s *securityMetricService) Create(ctx *gofr.Context, payload *SecurityMetri
 		Value:      payload.Value,
 		CreatedAt:  time.Now().UTC(),
 		UpdatedAt:  time.Now().UTC(),
-	}
-
-	if payload.CalculateValue {
-		var err error
-
-		model.Value, err = s.computeMetricValue(ctx, payload.SecurityID, payload.MetricID, payload.Date)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	securityMetric, err := s.store.Create(ctx, model)
@@ -137,18 +149,23 @@ func (s *securityMetricService) Patch(ctx *gofr.Context, id int, payload *Securi
 		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
 	}
 
-	oldSecurityMetric, err := s.store.Retrieve(ctx, id)
+	securityMetric, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	newSecurityMetric := *oldSecurityMetric
-
 	if payload.Value != 0 {
-		newSecurityMetric.Value = payload.Value
+		securityMetric.Value = payload.Value
 	}
 
-	securityMetric, err := s.store.Update(ctx, id, &newSecurityMetric)
+	if payload.RecomputeValue {
+		payload.Value, err = s.computeMetricValue(ctx, securityMetric.SecurityID, securityMetric.MetricID, securityMetric.Date)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	securityMetric, err = s.store.Update(ctx, id, securityMetric)
 	if err != nil {
 		return nil, err
 	}
@@ -176,12 +193,23 @@ func (s *securityMetricService) computeMetricValue(ctx *gofr.Context, securityID
 		return 0, err
 	}
 
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityID: securityID, CutoffDate: date}, metric.Period, 0)
+	n := metric.Period
+
+	marketDays, _, err := s.marketDayService.Index(ctx,
+		&MarketDayFilter{LastNDaysFromReference: &struct {
+			N         int
+			Reference time.Time
+		}{N: n, Reference: date}})
 	if err != nil {
 		return 0, err
 	}
 
-	if len(securityStats) != metric.Period {
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityID: securityID, Dates: marketDays}, 0, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(securityStats) != n {
 		return 0, &ErrResp{Code: 400, Message: fmt.Sprintf("Cannot compute %s_%d, not enough data", metric.Type.String(), metric.Period)}
 	}
 

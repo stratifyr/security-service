@@ -39,12 +39,12 @@ func (s *metricTypeStore) Index(ctx *gofr.Context) []MetricType {
 
 func (m MetricType) String() string {
 	var conversionMap = map[MetricType]string{
-		SMA: "Simple Moving Average",
-		EMA: "Exponential Moving Average",
-		RSI: "Relative Strength Index",
-		ROC: "Rate of Change of Price",
-		ATR: "Average True Range",
-		VMA: "Volume Moving Average",
+		SMA: "SMA",
+		EMA: "EMA",
+		RSI: "RSI",
+		ROC: "ROC",
+		ATR: "ATR",
+		VMA: "VMA",
 	}
 
 	return conversionMap[m]
@@ -52,12 +52,12 @@ func (m MetricType) String() string {
 
 func MetricTypeFromString(str string) (MetricType, error) {
 	var conversionMap = map[string]MetricType{
-		"Simple Moving Average":      SMA,
-		"Exponential Moving Average": EMA,
-		"Relative Strength Index":    RSI,
-		"Rate of Change of Price":    ROC,
-		"Average True Range":         ATR,
-		"Volume Moving Average":      VMA,
+		"SMA": SMA,
+		"EMA": EMA,
+		"RSI": RSI,
+		"ROC": ROC,
+		"ATR": ATR,
+		"VMA": VMA,
 	}
 
 	metricType, ok := conversionMap[str]

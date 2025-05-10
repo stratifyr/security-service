@@ -139,18 +139,16 @@ func (s *metricService) Patch(ctx *gofr.Context, id int, payload *MetricUpdate) 
 		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
 	}
 
-	oldMetric, err := s.store.Retrieve(ctx, id)
+	metric, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	newMetric := *oldMetric
-
 	if payload.Name != "" {
-		newMetric.Name = payload.Name
+		metric.Name = payload.Name
 	}
 
-	metric, err := s.store.Update(ctx, id, &newMetric)
+	metric, err = s.store.Update(ctx, id, metric)
 	if err != nil {
 		return nil, err
 	}

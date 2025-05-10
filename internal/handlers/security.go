@@ -74,6 +74,10 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 		filter.Symbol = ctx.Param("symbol")
 	}
 
+	if ctx.Param("isin") != "" {
+		filter.ISIN = ctx.Param("isin")
+	}
+
 	var err error
 
 	page := 1

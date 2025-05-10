@@ -18,13 +18,7 @@ func NewIndustryHandler(svc services.IndustryService) *industryHandler {
 func (h *industryHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	industries := h.svc.Index(ctx)
 
-	var resp = make([]string, len(industries))
-
-	for i := range industries {
-		resp[i] = industries[i].String()
-	}
-
 	return response.Raw{Data: map[string]any{
-		"data": resp,
+		"data": industries,
 	}}, nil
 }

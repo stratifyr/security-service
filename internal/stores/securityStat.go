@@ -22,8 +22,7 @@ type SecurityStatStore interface {
 
 type SecurityStatFilter struct {
 	SecurityID int
-	Date       time.Time
-	CutoffDate time.Time
+	Dates      []time.Time
 }
 
 type SecurityStat struct {
@@ -153,16 +152,15 @@ func (f *SecurityStatFilter) buildWhereClause() (clause string, values []interfa
 		values = append(values, f.SecurityID)
 	}
 
-	if f.Date != (time.Time{}) {
-		clause += " AND date = ?"
+	if len(f.Dates) > 0 {
+		var placeHolders []string
 
-		values = append(values, f.Date.Format(time.DateOnly))
-	}
+		for i := range f.Dates {
+			placeHolders = append(placeHolders, "?")
+			values = append(values, f.Dates[i].Format(time.DateOnly))
+		}
 
-	if f.CutoffDate != (time.Time{}) {
-		clause += " AND date <= ?"
-
-		values = append(values, f.CutoffDate.Format(time.DateOnly))
+		clause += " AND date IN (" + strings.Join(placeHolders, ", ") + ")"
 	}
 
 	if clause != "" {

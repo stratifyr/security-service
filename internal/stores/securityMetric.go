@@ -22,6 +22,7 @@ type SecurityMetricStore interface {
 
 type SecurityMetricFilter struct {
 	SecurityID int
+	MetricID   int
 	Date       time.Time
 }
 
@@ -146,6 +147,12 @@ func (f *SecurityMetricFilter) buildWhereClause() (clause string, values []inter
 		clause += " AND security_id = ?"
 
 		values = append(values, f.SecurityID)
+	}
+
+	if f.MetricID != 0 {
+		clause += " AND metric_id = ?"
+
+		values = append(values, f.MetricID)
 	}
 
 	if f.Date != (time.Time{}) {

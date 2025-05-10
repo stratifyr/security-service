@@ -15,19 +15,24 @@ func main() {
 	app.Migrate(migrations.All())
 
 	industryStore := stores.NewIndustryStore()
-	securityStore := stores.NewSecurityStore()
-	securityStatStore := stores.NewSecurityStatStore()
 	metricStore := stores.NewMetricStore()
+	securityStore := stores.NewSecurityStore()
+	marketHolidayStore := stores.NewMarketHolidayStore()
+	securityStatStore := stores.NewSecurityStatStore()
 	securityMetricStore := stores.NewSecurityMetricStore()
 
 	industryService := services.NewIndustryService(industryStore)
-	securityStatService := services.NewSecurityStatService(securityStatStore)
 	metricService := services.NewMetricService(metricStore)
-	securityMetricService := services.NewSecurityMetricService(metricStore, securityStatStore, securityMetricStore)
+	marketHolidayService := services.NewMarketHolidayService(marketHolidayStore)
+	marketDayService := services.NewMarketDayService(marketHolidayStore)
+	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore)
+	securityMetricService := services.NewSecurityMetricService(marketDayService, metricStore, securityStatStore, securityMetricStore)
 	securityService := services.NewSecurityService(securityStatService, metricService, securityMetricService, securityStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)
 	metricHandler := handlers.NewMetricHandler(metricService)
+	marketHolidayHandler := handlers.NewMarketHolidayHandler(marketHolidayService)
+	marketDayHandler := handlers.NewMarketDayHandler(marketDayService)
 	securityHandler := handlers.NewSecurityHandler(securityService)
 	securityStatHandler := handlers.NewSecurityStatHandler(securityStatService)
 	securityMetricHandler := handlers.NewSecurityMetricHandler(securityMetricService)
@@ -38,6 +43,14 @@ func main() {
 	app.POST("/metrics", metricHandler.Create)
 	app.GET("/metrics/{id}", metricHandler.Read)
 	app.PATCH("/metrics/{id}", metricHandler.Patch)
+
+	app.GET("/market-holidays", marketHolidayHandler.Index)
+	app.POST("/market-holidays", marketHolidayHandler.Create)
+	app.GET("/market-holidays/{id}", marketHolidayHandler.Read)
+	app.PATCH("/market-holidays/{id}", marketHolidayHandler.Patch)
+	app.DELETE("/market-holidays/{id}", marketHolidayHandler.Delete)
+
+	app.GET("/market-days", marketDayHandler.Index)
 
 	app.GET("/securities", securityHandler.Index)
 	app.POST("/securities", securityHandler.Create)

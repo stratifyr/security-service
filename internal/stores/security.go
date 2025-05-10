@@ -22,6 +22,7 @@ type SecurityStore interface {
 
 type SecurityFilter struct {
 	IDs    []int
+	ISIN   string
 	Symbol string
 }
 
@@ -153,6 +154,12 @@ func (f *SecurityFilter) buildWhereClause() (clause string, values []interface{}
 		}
 
 		clause += " AND id IN (" + strings.Join(placeHolders, ", ") + ")"
+	}
+
+	if f.ISIN != "" {
+		clause += " AND isin = ?"
+
+		values = append(values, f.ISIN)
 	}
 
 	if f.Symbol != "" {

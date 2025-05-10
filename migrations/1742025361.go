@@ -29,7 +29,7 @@ func setupInitialSchemas() migration.Migrate {
 										close DECIMAL(10,2) NOT NULL,
 										high DECIMAL(10,2) NOT NULL,
 										low DECIMAL(10,2) NOT NULL,
-										volume INT NOT NULL,
+										volume BIGINT NOT NULL,
 										created_at TIMESTAMP NOT NULL,
 										updated_at TIMESTAMP NOT NULL,
                              
@@ -50,6 +50,7 @@ func setupInitialSchemas() migration.Migrate {
 										updated_at TIMESTAMP NOT NULL,
 										
 										CONSTRAINT uk_metrics_name UNIQUE (name),
+										CONSTRAINT uk_metrics_type_period UNIQUE (type, period),
                                         INDEX idx_metrics_type (type)
 									);`); err != nil {
 				return err
@@ -68,6 +69,18 @@ func setupInitialSchemas() migration.Migrate {
 										CONSTRAINT fk_security_metrics_security_id FOREIGN KEY (security_id) REFERENCES securities(id),
 										CONSTRAINT fk_security_metrics_metric_id FOREIGN KEY (metric_id) REFERENCES metrics(id),
                                         INDEX idx_security_prices_security_id_date (security_id, date)
+									);`); err != nil {
+				return err
+			}
+
+			if _, err := d.SQL.Exec(`CREATE TABLE market_holidays (
+										id INT PRIMARY KEY AUTO_INCREMENT,
+										date DATE NOT NULL,
+										description VARCHAR(100) NOT NULL,
+										created_at TIMESTAMP NOT NULL,
+										updated_at TIMESTAMP NOT NULL,
+										
+                             			CONSTRAINT uk_market_holidays_date UNIQUE (date)
 									);`); err != nil {
 				return err
 			}

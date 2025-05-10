@@ -54,11 +54,15 @@ type SecurityStatUpdate struct {
 }
 
 type securityStatService struct {
-	store stores.SecurityStatStore
+	marketDayService MarketDayService
+	store            stores.SecurityStatStore
 }
 
-func NewSecurityStatService(store stores.SecurityStatStore) *securityStatService {
-	return &securityStatService{store: store}
+func NewSecurityStatService(marketDayService MarketDayService, store stores.SecurityStatStore) *securityStatService {
+	return &securityStatService{
+		marketDayService: marketDayService,
+		store:            store,
+	}
 }
 
 func (s *securityStatService) Index(ctx *gofr.Context, f *SecurityStatFilter, page, perPage int) ([]*SecurityStat, int, error) {
@@ -67,7 +71,10 @@ func (s *securityStatService) Index(ctx *gofr.Context, f *SecurityStatFilter, pa
 
 	filter := &stores.SecurityStatFilter{
 		SecurityID: f.SecurityID,
-		Date:       f.Date,
+	}
+
+	if f.Date != (time.Time{}) {
+		filter.Dates = []time.Time{f.Date}
 	}
 
 	securityStats, err := s.store.Index(ctx, filter, limit, offset)
@@ -107,6 +114,15 @@ func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCre
 		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
 	}
 
+	marketDays, count, err := s.marketDayService.Index(ctx,
+		&MarketDayFilter{DateBetween: &struct {
+			StartDate time.Time
+			EndDate   time.Time
+		}{StartDate: payload.Date, EndDate: payload.Date}})
+	if count != 1 || marketDays[0].Format(time.DateOnly) != payload.Date.Format(time.DateOnly) {
+		return nil, &ErrResp{Code: 400, Message: "cannot add stat for market holiday - " + payload.Date.Format(time.DateOnly)}
+	}
+
 	model := &stores.SecurityStat{
 		SecurityID: payload.SecurityID,
 		Date:       payload.Date,
@@ -132,34 +148,32 @@ func (s *securityStatService) Patch(ctx *gofr.Context, id int, payload *Security
 		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
 	}
 
-	oldSecurityStat, err := s.store.Retrieve(ctx, id)
+	securityStat, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	newSecurityStat := *oldSecurityStat
-
 	if payload.Open != 0 {
-		newSecurityStat.Open = payload.Open
+		securityStat.Open = payload.Open
 	}
 
 	if payload.Close != 0 {
-		newSecurityStat.Close = payload.Close
+		securityStat.Close = payload.Close
 	}
 
 	if payload.High != 0 {
-		newSecurityStat.High = payload.High
+		securityStat.High = payload.High
 	}
 
 	if payload.Low != 0 {
-		newSecurityStat.Low = payload.Low
+		securityStat.Low = payload.Low
 	}
 
 	if payload.Volume != 0 {
-		newSecurityStat.Volume = payload.Volume
+		securityStat.Volume = payload.Volume
 	}
 
-	securityStat, err := s.store.Update(ctx, id, &newSecurityStat)
+	securityStat, err = s.store.Update(ctx, id, securityStat)
 	if err != nil {
 		return nil, err
 	}

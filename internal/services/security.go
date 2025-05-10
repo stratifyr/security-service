@@ -17,6 +17,7 @@ type SecurityService interface {
 
 type SecurityFilter struct {
 	IDs    []int
+	ISIN   string
 	Symbol string
 }
 
@@ -100,6 +101,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 	filter := &stores.SecurityFilter{
 		IDs:    f.IDs,
 		Symbol: f.Symbol,
+		ISIN:   f.ISIN,
 	}
 
 	securities, err := s.store.Index(ctx, filter, limit, offset)
@@ -171,37 +173,35 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
 	}
 
-	oldSecurity, err := s.store.Retrieve(ctx, id)
+	security, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	newSecurity := *oldSecurity
-
 	if payload.Symbol != "" {
-		newSecurity.Symbol = payload.Symbol
+		security.Symbol = payload.Symbol
 	}
 
 	if payload.Industry != "" {
-		newSecurity.Industry, err = stores.IndustryFromString(payload.Industry)
+		security.Industry, err = stores.IndustryFromString(payload.Industry)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if payload.Name != "" {
-		newSecurity.Name = payload.Name
+		security.Name = payload.Name
 	}
 
 	if payload.Image != "" {
-		newSecurity.Image = payload.Image
+		security.Image = payload.Image
 	}
 
 	if payload.LTP != 0 {
-		newSecurity.LTP = payload.LTP
+		security.LTP = payload.LTP
 	}
 
-	security, err := s.store.Update(ctx, id, &newSecurity)
+	security, err = s.store.Update(ctx, id, security)
 	if err != nil {
 		return nil, err
 	}

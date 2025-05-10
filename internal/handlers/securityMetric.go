@@ -31,8 +31,9 @@ type SecurityMetricCreate struct {
 }
 
 type SecurityMetricUpdate struct {
-	UserID int     `json:"userId"`
-	Value  float64 `json:"value"`
+	UserID         int     `json:"userId"`
+	Value          float64 `json:"value"`
+	RecomputeValue bool    `json:"recomputeValue"`
 }
 
 type securityMetricHandler struct {
@@ -49,17 +50,24 @@ func (h *securityMetricHandler) Index(ctx *gofr.Context) (interface{}, error) {
 		err    error
 	)
 
-	if ctx.Param("date") != "" {
-		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
-		if err != nil {
-			return nil, http.ErrorInvalidParam{Params: []string{"date"}}
-		}
-	}
-
 	if ctx.Param("securityId") != "" {
 		filter.SecurityID, err = strconv.Atoi(ctx.Param("securityId"))
 		if err != nil {
 			return nil, http.ErrorInvalidParam{Params: []string{"securityId"}}
+		}
+	}
+
+	if ctx.Param("metricId") != "" {
+		filter.MetricID, err = strconv.Atoi(ctx.Param("metricId"))
+		if err != nil {
+			return nil, http.ErrorInvalidParam{Params: []string{"metricId"}}
+		}
+	}
+
+	if ctx.Param("date") != "" {
+		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
+		if err != nil {
+			return nil, http.ErrorInvalidParam{Params: []string{"date"}}
 		}
 	}
 
@@ -159,8 +167,9 @@ func (h *securityMetricHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 	}
 
 	model := &services.SecurityMetricUpdate{
-		UserID: payload.UserID,
-		Value:  payload.Value,
+		UserID:         payload.UserID,
+		Value:          payload.Value,
+		RecomputeValue: payload.RecomputeValue,
 	}
 
 	securityMetric, err := h.svc.Patch(ctx, id, model)
