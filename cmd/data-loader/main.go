@@ -1,18 +1,31 @@
 package main
 
 import (
+	_ "embed"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"gofr.dev/pkg/gofr"
 
 	dataProviders "github.com/stratifyr/security-service/cmd/data-loader/data-providers"
 )
+
+//go:embed data/securities-master.csv
+var securitesMaster string
+
+//go:embed data/metrics-master.csv
+var metricsMaster string
+
+//go:embed data/market-holidays.csv
+var marketHolidaysMaster string
 
 func main() {
 	app := gofr.NewCMD()
@@ -31,11 +44,12 @@ func main() {
 		tz:     istLocation,
 	}
 
-	app.SubCommand("load ltp", h.LoadLTPData)
-	app.SubCommand("load ohlc", h.LoadOHLCData)
-	app.SubCommand("load historical-ohlc", h.LoadHistoricalOHLCData)
+	app.SubCommand("load securities", h.LoadSecurities)
 	app.SubCommand("load metrics", h.LoadMetrics)
-	app.SubCommand("load historical-metrics", h.LoadHistoricalMetrics)
+	app.SubCommand("load market-holidays", h.LoadMarketHolidays)
+	app.SubCommand("load ltp", h.LoadLTP)
+	app.SubCommand("load security-stats", h.LoadSecurityStats)
+	app.SubCommand("load security-metrics", h.LoadSecurityMetrics)
 
 	app.Run()
 }
@@ -45,7 +59,106 @@ type marketDataHandler struct {
 	tz     *time.Location
 }
 
-func (h *marketDataHandler) LoadLTPData(ctx *gofr.Context) (any, error) {
+func (h *marketDataHandler) LoadSecurities(ctx *gofr.Context) (any, error) {
+	reader := csv.NewReader(strings.NewReader(securitesMaster))
+
+	headers, err := reader.Read()
+	if err != nil {
+		return nil, errors.New("failed to read securitiesMasterFile headers")
+	}
+
+	idxISIN := slices.Index(headers, "ISIN Code")
+	idxSymbol := slices.Index(headers, "Symbol")
+	idxIndustry := slices.Index(headers, "Industry")
+	idxName := slices.Index(headers, "Company Name")
+
+	for {
+		row, readErr := reader.Read()
+		if readErr == io.EOF {
+			break
+		}
+
+		if readErr != nil {
+			return nil, errors.New("failed to read securitiesMasterFile row")
+		}
+
+		if err = h.createOrUpdateSecurity(ctx, row[idxISIN], row[idxSymbol], row[idxIndustry], row[idxName]); err != nil {
+			fmt.Println(fmt.Sprintf("-[%s] fail, %s", row[idxISIN], err))
+			continue
+		}
+
+		fmt.Println(fmt.Sprintf("-[%s] success", row[idxISIN]))
+	}
+
+	return "\nsuccessfully loaded securities", nil
+}
+
+func (h *marketDataHandler) LoadMetrics(ctx *gofr.Context) (any, error) {
+	reader := csv.NewReader(strings.NewReader(metricsMaster))
+
+	headers, err := reader.Read()
+	if err != nil {
+		return nil, errors.New("failed to read metricsMasterFile headers")
+	}
+
+	idxName := slices.Index(headers, "Name")
+	idxType := slices.Index(headers, "Type")
+	idxPeriod := slices.Index(headers, "Period")
+
+	for {
+		row, readErr := reader.Read()
+		if readErr == io.EOF {
+			break
+		}
+
+		if readErr != nil {
+			return nil, errors.New("failed to read metricsMasterFile row")
+		}
+
+		if err = h.createOrUpdateMetric(ctx, row[idxName], row[idxType], row[idxPeriod]); err != nil {
+			fmt.Println(fmt.Sprintf("-[%s] fail, %s", row[idxName], err))
+			continue
+		}
+
+		fmt.Println(fmt.Sprintf("-[%s] success", row[idxName]))
+	}
+
+	return "\nsuccessfully loaded metrics", nil
+}
+
+func (h *marketDataHandler) LoadMarketHolidays(ctx *gofr.Context) (any, error) {
+	reader := csv.NewReader(strings.NewReader(marketHolidaysMaster))
+
+	headers, err := reader.Read()
+	if err != nil {
+		return nil, errors.New("failed to read marketHolidaysMasterFile headers")
+	}
+
+	idxDate := slices.Index(headers, "Date")
+	idxDescription := slices.Index(headers, "Description")
+
+	for {
+		row, readErr := reader.Read()
+		if readErr == io.EOF {
+			break
+		}
+
+		if readErr != nil {
+			return nil, errors.New("failed to read marketHolidaysMasterFile row")
+		}
+
+		if err = h.createOrUpdateMarketHolidays(ctx, row[idxDate], row[idxDescription]); err != nil {
+			fmt.Println(fmt.Sprintf("-[%s] fail, %s", row[idxDate], err))
+			continue
+		}
+
+		fmt.Println(fmt.Sprintf("-[%s] success", row[idxDate]))
+	}
+
+	return "\nsuccessfully loaded market-holidays", nil
+}
+
+func (h *marketDataHandler) LoadLTP(ctx *gofr.Context) (any, error) {
 	currentTime := time.Now().In(h.tz)
 	today := currentTime.Truncate(-24 * time.Hour)
 
@@ -99,58 +212,11 @@ func (h *marketDataHandler) LoadLTPData(ctx *gofr.Context) (any, error) {
 	return "\nsuccessfully loaded ltp data @ " + currentTime.Format(time.DateTime), nil
 }
 
-func (h *marketDataHandler) LoadOHLCData(ctx *gofr.Context) (any, error) {
-	today := time.Now().In(h.tz)
-
-	marketDays, err := h.getMarketDays(ctx, today, today)
-	if err != nil {
-		return nil, err
+func (h *marketDataHandler) LoadSecurityStats(ctx *gofr.Context) (any, error) {
+	if ctx.Param("start-date") == "" && ctx.Param("end-date") == "" {
+		return h.LoadTodaysSecurityStats(ctx)
 	}
 
-	if len(marketDays) != 1 || marketDays[0].Format(time.DateOnly) != today.Format(time.DateOnly) {
-		return nil, errors.New("cannot load data on market holiday - " + today.Format(time.DateOnly))
-	}
-
-	isinFilter := ctx.Param("isin")
-
-	securityISINs, securityIDMap, err := h.getSecurityDetails(ctx, isinFilter)
-	if err != nil {
-		return nil, err
-	}
-
-	if isinFilter != "" && !slices.Contains(securityISINs, isinFilter) {
-		return nil, errors.New("security not found with isin - " + isinFilter)
-	}
-
-	ohlcData, err := h.client.OHLCBulk(ctx, securityISINs)
-	if err != nil {
-		return nil, errors.New("failed to get ohlcData, err: " + err.Error())
-	}
-
-	for i := range securityISINs {
-		securityID := securityIDMap[securityISINs[i]]
-
-		idx := slices.IndexFunc(ohlcData, func(data *dataProviders.OHLCData) bool {
-			return data.ISIN == securityISINs[i]
-		})
-
-		if idx == -1 {
-			fmt.Println(fmt.Sprintf("-[%s] fail, ltp data not found", securityISINs[i]))
-			continue
-		}
-
-		if err = h.createOrUpdateSecurityStat(ctx, securityID, today, ohlcData[idx]); err != nil {
-			fmt.Println(fmt.Sprintf("-[%s] fail, %s", securityISINs[i], err))
-			continue
-		}
-
-		fmt.Println(fmt.Sprintf("-[%s] success", securityISINs[i]))
-	}
-
-	return "\nsuccessfully loaded ohlc data @ " + today.Format(time.DateOnly), nil
-}
-
-func (h *marketDataHandler) LoadHistoricalOHLCData(ctx *gofr.Context) (any, error) {
 	startDate, err := time.Parse(time.DateOnly, ctx.Param("start-date"))
 	if err != nil {
 		return nil, errors.New("invalid start-date")
@@ -215,58 +281,14 @@ func (h *marketDataHandler) LoadHistoricalOHLCData(ctx *gofr.Context) (any, erro
 		fmt.Println(fmt.Sprintf("-[%s] success", securityISINs[i]))
 	}
 
-	return fmt.Println(fmt.Sprintf("\nsuccessfully loaded ohlc data for interval %s-%s", startDate.Format(time.DateOnly), endDate.Format(time.DateOnly)))
+	return fmt.Println(fmt.Sprintf("\nsuccessfully loaded ohlc data for interval %s to %s", startDate.Format(time.DateOnly), endDate.Format(time.DateOnly)))
 }
 
-func (h *marketDataHandler) LoadMetrics(ctx *gofr.Context) (any, error) {
-	today := time.Now().Truncate(-24 * time.Hour)
-
-	marketDays, err := h.getMarketDays(ctx, today, today)
-	if err != nil {
-		return nil, err
+func (h *marketDataHandler) LoadSecurityMetrics(ctx *gofr.Context) (any, error) {
+	if ctx.Param("start-date") == "" || ctx.Param("end-date") == "" {
+		return h.LoadTodaysSecurityMetrics(ctx)
 	}
 
-	if len(marketDays) != 1 || marketDays[0].Format(time.DateOnly) != today.Format(time.DateOnly) {
-		return nil, errors.New("cannot load data on market holiday - " + today.Format(time.DateOnly))
-	}
-
-	isinFilter := ctx.Param("isin")
-
-	securityISINs, securityIDMap, err := h.getSecurityDetails(ctx, isinFilter)
-	if err != nil {
-		return nil, err
-	}
-
-	if isinFilter != "" && !slices.Contains(securityISINs, isinFilter) {
-		return nil, errors.New("security not found with isin - " + isinFilter)
-	}
-
-	metricIDs, metricsNames, err := h.getMetricIDs(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range securityISINs {
-		securityID := securityIDMap[securityISINs[i]]
-
-		for j := range metricIDs {
-			metricID := metricIDs[j]
-
-			if err = h.createSecurityMetric(ctx, securityID, metricID, today); err != nil {
-				fmt.Println(fmt.Sprintf("--[%s][%s] fail, %s", securityISINs[i], metricsNames[metricID], err))
-				continue
-			}
-
-			fmt.Println(fmt.Sprintf("--[%s][%s] success", securityISINs[i], metricsNames[metricID]))
-		}
-
-		fmt.Println(fmt.Sprintf("-[%s] success", securityISINs[i]))
-	}
-
-	return "\nsuccessfully loaded metrics data @ " + today.Format(time.DateTime), nil
-}
-
-func (h *marketDataHandler) LoadHistoricalMetrics(ctx *gofr.Context) (any, error) {
 	startDate, err := time.Parse(time.DateOnly, ctx.Param("start-date"))
 	if err != nil {
 		return nil, errors.New("invalid start-date")
@@ -327,7 +349,426 @@ func (h *marketDataHandler) LoadHistoricalMetrics(ctx *gofr.Context) (any, error
 		fmt.Println(fmt.Sprintf("-[%s] success", securityISINs[i]))
 	}
 
-	return fmt.Println(fmt.Sprintf("\nsuccessfully loaded metrics data for interval %s-%s", startDate.Format(time.DateOnly), endDate.Format(time.DateOnly)))
+	return fmt.Println(fmt.Sprintf("\nsuccessfully loaded security metrics data for interval %s to %s", startDate.Format(time.DateOnly), endDate.Format(time.DateOnly)))
+}
+
+func (h *marketDataHandler) LoadTodaysSecurityStats(ctx *gofr.Context) (any, error) {
+	today := time.Now().In(h.tz)
+
+	marketDays, err := h.getMarketDays(ctx, today, today)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(marketDays) != 1 || marketDays[0].Format(time.DateOnly) != today.Format(time.DateOnly) {
+		return nil, errors.New("cannot load data on market holiday - " + today.Format(time.DateOnly))
+	}
+
+	isinFilter := ctx.Param("isin")
+
+	securityISINs, securityIDMap, err := h.getSecurityDetails(ctx, isinFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	if isinFilter != "" && !slices.Contains(securityISINs, isinFilter) {
+		return nil, errors.New("security not found with isin - " + isinFilter)
+	}
+
+	ohlcData, err := h.client.OHLCBulk(ctx, securityISINs)
+	if err != nil {
+		return nil, errors.New("failed to get ohlcData, err: " + err.Error())
+	}
+
+	for i := range securityISINs {
+		securityID := securityIDMap[securityISINs[i]]
+
+		idx := slices.IndexFunc(ohlcData, func(data *dataProviders.OHLCData) bool {
+			return data.ISIN == securityISINs[i]
+		})
+
+		if idx == -1 {
+			fmt.Println(fmt.Sprintf("-[%s] fail, ltp data not found", securityISINs[i]))
+			continue
+		}
+
+		if err = h.createOrUpdateSecurityStat(ctx, securityID, today, ohlcData[idx]); err != nil {
+			fmt.Println(fmt.Sprintf("-[%s] fail, %s", securityISINs[i], err))
+			continue
+		}
+
+		fmt.Println(fmt.Sprintf("-[%s] success", securityISINs[i]))
+	}
+
+	return "\nsuccessfully loaded ohlc data @ " + today.Format(time.DateOnly), nil
+}
+
+func (h *marketDataHandler) LoadTodaysSecurityMetrics(ctx *gofr.Context) (any, error) {
+	today := time.Now().Truncate(-24 * time.Hour)
+
+	marketDays, err := h.getMarketDays(ctx, today, today)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(marketDays) != 1 || marketDays[0].Format(time.DateOnly) != today.Format(time.DateOnly) {
+		return nil, errors.New("cannot load data on market holiday - " + today.Format(time.DateOnly))
+	}
+
+	isinFilter := ctx.Param("isin")
+
+	securityISINs, securityIDMap, err := h.getSecurityDetails(ctx, isinFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	if isinFilter != "" && !slices.Contains(securityISINs, isinFilter) {
+		return nil, errors.New("security not found with isin - " + isinFilter)
+	}
+
+	metricIDs, metricsNames, err := h.getMetricIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range securityISINs {
+		securityID := securityIDMap[securityISINs[i]]
+
+		for j := range metricIDs {
+			metricID := metricIDs[j]
+
+			if err = h.createSecurityMetric(ctx, securityID, metricID, today); err != nil {
+				fmt.Println(fmt.Sprintf("--[%s][%s] fail, %s", securityISINs[i], metricsNames[metricID], err))
+				continue
+			}
+
+			fmt.Println(fmt.Sprintf("--[%s][%s] success", securityISINs[i], metricsNames[metricID]))
+		}
+
+		fmt.Println(fmt.Sprintf("-[%s] success", securityISINs[i]))
+	}
+
+	return "\nsuccessfully loaded security metrics data @ " + today.Format(time.DateTime), nil
+}
+
+func (h *marketDataHandler) createOrUpdateSecurity(ctx *gofr.Context, ISIN, symbol, industry, name string) error {
+	securityID, exists, err := h.checkIfSecurityAlreadyExists(ctx, ISIN)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		if err = h.updateSecurity(ctx, securityID, ISIN, symbol, industry, name); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if err = h.createSecurity(ctx, ISIN, symbol, industry, name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *marketDataHandler) checkIfSecurityAlreadyExists(ctx *gofr.Context, ISIN string) (int, bool, error) {
+	securityService := ctx.GetHTTPService("security-service")
+
+	resp, err := securityService.Get(ctx, "securities", map[string]any{"isin": ISIN})
+	if err != nil {
+		return 0, false, errors.New("failed GET /security-service/securities, err: " + err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+
+		return 0, false, errors.New("non 200 resp GET /security-service/securities, resp: " + string(body))
+	}
+
+	var res struct {
+		Data []*struct {
+			ID int `json:"id"`
+		} `json:"data"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil {
+		return 0, false, errors.New("unexpected resp GET /security-service/securities, unmarshallErr: " + err.Error())
+	}
+
+	if len(res.Data) > 0 {
+		return res.Data[0].ID, true, nil
+	}
+
+	return 0, false, nil
+}
+
+func (h *marketDataHandler) updateSecurity(ctx *gofr.Context, securityID int, ISIN, symbol, industry, name string) error {
+	payload := map[string]any{
+		"userId":   1,
+		"isin":     ISIN,
+		"symbol":   symbol,
+		"industry": industry,
+		"name":     name,
+	}
+
+	body, _ := json.Marshal(payload)
+
+	resp, err := ctx.GetHTTPService("security-service").Patch(ctx, fmt.Sprintf("securities/%d", securityID), nil, body)
+	if err != nil {
+		return errors.New(fmt.Sprintf("failed PATCH /security-service/securities/%d, err: %s", securityID, err))
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return errors.New(fmt.Sprintf("non 200 resp PATCH /security-service/securities/%d, resp: %s", securityID, string(b)))
+	}
+
+	return nil
+}
+
+func (h *marketDataHandler) createSecurity(ctx *gofr.Context, ISIN, symbol, industry, name string) error {
+	payload := map[string]any{
+		"userId":   1,
+		"isin":     ISIN,
+		"symbol":   symbol,
+		"industry": industry,
+		"name":     name,
+	}
+
+	body, _ := json.Marshal(payload)
+
+	resp, err := ctx.GetHTTPService("security-service").Post(ctx, "securities", nil, body)
+	if err != nil {
+		return errors.New("failed POST /security-service/securities, err: " + err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return errors.New("non 201 resp POST /security-service/securities, resp: " + string(b))
+	}
+
+	return nil
+}
+
+func (h *marketDataHandler) createOrUpdateMetric(ctx *gofr.Context, name, typ, period string) error {
+	interval, _ := strconv.Atoi(period)
+
+	metricID, exists, err := h.checkIfMetricAlreadyExists(ctx, typ, interval)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		if err = h.updateMetric(ctx, metricID, name); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if err = h.createMetric(ctx, name, typ, interval); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *marketDataHandler) checkIfMetricAlreadyExists(ctx *gofr.Context, typ string, period int) (int, bool, error) {
+	securityService := ctx.GetHTTPService("security-service")
+
+	resp, err := securityService.Get(ctx, "metrics", map[string]any{"type": typ, "period": period})
+	if err != nil {
+		return 0, false, errors.New("failed GET /security-service/metrics, err: " + err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+
+		return 0, false, errors.New("non 200 resp GET /security-service/metrics, resp: " + string(body))
+	}
+
+	var res struct {
+		Data []*struct {
+			ID int `json:"id"`
+		} `json:"data"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil {
+		return 0, false, errors.New("unexpected resp GET /security-service/metrics, unmarshallErr: " + err.Error())
+	}
+
+	if len(res.Data) > 0 {
+		return res.Data[0].ID, true, nil
+	}
+
+	return 0, false, nil
+}
+
+func (h *marketDataHandler) updateMetric(ctx *gofr.Context, metricID int, name string) error {
+	payload := map[string]any{
+		"userId": 1,
+		"name":   name,
+	}
+
+	body, _ := json.Marshal(payload)
+
+	resp, err := ctx.GetHTTPService("security-service").Patch(ctx, fmt.Sprintf("metrics/%d", metricID), nil, body)
+	if err != nil {
+		return errors.New(fmt.Sprintf("failed PATCH /security-service/metrics/%d, err: %s", metricID, err))
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return errors.New(fmt.Sprintf("non 200 resp PATCH /security-service/metrics/%d, resp: %s", metricID, string(b)))
+	}
+
+	return nil
+}
+
+func (h *marketDataHandler) createMetric(ctx *gofr.Context, name, typ string, period int) error {
+	payload := map[string]any{
+		"userId": 1,
+		"name":   name,
+		"type":   typ,
+		"period": period,
+	}
+
+	body, _ := json.Marshal(payload)
+
+	resp, err := ctx.GetHTTPService("security-service").Post(ctx, "metrics", nil, body)
+	if err != nil {
+		return errors.New("failed POST /security-service/metrics, err: " + err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return errors.New("non 201 resp POST /security-service/metrics, resp: " + string(b))
+	}
+
+	return nil
+}
+
+func (h *marketDataHandler) createOrUpdateMarketHolidays(ctx *gofr.Context, date, description string) error {
+	marketHolidayID, exists, err := h.checkIfMarketHolidayAlreadyExists(ctx, date)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		if err = h.updateMarketHoliday(ctx, marketHolidayID, description); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if err = h.createMarketHoliday(ctx, date, description); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *marketDataHandler) checkIfMarketHolidayAlreadyExists(ctx *gofr.Context, date string) (int, bool, error) {
+	securityService := ctx.GetHTTPService("security-service")
+
+	resp, err := securityService.Get(ctx, "market-holidays", map[string]any{"date": date})
+	if err != nil {
+		return 0, false, errors.New("failed GET /security-service/market-holidays, err: " + err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+
+		return 0, false, errors.New("non 200 resp GET /security-service/market-holidays, resp: " + string(body))
+	}
+
+	var res struct {
+		Data []*struct {
+			ID int `json:"id"`
+		} `json:"data"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil {
+		return 0, false, errors.New("unexpected resp GET /security-service/market-holidays, unmarshallErr: " + err.Error())
+	}
+
+	if len(res.Data) > 0 {
+		return res.Data[0].ID, true, nil
+	}
+
+	return 0, false, nil
+}
+
+func (h *marketDataHandler) updateMarketHoliday(ctx *gofr.Context, marketHolidayID int, description string) error {
+	payload := map[string]any{
+		"userId":      1,
+		"description": description,
+	}
+
+	body, _ := json.Marshal(payload)
+
+	resp, err := ctx.GetHTTPService("security-service").Patch(ctx, fmt.Sprintf("market-holidays/%d", marketHolidayID), nil, body)
+	if err != nil {
+		return errors.New(fmt.Sprintf("failed PATCH /security-service/market-holidays/%d, err: %s", marketHolidayID, err))
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return errors.New(fmt.Sprintf("non 200 resp PATCH /security-service/market-holidays/%d, resp: %s", marketHolidayID, string(b)))
+	}
+
+	return nil
+}
+
+func (h *marketDataHandler) createMarketHoliday(ctx *gofr.Context, date, description string) error {
+	payload := map[string]any{
+		"userId":      1,
+		"date":        date,
+		"description": description,
+	}
+
+	body, _ := json.Marshal(payload)
+
+	resp, err := ctx.GetHTTPService("security-service").Post(ctx, "market-holidays", nil, body)
+	if err != nil {
+		return errors.New("failed POST /security-service/market-holidays, err: " + err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 {
+		b, _ := io.ReadAll(resp.Body)
+
+		return errors.New("non 201 resp POST /security-service/market-holidays, resp: " + string(b))
+	}
+
+	return nil
 }
 
 func (h *marketDataHandler) getMarketDays(ctx *gofr.Context, startDate, endDate time.Time) ([]time.Time, error) {
@@ -601,7 +1042,7 @@ func (h *marketDataHandler) createSecurityStat(ctx *gofr.Context, securityID int
 }
 
 func (h *marketDataHandler) createOrUpdateSecurityMetric(ctx *gofr.Context, securityID, metricID int, date time.Time) error {
-	securityMetricID, metricExists, err := h.checkIfMetricAlreadyExists(ctx, securityID, metricID, date)
+	securityMetricID, metricExists, err := h.checkIfSecurityMetricAlreadyExists(ctx, securityID, metricID, date)
 	if err != nil {
 		return err
 	}
@@ -621,7 +1062,7 @@ func (h *marketDataHandler) createOrUpdateSecurityMetric(ctx *gofr.Context, secu
 	return nil
 }
 
-func (h *marketDataHandler) checkIfMetricAlreadyExists(ctx *gofr.Context, securityID, metricID int, date time.Time) (int, bool, error) {
+func (h *marketDataHandler) checkIfSecurityMetricAlreadyExists(ctx *gofr.Context, securityID, metricID int, date time.Time) (int, bool, error) {
 	securityService := ctx.GetHTTPService("security-service")
 
 	resp, err := securityService.Get(ctx, "security-metrics", map[string]any{"securityId": securityID, "metricId": metricID, "date": date.Format(time.DateOnly)})

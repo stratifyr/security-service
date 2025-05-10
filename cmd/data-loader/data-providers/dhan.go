@@ -16,7 +16,7 @@ import (
 	"gofr.dev/pkg/gofr"
 )
 
-//go:embed dhan-scrip-master_NSE_EQ.csv
+//go:embed dhan-scrip-master.csv
 var dhanMasterScrip string
 
 type client struct {

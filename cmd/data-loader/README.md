@@ -14,6 +14,18 @@ export SECURITY_SERVICE_HOST=http://localhost:8000
 ```
 
 ## Commands
+**load securities:** To load the securities from master list
+```bash
+data-loader load securities
+```
+**load metrics:** To load the metrics from master list
+```bash
+data-loader load metrics
+```
+**load market-holidays:** To load the market holidays from master list
+```bash
+data-loader load market-holidays
+```
 **load ltp:** To load last traded price for the securities
 ```bash
 data-loader load ltp
@@ -21,32 +33,30 @@ data-loader load ltp
 ```bash
 data-loader load ltp --isin=INE883A01011
 ```
-**load ohlc:** To load open, high, close and volume stats for the securities for this day
+**load security-stats:** To load open, high, close and volume stats for the securities
 ```bash
-data-loader load ohlc
+data-loader load security-stats
 ```
 ```bash
-data-loader load ohlc --isin=INE883A01011
-```
-**load historical-ohlc:** To load open, high, close and volume stats for the securities for the given interval
-```bash
-data-loader load historical-ohlc --start-date=2024-01-01 --end-date=2024-12-31
+data-loader load security-stats --isin=INE883A01011
 ```
 ```bash
-data-loader load historical-ohlc --isin=INE883A01011 --start-date=2024-01-01 --end-date=2024-12-31
-```
-**load metrics:** To load metrics like SMA, EMA, RSI etc. for the securities for this day
-```bash
-data-loader load metrics
+data-loader load security-stats --start-date=2024-01-01 --end-date=2024-12-31
 ```
 ```bash
-data-loader load metrics --isin=INE883A01011
+data-loader load security-stats --isin=INE883A01011 --start-date=2024-01-01 --end-date=2024-12-31
 ```
-**load historical-metrics:** To load metrics like SMA, EMA, RSI etc. for the securities for the given interval
+**load security-metrics:** To load configured metrics like SMA, EMA, RSI etc. for the securities
 ```bash
-data-loader load historical-metrics --start-date=2024-01-01 --end-date=2024-12-31
+data-loader load security-metrics
 ```
 ```bash
-data-loader load historical-metrics --isin=INE883A01011 --start-date=2024-01-01 --end-date=2024-12-31
+data-loader load security-metrics --isin=INE883A01011
+```
+```bash
+data-loader load security-metrics --start-date=2024-01-01 --end-date=2024-12-31
+```
+```bash
+data-loader load security-metrics --isin=INE883A01011 --start-date=2024-01-01 --end-date=2024-12-31
 ```
 
