@@ -21,7 +21,8 @@ type MetricStore interface {
 }
 
 type MetricFilter struct {
-	Type *MetricType
+	Type   *MetricType
+	Period int
 }
 
 type Metric struct {
@@ -144,7 +145,13 @@ func (f *MetricFilter) buildWhereClause() (clause string, values []interface{}) 
 	if f.Type != nil {
 		clause += " AND type = ?"
 
-		values = append(values, f.Type)
+		values = append(values, *f.Type)
+	}
+
+	if f.Period != 0 {
+		clause += " AND period = ?"
+
+		values = append(values, f.Period)
 	}
 
 	if clause != "" {

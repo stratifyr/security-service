@@ -50,6 +50,13 @@ func (h *metricHandler) Index(ctx *gofr.Context) (interface{}, error) {
 
 	var err error
 
+	if ctx.Param("period") != "" {
+		filter.Period, err = strconv.Atoi(ctx.Param("period"))
+		if err != nil {
+			return nil, http.ErrorInvalidParam{Params: []string{"period"}}
+		}
+	}
+
 	page := 1
 	if ctx.Param("page") != "" {
 		page, err = strconv.Atoi(ctx.Param("page"))

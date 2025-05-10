@@ -16,7 +16,8 @@ type MetricService interface {
 }
 
 type MetricFilter struct {
-	Type string
+	Type   string
+	Period int
 }
 
 type Metric struct {
@@ -44,8 +45,8 @@ type MetricUpdate struct {
 var MetricTypeIndicator = map[stores.MetricType]stores.MetricIndicator{
 	stores.SMA: stores.Trend,
 	stores.EMA: stores.Trend,
-	stores.RSI: stores.Trend,
-	stores.ROC: stores.Trend,
+	stores.RSI: stores.Momentum,
+	stores.ROC: stores.Momentum,
 	stores.ATR: stores.Volatility,
 	stores.VMA: stores.Volume,
 }
@@ -63,7 +64,8 @@ func (s *metricService) Index(ctx *gofr.Context, f *MetricFilter, page, perPage 
 	offset := limit * (page - 1)
 
 	filter := &stores.MetricFilter{
-		Type: nil,
+		Type:   nil,
+		Period: f.Period,
 	}
 
 	if f.Type != "" {
