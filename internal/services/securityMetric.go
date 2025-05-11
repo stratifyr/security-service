@@ -290,7 +290,7 @@ func (s *securityMetricService) computeROC(n int, lastNStats []*stores.SecurityS
 	currentPrice := lastNStats[0].Close
 	nDaysPriorPrice := lastNStats[n-1].Close
 
-	return (currentPrice - nDaysPriorPrice) / nDaysPriorPrice
+	return ((currentPrice - nDaysPriorPrice) / nDaysPriorPrice) * 100
 }
 
 func (s *securityMetricService) computeATR(n int, lastNStats []*stores.SecurityStat) float64 {

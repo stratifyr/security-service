@@ -364,6 +364,8 @@ func (s *securityService) computeAndSetNormalizedValues(resp *Security) {
 			if metric.Value > 70 || metric.Value < 30 {
 				metric.NormalizedValue = 0
 			}
+		case stores.ROC:
+			metric.NormalizedValue = metric.Value / 100
 
 		case stores.ATR:
 			metric.NormalizedValue = metric.Value / resp.SecurityStat.Close
