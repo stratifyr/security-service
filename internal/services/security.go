@@ -361,9 +361,14 @@ func (s *securityService) computeAndSetNormalizedValues(resp *Security) {
 		case stores.RSI:
 			metric.NormalizedValue = metric.Value / 100
 
-			if metric.Value > 70 || metric.Value < 30 {
-				metric.NormalizedValue = 0
+			if metric.Value > 70 {
+				metric.NormalizedValue = 0.7 - metric.NormalizedValue
 			}
+
+			if metric.Value < 30 {
+				metric.NormalizedValue = metric.NormalizedValue - 0.3
+			}
+
 		case stores.ROC:
 			metric.NormalizedValue = metric.Value / 100
 
