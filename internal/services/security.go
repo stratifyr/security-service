@@ -376,7 +376,7 @@ func (s *securityService) computeAndSetNormalizedValues(resp *Security) {
 			metric.NormalizedValue = metric.Value / resp.SecurityStat.Close
 
 		case stores.VMA:
-			metric.NormalizedValue = metric.Value / float64(resp.SecurityStat.Volume)
+			metric.NormalizedValue = (float64(resp.SecurityStat.Volume) - metric.Value) / float64(resp.SecurityStat.Volume)
 
 		default:
 			metric.NormalizedValue = metric.Value
