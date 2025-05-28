@@ -392,9 +392,9 @@ func (c *client) HistoricalOHLC(ctx *gofr.Context, isin string, startDate, endDa
 			OHLCData: &OHLCData{
 				ISIN:   isin,
 				Open:   res.Open[i],
-				High:   res.Open[i],
-				Low:    res.Open[i],
-				Close:  res.Open[i],
+				High:   res.High[i],
+				Low:    res.Low[i],
+				Close:  res.Close[i],
 				Volume: int(res.Volume[i]),
 			},
 		}
