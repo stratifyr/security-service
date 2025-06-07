@@ -169,20 +169,21 @@ func (c *client) LTPBulk(ctx *gofr.Context, isins []string) ([]*LTPData, error) 
 		return nil, errors.New("unexpected resp POST /v2/marketfeed/ltp, err: " + err.Error())
 	}
 
-	var ltpData = make([]*LTPData, len(isins))
+	var ltpData []*LTPData
 
 	for i := range isins {
 		securityID := c.isinSecurityIDMapping[isins[i]]
 
 		data, ok := res.Data.NseEQ[strconv.Itoa(securityID)]
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("missing data for %s, POST /v2/marketfeed/ltp", isins[i]))
+			ctx.Warnf(fmt.Sprintf("missing data for %s, POST /v2/marketfeed/ltp", isins[i]))
+			continue
 		}
 
-		ltpData[i] = &LTPData{
+		ltpData = append(ltpData, &LTPData{
 			ISIN: isins[i],
 			LTP:  data.LTP,
-		}
+		})
 	}
 
 	return ltpData, nil

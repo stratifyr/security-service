@@ -37,7 +37,10 @@ func main() {
 		log.Fatalf("failed to get data provider, err: %s", err)
 	}
 
-	istLocation, _ := time.LoadLocation("Asia/Kolkata")
+	istLocation, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		log.Fatalf("failed to load timezone: %v", err)
+	}
 
 	h := &marketDataHandler{
 		client: client,
@@ -160,17 +163,6 @@ func (h *marketDataHandler) LoadMarketHolidays(ctx *gofr.Context) (any, error) {
 
 func (h *marketDataHandler) LoadLTP(ctx *gofr.Context) (any, error) {
 	currentTime := time.Now().In(h.tz)
-	today := currentTime.Truncate(-24 * time.Hour)
-
-	marketDays, err := h.getMarketDays(ctx, today, today)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(marketDays) != 1 || marketDays[0].Format(time.DateOnly) != today.Format(time.DateOnly) {
-		return nil, errors.New("cannot load data on market holiday - " + today.Format(time.DateOnly))
-	}
-
 	isinFilter := ctx.Param("isin")
 
 	securityISINs, securityIDMap, err := h.getSecurityDetails(ctx, isinFilter)
