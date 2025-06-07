@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ltp-loader
+  namespace: default
+spec:
+  schedule: "* 3-10 * * 1-5"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: ltp-loader
+              image: stratifyr/data-loader:latest
+              imagePullPolicy: Never
+              args:
+                - load
+                - ltp
+              envFrom:
+                - secretRef:
+                    name: data-loader-secrets
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: stats-loader
+  namespace: default
+spec:
+  schedule: "30 13 * * 1-5"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: stats-loader
+              image: stratifyr/data-loader:latest
+              imagePullPolicy: Never
+              command:
+                - sh
+                - -c
+                - |
+                  ./data-loader load security-stats &&
+                  ./data-loader load security-metrics
+              envFrom:
+                - secretRef:
+                    name: data-loader-secrets
+          restartPolicy: OnFailure
