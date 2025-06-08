@@ -118,11 +118,38 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		return nil, 0, nil
 	}
 
-	var resp = make([]*Security, len(securities))
+	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var metricsMap = make(map[int]*Metric)
+
+	for i := range metrics {
+		metricsMap[metrics[i].ID] = metrics[i]
+	}
+
+	var (
+		sem   = make(chan struct{}, 5)
+		resp  = make([]*Security, len(securities))
+		errCh = make(chan error, len(securities))
+	)
 
 	for i := range securities {
-		resp[i], err = s.buildResp(ctx, securities[i])
-		if err != nil {
+		sem <- struct{}{}
+		i := i
+		resp[i] = &Security{}
+
+		go func() {
+			defer func() { <-sem }()
+
+			resp[i], err = s.buildResp(ctx, securities[i], metricsMap)
+			errCh <- err
+		}()
+	}
+
+	for j := 0; j < len(securities); j++ {
+		if err := <-errCh; err != nil {
 			return nil, 0, err
 		}
 	}
@@ -136,7 +163,18 @@ func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 		return nil, err
 	}
 
-	return s.buildResp(ctx, security)
+	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var metricsMap = make(map[int]*Metric)
+
+	for i := range metrics {
+		metricsMap[metrics[i].ID] = metrics[i]
+	}
+
+	return s.buildResp(ctx, security, metricsMap)
 }
 
 func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error) {
@@ -165,7 +203,18 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		return nil, err
 	}
 
-	return s.buildResp(ctx, security)
+	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var metricsMap = make(map[int]*Metric)
+
+	for i := range metrics {
+		metricsMap[metrics[i].ID] = metrics[i]
+	}
+
+	return s.buildResp(ctx, security, metricsMap)
 }
 
 func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
@@ -206,10 +255,21 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		return nil, err
 	}
 
-	return s.buildResp(ctx, security)
+	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var metricsMap = make(map[int]*Metric)
+
+	for i := range metrics {
+		metricsMap[metrics[i].ID] = metrics[i]
+	}
+
+	return s.buildResp(ctx, security, metricsMap)
 }
 
-func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security) (*Security, error) {
+func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, metricsMap map[int]*Metric) (*Security, error) {
 	resp := &Security{
 		ID:              model.ID,
 		ISIN:            model.ISIN,
@@ -228,7 +288,7 @@ func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security) (
 		return nil, err
 	}
 
-	if err := s.bindSecurityMetricsDetails(ctx, resp); err != nil {
+	if err := s.bindSecurityMetricsDetails(ctx, resp, metricsMap); err != nil {
 		return nil, err
 	}
 
@@ -270,18 +330,7 @@ func (s *securityService) bindSecurityStat(ctx *gofr.Context, resp *Security) er
 	return nil
 }
 
-func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Security) error {
-	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
-	if err != nil {
-		return err
-	}
-
-	var metricsMap = make(map[int]*Metric)
-
-	for i := range metrics {
-		metricsMap[metrics[i].ID] = metrics[i]
-	}
-
+func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Security, metricsMap map[int]*Metric) error {
 	if resp.SecurityStat == nil {
 		return nil
 	}

@@ -31,6 +31,10 @@ const (
 	Services
 	Telecommunication
 	Textiles
+	Index
+	Bond
+	Gold
+	Silver
 )
 
 type Industry int
@@ -64,6 +68,10 @@ func (s *industryStore) Index(ctx *gofr.Context) []Industry {
 		Services,
 		Telecommunication,
 		Textiles,
+		Index,
+		Bond,
+		Gold,
+		Silver,
 	}
 }
 
@@ -90,6 +98,10 @@ func (ex Industry) String() string {
 		Services:                         "Services",
 		Telecommunication:                "Telecommunication",
 		Textiles:                         "Textiles",
+		Index:                            "Index",
+		Bond:                             "Bond",
+		Gold:                             "Gold",
+		Silver:                           "Silver",
 	}
 
 	return conversionMap[ex]
@@ -118,6 +130,10 @@ func IndustryFromString(str string) (Industry, error) {
 		"Services":                          Services,
 		"Telecommunication":                 Telecommunication,
 		"Textiles":                          Textiles,
+		"Index":                             Index,
+		"Bond":                              Bond,
+		"Gold":                              Gold,
+		"Silver":                            Silver,
 	}
 
 	industry, ok := conversionMap[str]
