@@ -27,7 +27,7 @@ func main() {
 	marketDayService := services.NewMarketDayService(marketHolidayStore)
 	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore)
 	securityMetricService := services.NewSecurityMetricService(marketDayService, metricStore, securityStatStore, securityMetricStore)
-	securityService := services.NewSecurityService(securityStatService, metricService, securityMetricService, securityStore)
+	securityService := services.NewSecurityService(marketDayService, metricStore, securityMetricStore, securityStatStore, securityStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)
 	metricHandler := handlers.NewMetricHandler(metricService)

@@ -78,19 +78,21 @@ type SecurityUpdate struct {
 }
 
 type securityService struct {
-	securityStatService   SecurityStatService
-	metricsService        MetricService
-	securityMetricService SecurityMetricService
-	store                 stores.SecurityStore
+	marketDayService    MarketDayService
+	metricsStore        stores.MetricStore
+	securityMetricStore stores.SecurityMetricStore
+	securityStatStore   stores.SecurityStatStore
+	store               stores.SecurityStore
 }
 
-func NewSecurityService(securityStatService SecurityStatService, metricsService MetricService,
-	securityMetricService SecurityMetricService, store stores.SecurityStore) *securityService {
+func NewSecurityService(marketDayService MarketDayService, metricStore stores.MetricStore, securityMetricStore stores.SecurityMetricStore,
+	securityStatStore stores.SecurityStatStore, store stores.SecurityStore) *securityService {
 	return &securityService{
-		securityStatService:   securityStatService,
-		metricsService:        metricsService,
-		securityMetricService: securityMetricService,
-		store:                 store,
+		marketDayService:    marketDayService,
+		metricsStore:        metricStore,
+		securityMetricStore: securityMetricStore,
+		securityStatStore:   securityStatStore,
+		store:               store,
 	}
 }
 
@@ -118,15 +120,20 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		return nil, 0, nil
 	}
 
-	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	metricsMap, err := s.getMetricsMap(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	var metricsMap = make(map[int]*Metric)
+	var securityIDs = make([]int, len(securities))
 
-	for i := range metrics {
-		metricsMap[metrics[i].ID] = metrics[i]
+	for i := range securities {
+		securityIDs[i] = securities[i].ID
+	}
+
+	securityStatsMap, err := s.getStatsMap(ctx, securityIDs)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	var (
@@ -143,7 +150,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		go func() {
 			defer func() { <-sem }()
 
-			resp[i], err = s.buildResp(ctx, securities[i], metricsMap)
+			resp[i], err = s.buildResp(ctx, securities[i], metricsMap, securityStatsMap)
 			errCh <- err
 		}()
 	}
@@ -163,18 +170,17 @@ func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 		return nil, err
 	}
 
-	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	metricsMap, err := s.getMetricsMap(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var metricsMap = make(map[int]*Metric)
-
-	for i := range metrics {
-		metricsMap[metrics[i].ID] = metrics[i]
+	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID})
+	if err != nil {
+		return nil, err
 	}
 
-	return s.buildResp(ctx, security, metricsMap)
+	return s.buildResp(ctx, security, metricsMap, securityStatsMap)
 }
 
 func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error) {
@@ -203,18 +209,17 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		return nil, err
 	}
 
-	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	metricsMap, err := s.getMetricsMap(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var metricsMap = make(map[int]*Metric)
-
-	for i := range metrics {
-		metricsMap[metrics[i].ID] = metrics[i]
+	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID})
+	if err != nil {
+		return nil, err
 	}
 
-	return s.buildResp(ctx, security, metricsMap)
+	return s.buildResp(ctx, security, metricsMap, securityStatsMap)
 }
 
 func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
@@ -255,21 +260,20 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		return nil, err
 	}
 
-	metrics, _, err := s.metricsService.Index(ctx, &MetricFilter{}, 0, 0)
+	metricsMap, err := s.getMetricsMap(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var metricsMap = make(map[int]*Metric)
-
-	for i := range metrics {
-		metricsMap[metrics[i].ID] = metrics[i]
+	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID})
+	if err != nil {
+		return nil, err
 	}
 
-	return s.buildResp(ctx, security, metricsMap)
+	return s.buildResp(ctx, security, metricsMap, securityStatsMap)
 }
 
-func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, metricsMap map[int]*Metric) (*Security, error) {
+func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, metricsMap map[int]*stores.Metric, securityStatsMap map[int]*stores.SecurityStat) (*Security, error) {
 	resp := &Security{
 		ID:              model.ID,
 		ISIN:            model.ISIN,
@@ -284,7 +288,7 @@ func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, m
 		SecurityMetrics: nil,
 	}
 
-	if err := s.bindSecurityStat(ctx, resp); err != nil {
+	if err := s.bindSecurityStat(resp, securityStatsMap); err != nil {
 		return nil, err
 	}
 
@@ -297,13 +301,9 @@ func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, m
 	return resp, nil
 }
 
-func (s *securityService) bindSecurityStat(ctx *gofr.Context, resp *Security) error {
-	securityStat, _, err := s.securityStatService.Index(ctx, &SecurityStatFilter{SecurityID: resp.ID}, 1, 0)
-	if err != nil {
-		return err
-	}
-
-	if len(securityStat) < 1 {
+func (s *securityService) bindSecurityStat(resp *Security, securityStatsMap map[int]*stores.SecurityStat) error {
+	securityStat, ok := securityStatsMap[resp.ID]
+	if !ok {
 		return nil
 	}
 
@@ -317,27 +317,27 @@ func (s *securityService) bindSecurityStat(ctx *gofr.Context, resp *Security) er
 		Low        float64
 		Volume     int
 	}{
-		ID:         securityStat[0].ID,
-		SecurityID: securityStat[0].SecurityID,
-		Date:       securityStat[0].Date,
-		Open:       securityStat[0].Open,
-		Close:      securityStat[0].Close,
-		High:       securityStat[0].High,
-		Low:        securityStat[0].Low,
-		Volume:     securityStat[0].Volume,
+		ID:         securityStat.ID,
+		SecurityID: securityStat.SecurityID,
+		Date:       securityStat.Date,
+		Open:       securityStat.Open,
+		Close:      securityStat.Close,
+		High:       securityStat.High,
+		Low:        securityStat.Low,
+		Volume:     securityStat.Volume,
 	}
 
 	return nil
 }
 
-func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Security, metricsMap map[int]*Metric) error {
+func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Security, metricsMap map[int]*stores.Metric) error {
 	if resp.SecurityStat == nil {
 		return nil
 	}
 
 	date := resp.SecurityStat.Date
 
-	securityMetrics, _, err := s.securityMetricService.Index(ctx, &SecurityMetricFilter{SecurityID: resp.ID, Date: date}, 0, 0)
+	securityMetrics, err := s.securityMetricStore.Index(ctx, &stores.SecurityMetricFilter{SecurityID: resp.ID, Date: date}, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -389,14 +389,49 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 			}{
 				ID:        securityMetrics[i].MetricID,
 				Name:      metricsMap[securityMetrics[i].MetricID].Name,
-				Type:      metricsMap[securityMetrics[i].MetricID].Type,
+				Type:      metricsMap[securityMetrics[i].MetricID].Type.String(),
 				Period:    metricsMap[securityMetrics[i].MetricID].Period,
-				Indicator: metricsMap[securityMetrics[i].MetricID].Indicator,
+				Indicator: metricsMap[securityMetrics[i].MetricID].Indicator.String(),
 			},
 		}
 	}
 
 	return nil
+}
+
+func (s *securityService) getMetricsMap(ctx *gofr.Context) (map[int]*stores.Metric, error) {
+	metrics, err := s.metricsStore.Index(ctx, &stores.MetricFilter{}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var metricsMap = make(map[int]*stores.Metric)
+
+	for i := range metrics {
+		metricsMap[metrics[i].ID] = metrics[i]
+	}
+
+	return metricsMap, nil
+}
+
+func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int) (map[int]*stores.SecurityStat, error) {
+	dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDays: 1})
+	if err != nil {
+		return nil, err
+	}
+
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: dates}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var securityStatsMap = make(map[int]*stores.SecurityStat)
+
+	for i := range securityStats {
+		securityStatsMap[securityStats[i].SecurityID] = securityStats[i]
+	}
+
+	return securityStatsMap, nil
 }
 
 func (s *securityService) computeAndSetNormalizedValues(resp *Security) {

@@ -204,7 +204,7 @@ func (s *securityMetricService) computeMetricValue(ctx *gofr.Context, securityID
 		return 0, err
 	}
 
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityID: securityID, Dates: marketDays}, 0, 0)
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{securityID}, Dates: marketDays}, 0, 0)
 	if err != nil {
 		return 0, err
 	}

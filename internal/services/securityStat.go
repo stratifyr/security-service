@@ -69,20 +69,22 @@ func (s *securityStatService) Index(ctx *gofr.Context, f *SecurityStatFilter, pa
 	limit := perPage
 	offset := limit * (page - 1)
 
-	filter := &stores.SecurityStatFilter{
-		SecurityID: f.SecurityID,
+	var filter stores.SecurityStatFilter
+
+	if f.SecurityID != 0 {
+		filter.SecurityIDs = []int{f.SecurityID}
 	}
 
 	if f.Date != (time.Time{}) {
 		filter.Dates = []time.Time{f.Date}
 	}
 
-	securityStats, err := s.store.Index(ctx, filter, limit, offset)
+	securityStats, err := s.store.Index(ctx, &filter, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	count, err := s.store.Count(ctx, filter)
+	count, err := s.store.Count(ctx, &filter)
 	if err != nil {
 		return nil, 0, err
 	}

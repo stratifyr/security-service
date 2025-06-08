@@ -21,8 +21,8 @@ type SecurityStatStore interface {
 }
 
 type SecurityStatFilter struct {
-	SecurityID int
-	Dates      []time.Time
+	SecurityIDs []int
+	Dates       []time.Time
 }
 
 type SecurityStat struct {
@@ -146,10 +146,15 @@ func (s *securityStatStore) Update(ctx *gofr.Context, id int, ss *SecurityStat) 
 }
 
 func (f *SecurityStatFilter) buildWhereClause() (clause string, values []interface{}) {
-	if f.SecurityID != 0 {
-		clause += " AND security_id = ?"
+	if len(f.SecurityIDs) > 0 {
+		var placeHolders []string
 
-		values = append(values, f.SecurityID)
+		for i := range f.SecurityIDs {
+			placeHolders = append(placeHolders, "?")
+			values = append(values, f.SecurityIDs[i])
+		}
+
+		clause += " AND security_id IN (" + strings.Join(placeHolders, ", ") + ")"
 	}
 
 	if len(f.Dates) > 0 {

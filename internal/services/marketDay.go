@@ -43,7 +43,7 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 
 	switch {
 	case f.LastNDays > 0:
-		endDate = time.Now()
+		endDate = time.Now().UTC()
 		startDate = endDate.Add(365 * -24 * time.Hour)
 		n = f.LastNDays
 	case f.LastNDaysFromReference != nil:
