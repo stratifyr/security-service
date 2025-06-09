@@ -2,6 +2,7 @@ package stores
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,6 +12,8 @@ import (
 	"gofr.dev/pkg/gofr/datasource"
 	"gofr.dev/pkg/gofr/http"
 )
+
+const cacheExpiry = 3 * 324 * time.Hour
 
 type SecurityMetricStore interface {
 	Index(ctx *gofr.Context, filter *SecurityMetricFilter, limit, offset int) ([]*SecurityMetric, error)
@@ -43,6 +46,19 @@ func NewSecurityMetricStore() *securityMetricStore {
 }
 
 func (s *securityMetricStore) Index(ctx *gofr.Context, filter *SecurityMetricFilter, limit, offset int) ([]*SecurityMetric, error) {
+	cacheKey := fmt.Sprintf("security_metrics:security_id:%d:date:%s", filter.SecurityID, filter.Date.Format(time.DateOnly))
+	isCacheable := filter.isCacheable(limit)
+
+	if isCacheable {
+		cache, err := ctx.Redis.Get(ctx, cacheKey).Bytes()
+		if err == nil {
+			var securityMetrics []*SecurityMetric
+			if json.Unmarshal(cache, &securityMetrics) == nil {
+				return securityMetrics, nil
+			}
+		}
+	}
+
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, security_id, metric_id, date, value, created_at, updated_at
@@ -76,6 +92,14 @@ func (s *securityMetricStore) Index(ctx *gofr.Context, filter *SecurityMetricFil
 
 	if err = rows.Err(); err != nil {
 		return nil, datasource.ErrorDB{Err: err}
+	}
+
+	if isCacheable {
+		serialized, _ := json.Marshal(securityMetrics)
+
+		if err = ctx.Redis.Set(ctx, cacheKey, serialized, cacheExpiry).Err(); err != nil {
+			ctx.Warnf("failed to set cache, key: %s, err: %v", cacheKey, err)
+		}
 	}
 
 	return securityMetrics, nil
@@ -127,6 +151,11 @@ func (s *securityMetricStore) Create(ctx *gofr.Context, sm *SecurityMetric) (*Se
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
+	cacheKey := fmt.Sprintf("security_metrics:security_id:%d:date:%s", sm.SecurityID, sm.Date.Format(time.DateOnly))
+	if err = ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
+		ctx.Warnf("failed to clear cache, key: %s, err: %v", cacheKey, err)
+	}
+
 	return s.Retrieve(ctx, int(id))
 }
 
@@ -137,6 +166,11 @@ func (s *securityMetricStore) Update(ctx *gofr.Context, id int, sm *SecurityMetr
 	_, err := ctx.SQL.ExecContext(ctx, query, sm.SecurityID, sm.MetricID, sm.Date, sm.Value, sm.CreatedAt, sm.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
+	}
+
+	cacheKey := fmt.Sprintf("security_metrics:security_id:%d:date:%s", sm.SecurityID, sm.Date.Format(time.DateOnly))
+	if err = ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
+		ctx.Warnf("failed to clear cache, key: %s, err: %v", cacheKey, err)
 	}
 
 	return s.Retrieve(ctx, id)
@@ -166,4 +200,16 @@ func (f *SecurityMetricFilter) buildWhereClause() (clause string, values []inter
 	}
 
 	return clause, values
+}
+
+func (f *SecurityMetricFilter) isCacheable(limit int) bool {
+	if limit != 0 {
+		return false
+	}
+
+	if f.SecurityID != 0 && f.MetricID == 0 && !f.Date.IsZero() && time.Since(f.Date) <= cacheExpiry {
+		return true
+	}
+
+	return false
 }
