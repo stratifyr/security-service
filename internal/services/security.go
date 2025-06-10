@@ -415,12 +415,17 @@ func (s *securityService) getMetricsMap(ctx *gofr.Context) (map[int]*stores.Metr
 }
 
 func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int) (map[int]*stores.SecurityStat, error) {
-	dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDays: 1})
+	dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDays: 2})
 	if err != nil {
 		return nil, err
 	}
 
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: dates}, 0, 0)
+	date := dates[0]
+	if dates[0].Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
+		date = dates[1]
+	}
+
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: []time.Time{date}}, 0, 0)
 	if err != nil {
 		return nil, err
 	}
