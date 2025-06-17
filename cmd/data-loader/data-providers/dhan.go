@@ -310,24 +310,25 @@ func (c *client) OHLCBulk(ctx *gofr.Context, isins []string) ([]*OHLCData, error
 		return nil, errors.New("unexpected resp POST /v2/marketfeed/quote, err: " + err.Error())
 	}
 
-	var ohlcData = make([]*OHLCData, len(isins))
+	var ohlcData []*OHLCData
 
 	for i := range isins {
 		securityID := c.isinSecurityIDMapping[isins[i]]
 
 		data, ok := res.Data.NseEQ[strconv.Itoa(securityID)]
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("missing data for %s, POST /v2/marketfeed/quote", isins[i]))
+			ctx.Warnf(fmt.Sprintf("missing data for %s, POST /v2/marketfeed/quote", isins[i]))
+			continue
 		}
 
-		ohlcData[i] = &OHLCData{
+		ohlcData = append(ohlcData, &OHLCData{
 			ISIN:   isins[i],
 			Open:   data.Ohlc.Open,
 			High:   data.Ohlc.High,
 			Low:    data.Ohlc.Low,
 			Close:  data.Ohlc.Close,
 			Volume: int(data.Volume),
-		}
+		})
 	}
 
 	return ohlcData, nil
