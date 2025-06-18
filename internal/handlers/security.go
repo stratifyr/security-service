@@ -12,16 +12,17 @@ import (
 )
 
 type Security struct {
-	ID         int     `json:"id"`
-	ISIN       string  `json:"isin"`
-	Symbol     string  `json:"symbol"`
-	Industry   string  `json:"industry"`
-	Name       string  `json:"name"`
-	Image      string  `json:"image"`
-	LTP        float64 `json:"ltp"`
-	CreatedAt  string  `json:"createdAt"`
-	UpdatedAt  string  `json:"updatedAt"`
-	MarketData *struct {
+	ID            int     `json:"id"`
+	ISIN          string  `json:"isin"`
+	Symbol        string  `json:"symbol"`
+	Industry      string  `json:"industry"`
+	Name          string  `json:"name"`
+	Image         string  `json:"image"`
+	LTP           float64 `json:"ltp"`
+	PreviousClose float64 `json:"previousClose"`
+	CreatedAt     string  `json:"createdAt"`
+	UpdatedAt     string  `json:"updatedAt"`
+	MarketData    *struct {
 		Date    string  `json:"date"`
 		Open    float64 `json:"open"`
 		Close   float64 `json:"close"`
@@ -193,16 +194,17 @@ func (h *securityHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 
 func (h *securityHandler) buildResp(model *services.Security) *Security {
 	resp := &Security{
-		ID:         model.ID,
-		ISIN:       model.ISIN,
-		Symbol:     model.Symbol,
-		Industry:   model.Industry,
-		Name:       model.Name,
-		Image:      model.Image,
-		LTP:        model.LTP,
-		CreatedAt:  model.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:  model.UpdatedAt.Format(time.RFC3339),
-		MarketData: nil,
+		ID:            model.ID,
+		ISIN:          model.ISIN,
+		Symbol:        model.Symbol,
+		Industry:      model.Industry,
+		Name:          model.Name,
+		Image:         model.Image,
+		LTP:           model.LTP,
+		PreviousClose: model.PreviousClose,
+		CreatedAt:     model.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:     model.UpdatedAt.Format(time.RFC3339),
+		MarketData:    nil,
 	}
 
 	if model.SecurityStat == nil {

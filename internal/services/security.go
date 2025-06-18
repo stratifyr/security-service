@@ -22,16 +22,17 @@ type SecurityFilter struct {
 }
 
 type Security struct {
-	ID           int
-	ISIN         string
-	Symbol       string
-	Industry     string
-	Name         string
-	Image        string
-	LTP          float64
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	SecurityStat *struct {
+	ID            int
+	ISIN          string
+	Symbol        string
+	Industry      string
+	Name          string
+	Image         string
+	LTP           float64
+	PreviousClose float64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	SecurityStat  *struct {
 		ID         int
 		SecurityID int
 		Date       time.Time
@@ -136,6 +137,11 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		return nil, 0, err
 	}
 
+	prevCloseMap, err := s.getPrevCloseMap(ctx, securityIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	var (
 		sem   = make(chan struct{}, 5)
 		resp  = make([]*Security, len(securities))
@@ -150,7 +156,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		go func() {
 			defer func() { <-sem }()
 
-			resp[i], err = s.buildResp(ctx, securities[i], metricsMap, securityStatsMap)
+			resp[i], err = s.buildResp(ctx, securities[i], metricsMap, securityStatsMap, prevCloseMap)
 			errCh <- err
 		}()
 	}
@@ -180,7 +186,12 @@ func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 		return nil, err
 	}
 
-	return s.buildResp(ctx, security, metricsMap, securityStatsMap)
+	prevCloseMap, err := s.getPrevCloseMap(ctx, []int{security.ID})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.buildResp(ctx, security, metricsMap, securityStatsMap, prevCloseMap)
 }
 
 func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error) {
@@ -219,7 +230,12 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		return nil, err
 	}
 
-	return s.buildResp(ctx, security, metricsMap, securityStatsMap)
+	prevCloseMap, err := s.getPrevCloseMap(ctx, []int{security.ID})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.buildResp(ctx, security, metricsMap, securityStatsMap, prevCloseMap)
 }
 
 func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
@@ -270,10 +286,16 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		return nil, err
 	}
 
-	return s.buildResp(ctx, security, metricsMap, securityStatsMap)
+	prevCloseMap, err := s.getPrevCloseMap(ctx, []int{security.ID})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.buildResp(ctx, security, metricsMap, securityStatsMap, prevCloseMap)
 }
 
-func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, metricsMap map[int]*stores.Metric, securityStatsMap map[int]*stores.SecurityStat) (*Security, error) {
+func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, metricsMap map[int]*stores.Metric,
+	securityStatsMap map[int]*stores.SecurityStat, prevCloseMap map[int]float64) (*Security, error) {
 	resp := &Security{
 		ID:              model.ID,
 		ISIN:            model.ISIN,
@@ -288,9 +310,8 @@ func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, m
 		SecurityMetrics: nil,
 	}
 
-	if err := s.bindSecurityStat(resp, securityStatsMap); err != nil {
-		return nil, err
-	}
+	s.bindSecurityStat(resp, securityStatsMap)
+	s.bindPreviousClose(resp, prevCloseMap)
 
 	if err := s.bindSecurityMetricsDetails(ctx, resp, metricsMap); err != nil {
 		return nil, err
@@ -301,10 +322,10 @@ func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, m
 	return resp, nil
 }
 
-func (s *securityService) bindSecurityStat(resp *Security, securityStatsMap map[int]*stores.SecurityStat) error {
+func (s *securityService) bindSecurityStat(resp *Security, securityStatsMap map[int]*stores.SecurityStat) {
 	securityStat, ok := securityStatsMap[resp.ID]
 	if !ok {
-		return nil
+		return
 	}
 
 	resp.SecurityStat = &struct {
@@ -327,7 +348,18 @@ func (s *securityService) bindSecurityStat(resp *Security, securityStatsMap map[
 		Volume:     securityStat.Volume,
 	}
 
-	return nil
+	return
+}
+
+func (s *securityService) bindPreviousClose(resp *Security, prevCloseMap map[int]float64) {
+	prevClose, ok := prevCloseMap[resp.ID]
+	if !ok {
+		return
+	}
+
+	resp.PreviousClose = prevClose
+
+	return
 }
 
 func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Security, metricsMap map[int]*stores.Metric) error {
@@ -437,6 +469,28 @@ func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int) (map
 	}
 
 	return securityStatsMap, nil
+}
+
+func (s *securityService) getPrevCloseMap(ctx *gofr.Context, securityIDs []int) (map[int]float64, error) {
+	dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDays: 2})
+	if err != nil {
+		return nil, err
+	}
+
+	date := dates[1]
+
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: []time.Time{date}}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var prevCloseMap = make(map[int]float64)
+
+	for i := range securityStats {
+		prevCloseMap[securityStats[i].SecurityID] = securityStats[i].Close
+	}
+
+	return prevCloseMap, nil
 }
 
 func (s *securityService) computeAndSetNormalizedValues(resp *Security) {
