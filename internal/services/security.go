@@ -499,7 +499,7 @@ func (s *securityService) computeAndSetNormalizedValues(resp *Security) {
 
 		switch metricType {
 		case stores.SMA, stores.EMA:
-			metric.NormalizedValue = (resp.SecurityStat.Close - metric.Value) / resp.SecurityStat.Close
+			metric.NormalizedValue = (resp.SecurityStat.Close - metric.Value) / metric.Value
 
 		case stores.RSI:
 			metric.NormalizedValue = metric.Value / 100
@@ -516,10 +516,10 @@ func (s *securityService) computeAndSetNormalizedValues(resp *Security) {
 			metric.NormalizedValue = metric.Value / 100
 
 		case stores.ATR:
-			metric.NormalizedValue = metric.Value / resp.SecurityStat.Close
+			metric.NormalizedValue = -metric.Value / resp.SecurityStat.Close
 
 		case stores.VMA:
-			metric.NormalizedValue = (float64(resp.SecurityStat.Volume) - metric.Value) / float64(resp.SecurityStat.Volume)
+			metric.NormalizedValue = (float64(resp.SecurityStat.Volume) - metric.Value) / metric.Value
 
 		default:
 			metric.NormalizedValue = metric.Value
