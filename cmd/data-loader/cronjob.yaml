@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: ltp-loader
-  namespace: default
+  namespace: stratifyr
 spec:
   schedule: "* 3-10 * * 1-5"
   jobTemplate:
@@ -11,21 +11,27 @@ spec:
         spec:
           containers:
             - name: ltp-loader
-              image: stratifyr/data-loader:latest
-              imagePullPolicy: Never
+              image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/data-loader:latest
               args:
                 - load
                 - ltp
               envFrom:
                 - secretRef:
                     name: data-loader-secrets
+              resources:
+                requests:
+                  cpu: "250m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "1Gi"
           restartPolicy: OnFailure
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: stats-loader
-  namespace: default
+  namespace: stratifyr
 spec:
   schedule: "30 13 * * 1-5"
   jobTemplate:
@@ -34,8 +40,7 @@ spec:
         spec:
           containers:
             - name: stats-loader
-              image: stratifyr/data-loader:latest
-              imagePullPolicy: Never
+              image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/data-loader:latest
               command:
                 - sh
                 - -c
@@ -45,4 +50,11 @@ spec:
               envFrom:
                 - secretRef:
                     name: data-loader-secrets
+              resources:
+                requests:
+                  cpu: "250m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "1Gi"
           restartPolicy: OnFailure

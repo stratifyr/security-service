@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: data-loader
-  namespace: default
+  namespace: stratifyr
 spec:
   template:
     metadata:
@@ -12,8 +12,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: data-loader
-          image: stratifyr/data-loader:latest
-          imagePullPolicy: Never
+          image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/data-loader:latest
           envFrom:
             - secretRef:
                 name: data-loader-secrets
@@ -25,5 +24,5 @@ spec:
               ./data-loader load metrics &&
               ./data-loader load market-holidays &&
               ./data-loader load ltp &&
-              ./data-loader load security-stats --start-date=2024-06-07 --end-date=2025-06-07 &&
-              ./data-loader load security-metrics --start-date=2025-06-07 --end-date=2025-06-07
+              ./data-loader load security-stats --start-date=2024-07-10 --end-date=2025-07-10 &&
+              ./data-loader load security-metrics --start-date=2024-07-10 --end-date=2025-07-10
