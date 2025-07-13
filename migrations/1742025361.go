@@ -61,7 +61,7 @@ func setupInitialSchemas() migration.Migrate {
 										security_id INT NOT NULL,
 										metric_id INT NOT NULL,
 										date DATE NOT NULL,
-										value DECIMAL(10,2) NOT NULL,
+										value DECIMAL(13,2) NOT NULL,
 										created_at TIMESTAMP NOT NULL,
 										updated_at TIMESTAMP NOT NULL,
                              
