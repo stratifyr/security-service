@@ -17,14 +17,11 @@ spec:
                 - ltp
               envFrom:
                 - secretRef:
-                    name: data-loader-secrets
+                    name: data-loader-secret
               resources:
                 requests:
-                  cpu: "250m"
-                  memory: "512Mi"
-                limits:
-                  cpu: "500m"
-                  memory: "1Gi"
+                  cpu: "25m"
+                  memory: "64Mi"
           restartPolicy: OnFailure
 ---
 apiVersion: batch/v1
@@ -49,12 +46,9 @@ spec:
                   ./data-loader load security-metrics
               envFrom:
                 - secretRef:
-                    name: data-loader-secrets
+                    name: data-loader-secret
               resources:
                 requests:
-                  cpu: "250m"
-                  memory: "512Mi"
-                limits:
-                  cpu: "500m"
-                  memory: "1Gi"
+                  cpu: "25m"
+                  memory: "64Mi"
           restartPolicy: OnFailure

@@ -22,14 +22,11 @@ spec:
             - containerPort: 8000
           envFrom:
             - secretRef:
-                name: security-svc-secrets
+                name: security-svc-secret
           resources:
             requests:
-              cpu: "250m"
-              memory: "512Mi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
+              cpu: "25m"
+              memory: "64Mi"
 ---
 apiVersion: v1
 kind: Service

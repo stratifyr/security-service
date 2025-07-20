@@ -15,7 +15,7 @@ spec:
           image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/data-loader:latest
           envFrom:
             - secretRef:
-                name: data-loader-secrets
+                name: data-loader-secret
           command:
             - sh
             - -c
