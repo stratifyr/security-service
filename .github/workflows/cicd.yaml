@@ -26,12 +26,12 @@ jobs:
             dockerfile: ./Dockerfile
             docker_context: .
           - name: ltp-loader
-            type: cron
+            type: cronjob
             k8s_yaml: ./cmd/data-loader/cronjob-ltp-loader.yaml
             dockerfile: ./cmd/data-loader/Dockerfile
             docker_context: ./cmd/data-loader
           - name: stats-loader
-            type: cron
+            type: cronjob
             k8s_yaml: ./cmd/data-loader/cronjob-stats-loader.yaml
             dockerfile: ./cmd/data-loader/Dockerfile
             docker_context: ./cmd/data-loader
