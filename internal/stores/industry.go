@@ -35,6 +35,7 @@ const (
 	Bond
 	Gold
 	Silver
+	Utilities
 )
 
 type Industry int
@@ -72,6 +73,7 @@ func (s *industryStore) Index(ctx *gofr.Context) []Industry {
 		Bond,
 		Gold,
 		Silver,
+		Utilities,
 	}
 }
 
@@ -102,6 +104,7 @@ func (ex Industry) String() string {
 		Bond:                             "Bond",
 		Gold:                             "Gold",
 		Silver:                           "Silver",
+		Utilities:                        "Utilities",
 	}
 
 	return conversionMap[ex]
@@ -134,6 +137,7 @@ func IndustryFromString(str string) (Industry, error) {
 		"Bond":                              Bond,
 		"Gold":                              Gold,
 		"Silver":                            Silver,
+		"Utilities":                         Utilities,
 	}
 
 	industry, ok := conversionMap[str]
