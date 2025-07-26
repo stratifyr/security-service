@@ -25,9 +25,14 @@ jobs:
             k8s_yaml: deployment.yaml
             dockerfile: ./Dockerfile
             docker_context: .
-          - name: data-loader
+          - name: ltp-loader
             type: cron
-            k8s_yaml: ./cmd/data-loader/cronjob.yaml
+            k8s_yaml: ./cmd/data-loader/cronjob-ltp-loader.yaml
+            dockerfile: ./cmd/data-loader/Dockerfile
+            docker_context: ./cmd/data-loader
+          - name: stats-loader
+            type: cron
+            k8s_yaml: ./cmd/data-loader/cronjob-stats-loader.yaml
             dockerfile: ./cmd/data-loader/Dockerfile
             docker_context: ./cmd/data-loader
 
