@@ -46,10 +46,13 @@ func NewSecurityMetricStore() *securityMetricStore {
 }
 
 func (s *securityMetricStore) Index(ctx *gofr.Context, filter *SecurityMetricFilter, limit, offset int) ([]*SecurityMetric, error) {
-	cacheKey := fmt.Sprintf("security_metrics:security_id:%d:date:%s", filter.SecurityID, filter.Date.Format(time.DateOnly))
-	isCacheable := filter.isCacheable(limit)
+	var (
+		cacheKey    string
+		isCacheable = filter.isCacheable(limit)
+	)
 
 	if isCacheable {
+		cacheKey = fmt.Sprintf("security_metrics:security_id:%d:date:%s", filter.SecurityID, filter.Date.Format(time.DateOnly))
 		cache, err := ctx.Redis.Get(ctx, cacheKey).Bytes()
 		if err == nil {
 			var securityMetrics []*SecurityMetric
@@ -139,6 +142,11 @@ func (s *securityMetricStore) Retrieve(ctx *gofr.Context, id int) (*SecurityMetr
 }
 
 func (s *securityMetricStore) Create(ctx *gofr.Context, sm *SecurityMetric) (*SecurityMetric, error) {
+	cacheKey := fmt.Sprintf("security_metrics:security_id:%d:date:%s", sm.SecurityID, sm.Date.Format(time.DateOnly))
+	if err := ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
+		return nil, datasource.ErrorDB{Err: err}
+	}
+
 	query := "INSERT INTO security_metrics (security_id, metric_id, date, value, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
 
 	result, err := ctx.SQL.ExecContext(ctx, query, sm.SecurityID, sm.MetricID, sm.Date, sm.Value, sm.CreatedAt, sm.UpdatedAt)
@@ -151,26 +159,21 @@ func (s *securityMetricStore) Create(ctx *gofr.Context, sm *SecurityMetric) (*Se
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
-	cacheKey := fmt.Sprintf("security_metrics:security_id:%d:date:%s", sm.SecurityID, sm.Date.Format(time.DateOnly))
-	if err = ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
-		ctx.Warnf("failed to clear cache, key: %s, err: %v", cacheKey, err)
-	}
-
 	return s.Retrieve(ctx, int(id))
 }
 
 func (s *securityMetricStore) Update(ctx *gofr.Context, id int, sm *SecurityMetric) (*SecurityMetric, error) {
+	cacheKey := fmt.Sprintf("security_metrics:security_id:%d:date:%s", sm.SecurityID, sm.Date.Format(time.DateOnly))
+	if err := ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
+		return nil, datasource.ErrorDB{Err: err}
+	}
+
 	query := `UPDATE security_metrics SET security_id = ?, metric_id = ?, date = ?, value = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
 	_, err := ctx.SQL.ExecContext(ctx, query, sm.SecurityID, sm.MetricID, sm.Date, sm.Value, sm.CreatedAt, sm.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
-	}
-
-	cacheKey := fmt.Sprintf("security_metrics:security_id:%d:date:%s", sm.SecurityID, sm.Date.Format(time.DateOnly))
-	if err = ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
-		ctx.Warnf("failed to clear cache, key: %s, err: %v", cacheKey, err)
 	}
 
 	return s.Retrieve(ctx, id)
