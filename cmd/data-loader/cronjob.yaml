@@ -5,6 +5,7 @@ metadata:
   namespace: stratifyr
 spec:
   schedule: "* 3-10 * * 1-5"
+  successfulJobsHistoryLimit: 1
   jobTemplate:
     spec:
       template:
@@ -20,8 +21,8 @@ spec:
                     name: data-loader-secret
               resources:
                 requests:
-                  cpu: "25m"
-                  memory: "64Mi"
+                  cpu: "10m"
+                  memory: "32Mi"
           restartPolicy: OnFailure
 ---
 apiVersion: batch/v1
@@ -31,6 +32,7 @@ metadata:
   namespace: stratifyr
 spec:
   schedule: "30 13 * * 1-5"
+  successfulJobsHistoryLimit: 1
   jobTemplate:
     spec:
       template:
@@ -49,6 +51,6 @@ spec:
                     name: data-loader-secret
               resources:
                 requests:
-                  cpu: "25m"
-                  memory: "64Mi"
+                  cpu: "10m"
+                  memory: "32Mi"
           restartPolicy: OnFailure
