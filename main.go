@@ -4,6 +4,7 @@ import (
 	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/handlers"
+	"github.com/stratifyr/security-service/internal/handlers/grpc"
 	"github.com/stratifyr/security-service/internal/services"
 	"github.com/stratifyr/security-service/internal/stores"
 	"github.com/stratifyr/security-service/migrations"
@@ -36,6 +37,8 @@ func main() {
 	securityHandler := handlers.NewSecurityHandler(securityService)
 	securityStatHandler := handlers.NewSecurityStatHandler(securityStatService)
 	securityMetricHandler := handlers.NewSecurityMetricHandler(securityMetricService)
+
+	grpc.RegisterSecurityServiceServerWithGofr(app, grpc.NewSecurityServiceGoFrServer(securityService))
 
 	app.GET("/industries", industryHandler.Index)
 
