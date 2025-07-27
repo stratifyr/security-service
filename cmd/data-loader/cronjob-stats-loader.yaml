@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: stats-loader
+  namespace: stratifyr
+spec:
+  schedule: "30 13 * * 1-5"
+  successfulJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: stats-loader
+              image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/stats-loader:latest
+              command:
+                - sh
+                - -c
+                - |
+                  ./data-loader load security-stats &&
+                  ./data-loader load security-metrics
+              envFrom:
+                - secretRef:
+                    name: data-loader-secret
+              resources:
+                requests:
+                  cpu: "10m"
+                  memory: "32Mi"
+          restartPolicy: OnFailure
