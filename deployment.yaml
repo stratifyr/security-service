@@ -19,7 +19,10 @@ spec:
         - name: security-service
           image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/security-service:latest
           ports:
-            - containerPort: 8000
+            - name: http
+              containerPort: 8000
+            - name: grpc
+              containerPort: 9000
           envFrom:
             - secretRef:
                 name: security-svc-secret
@@ -37,7 +40,10 @@ spec:
   selector:
     app: security-service
   ports:
-    - protocol: TCP
+    - name: http
       port: 80
       targetPort: 8000
+    - name: grpc
+      port: 9000
+      targetPort: 9000
   type: ClusterIP
