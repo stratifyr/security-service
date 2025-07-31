@@ -21,9 +21,10 @@ type SecurityStore interface {
 }
 
 type SecurityFilter struct {
-	IDs    []int
-	ISIN   string
-	Symbol string
+	IDs     []int
+	ISIN    string
+	Symbol  string
+	MaxTier *int
 }
 
 type Security struct {
@@ -34,6 +35,7 @@ type Security struct {
 	Name      string
 	Image     string
 	LTP       float64
+	Tier      int
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -47,7 +49,7 @@ func NewSecurityStore() *securityStore {
 func (s *securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, offset int) ([]*Security, error) {
 	whereClause, values := filter.buildWhereClause()
 
-	query := `SELECT id, isin, symbol, industry, name, image, ltp, created_at, updated_at
+	query := `SELECT id, isin, symbol, industry, name, image, ltp, tier, created_at, updated_at
               FROM securities %s`
 
 	if limit > 0 {
@@ -68,7 +70,7 @@ func (s *securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, 
 	for rows.Next() {
 		var st Security
 
-		err = rows.Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry, &st.Name, &st.Image, &st.LTP, &st.CreatedAt, &st.UpdatedAt)
+		err = rows.Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry, &st.Name, &st.Image, &st.LTP, &st.Tier, &st.CreatedAt, &st.UpdatedAt)
 		if err != nil {
 			return nil, datasource.ErrorDB{Err: err}
 		}
@@ -101,10 +103,10 @@ func (s *securityStore) Count(ctx *gofr.Context, filter *SecurityFilter) (int, e
 func (s *securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 	var st Security
 
-	query := `SELECT id, isin, symbol, industry, name, image, ltp, created_at, updated_at
+	query := `SELECT id, isin, symbol, industry, name, image, ltp, tier, created_at, updated_at
               FROM securities WHERE id = ?`
 
-	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry, &st.Name, &st.Image, &st.LTP, &st.CreatedAt, &st.UpdatedAt)
+	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry, &st.Name, &st.Image, &st.LTP, &st.Tier, &st.CreatedAt, &st.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, http.ErrorEntityNotFound{Name: "securities", Value: strconv.Itoa(id)}
@@ -117,7 +119,7 @@ func (s *securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 }
 
 func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, error) {
-	query := "INSERT INTO securities (isin, symbol, industry, name, image, ltp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	query := "INSERT INTO securities (isin, symbol, industry, name, image, ltp, tier, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	result, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.CreatedAt, st.UpdatedAt)
 	if err != nil {
@@ -133,10 +135,10 @@ func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, erro
 }
 
 func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Security, error) {
-	query := `UPDATE securities SET isin = ?, symbol = ?, industry = ?, name = ?, image = ?, ltp = ?, created_at = ?, updated_at = ?
+	query := `UPDATE securities SET isin = ?, symbol = ?, industry = ?, name = ?, image = ?, ltp = ?, tier = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
-	_, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.CreatedAt, st.UpdatedAt, id)
+	_, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.Tier, st.CreatedAt, st.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -166,6 +168,12 @@ func (f *SecurityFilter) buildWhereClause() (clause string, values []interface{}
 		clause += " AND symbol = ?"
 
 		values = append(values, f.Symbol)
+	}
+
+	if f.MaxTier != nil {
+		clause += " AND tier <= ?"
+
+		values = append(values, *f.MaxTier)
 	}
 
 	if clause != "" {

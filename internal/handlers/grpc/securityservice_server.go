@@ -31,6 +31,7 @@ func (s *SecurityServiceGoFrServer) Index(ctx *gofr.Context) (any, error) {
 	}
 
 	filter := &services.SecurityFilter{
+		UserID: int(payload.UserId),
 		IDs:    ids,
 		ISIN:   payload.Isin,
 		Symbol: payload.Symbol,
@@ -60,6 +61,7 @@ func (s *SecurityServiceGoFrServer) buildResponse(securities []*services.Securit
 			Image:         securities[i].Image,
 			Ltp:           securities[i].LTP,
 			PreviousClose: securities[i].PreviousClose,
+			Tier:          int32(securities[i].Tier),
 			CreatedAt:     securities[i].CreatedAt.Format(time.RFC3339),
 			UpdatedAt:     securities[i].UpdatedAt.Format(time.RFC3339),
 		}
@@ -85,6 +87,7 @@ func (s *SecurityServiceGoFrServer) buildResponse(securities []*services.Securit
 				Type:            securities[i].SecurityMetrics[j].Metric.Type,
 				Period:          int32(securities[i].SecurityMetrics[j].Metric.Period),
 				Indicator:       securities[i].SecurityMetrics[j].Metric.Indicator,
+				Tier:            int32(securities[i].SecurityMetrics[j].Metric.Tier),
 				Value:           securities[i].SecurityMetrics[j].Value,
 				NormalizedValue: securities[i].SecurityMetrics[j].NormalizedValue,
 			}
