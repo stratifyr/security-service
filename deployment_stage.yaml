@@ -30,6 +30,9 @@ spec:
             requests:
               cpu: "10m"
               memory: "32Mi"
+            limits:
+              cpu: "10m"
+              memory: "32Mi"
 ---
 apiVersion: v1
 kind: Service
