@@ -224,6 +224,7 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 		Name:          model.Name,
 		Image:         model.Image,
 		LTP:           model.LTP,
+		Tier:          model.Tier,
 		PreviousClose: model.PreviousClose,
 		CreatedAt:     model.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:     model.UpdatedAt.Format(time.RFC3339),

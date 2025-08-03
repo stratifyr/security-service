@@ -374,6 +374,7 @@ func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, m
 		Name:            model.Name,
 		Image:           model.Image,
 		LTP:             model.LTP,
+		Tier:            model.Tier,
 		CreatedAt:       model.CreatedAt,
 		UpdatedAt:       model.CreatedAt,
 		SecurityStat:    nil,
