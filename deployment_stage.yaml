@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: security-service
-  namespace: stratifyr
+  namespace: stratifyr-stage
   labels:
     app: security-service
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: security-service
-          image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/security-service:git-sha # will be replaced in CI/CD
+          image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/security-service:dev-git-sha # will be replaced in CI/CD
           ports:
             - name: http
               containerPort: 8000
@@ -35,7 +35,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: security-service
-  namespace: stratifyr
+  namespace: stratifyr-stage
 spec:
   selector:
     app: security-service

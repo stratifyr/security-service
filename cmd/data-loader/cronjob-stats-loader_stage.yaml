@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: stats-loader
-  namespace: stratifyr
+  namespace: stratifyr-stage
 spec:
   schedule: "30 13 * * 1-5"
   successfulJobsHistoryLimit: 1
@@ -12,7 +12,7 @@ spec:
         spec:
           containers:
             - name: stats-loader
-              image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/stats-loader:git-sha # will be replaced in CI/CD
+              image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/stats-loader:dev-git-sha # will be replaced in CI/CD
               command:
                 - sh
                 - -c
