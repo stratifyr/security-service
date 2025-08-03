@@ -121,7 +121,7 @@ func (s *securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, error) {
 	query := "INSERT INTO securities (isin, symbol, industry, name, image, ltp, tier, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
-	result, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.CreatedAt, st.UpdatedAt)
+	result, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.Tier, st.CreatedAt, st.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
