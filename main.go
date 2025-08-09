@@ -13,6 +13,8 @@ import (
 func main() {
 	app := gofr.New()
 
+	app.AddHTTPService("account-service", app.Config.Get("ACCOUNT_SERVICE_HOST"))
+
 	app.Migrate(migrations.All())
 
 	industryStore := stores.NewIndustryStore()

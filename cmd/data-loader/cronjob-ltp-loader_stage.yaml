@@ -2,9 +2,9 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: ltp-loader
-  namespace: stratifyr
+  namespace: stratifyr-stage
 spec:
-  schedule: "* 3-10 * * 1-5"
+  schedule: "0 13 * * 1-5"
   successfulJobsHistoryLimit: 1
   jobTemplate:
     spec:
@@ -12,7 +12,7 @@ spec:
         spec:
           containers:
             - name: ltp-loader
-              image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/ltp-loader:git-sha # will be replaced in CI/CD
+              image: asia-south1-docker.pkg.dev/stratifyr/stratifyr/ltp-loader:dev-git-sha # will be replaced in CI/CD
               args:
                 - load
                 - ltp
@@ -21,6 +21,9 @@ spec:
                     name: data-loader-secret
               resources:
                 requests:
+                  cpu: "10m"
+                  memory: "32Mi"
+                limits:
                   cpu: "10m"
                   memory: "32Mi"
           restartPolicy: OnFailure

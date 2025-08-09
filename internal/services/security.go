@@ -1,6 +1,9 @@
 package services
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -10,12 +13,13 @@ import (
 
 type SecurityService interface {
 	Index(ctx *gofr.Context, f *SecurityFilter, page, perPage int) ([]*Security, int, error)
-	Read(ctx *gofr.Context, id int) (*Security, error)
+	Read(ctx *gofr.Context, id, userID int) (*Security, error)
 	Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error)
 	Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error)
 }
 
 type SecurityFilter struct {
+	UserID int
 	IDs    []int
 	ISIN   string
 	Symbol string
@@ -30,6 +34,7 @@ type Security struct {
 	Image         string
 	LTP           float64
 	PreviousClose float64
+	Tier          int
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	SecurityStat  *struct {
@@ -55,6 +60,7 @@ type Security struct {
 			Type      string
 			Period    int
 			Indicator string
+			Tier      int
 		}
 	}
 }
@@ -67,6 +73,7 @@ type SecurityCreate struct {
 	Name     string
 	Image    string
 	LTP      float64
+	Tier     int
 }
 
 type SecurityUpdate struct {
@@ -76,6 +83,7 @@ type SecurityUpdate struct {
 	Name     string
 	Image    string
 	LTP      float64
+	Tier     *int
 }
 
 type securityService struct {
@@ -102,9 +110,19 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 	offset := limit * (page - 1)
 
 	filter := &stores.SecurityFilter{
-		IDs:    f.IDs,
-		Symbol: f.Symbol,
-		ISIN:   f.ISIN,
+		IDs:     f.IDs,
+		Symbol:  f.Symbol,
+		ISIN:    f.ISIN,
+		MaxTier: nil,
+	}
+
+	if f.UserID != 0 {
+		userTier, err := s.getUserTier(ctx, f.UserID)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		filter.MaxTier = &userTier
 	}
 
 	securities, err := s.store.Index(ctx, filter, limit, offset)
@@ -121,7 +139,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		return nil, 0, nil
 	}
 
-	metricsMap, err := s.getMetricsMap(ctx)
+	metricsMap, err := s.getMetricsMap(ctx, f.UserID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -170,13 +188,13 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 	return resp, count, nil
 }
 
-func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
+func (s *securityService) Read(ctx *gofr.Context, id, userID int) (*Security, error) {
 	security, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	metricsMap, err := s.getMetricsMap(ctx)
+	metricsMap, err := s.getMetricsMap(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -211,6 +229,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		Name:      payload.Name,
 		Image:     payload.Image,
 		LTP:       payload.LTP,
+		Tier:      payload.Tier,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
@@ -220,7 +239,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		return nil, err
 	}
 
-	metricsMap, err := s.getMetricsMap(ctx)
+	metricsMap, err := s.getMetricsMap(ctx, payload.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -271,12 +290,16 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		security.LTP = payload.LTP
 	}
 
+	if payload.Tier != nil {
+		security.Tier = *payload.Tier
+	}
+
 	security, err = s.store.Update(ctx, id, security)
 	if err != nil {
 		return nil, err
 	}
 
-	metricsMap, err := s.getMetricsMap(ctx)
+	metricsMap, err := s.getMetricsMap(ctx, payload.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -294,6 +317,53 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 	return s.buildResp(ctx, security, metricsMap, securityStatsMap, prevCloseMap)
 }
 
+func (s *securityService) getUserTier(ctx *gofr.Context, userID int) (int, error) {
+	httpService := ctx.GetHTTPService("account-service")
+
+	resp, err := httpService.Get(ctx, fmt.Sprintf("users/%d", userID), nil)
+	if err != nil {
+		ctx.Logger.Errorf("failed GET /account-service/users/{id}, %v", map[string]interface{}{
+			"err":    err.Error(),
+			"userId": userID,
+		})
+
+		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+
+		ctx.Logger.Errorf("non 200 resp GET /account-service/users/{id}, %v", map[string]interface{}{
+			"code": resp.StatusCode,
+			"resp": string(body),
+		})
+
+		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
+	}
+
+	var res struct {
+		Data *struct {
+			Plan *struct {
+				Tier int `json:"tier"`
+			} `json:"plan"`
+		} `json:"data"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil {
+		ctx.Logger.Error("unexpected response from GET /account-service/users/{id}, %v", map[string]interface{}{
+			"resp":         fmt.Sprintf("%s", resp.Body),
+			"unmarshalErr": err,
+		})
+
+		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
+	}
+
+	return res.Data.Plan.Tier, nil
+}
+
 func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, metricsMap map[int]*stores.Metric,
 	securityStatsMap map[int]*stores.SecurityStat, prevCloseMap map[int]float64) (*Security, error) {
 	resp := &Security{
@@ -304,6 +374,7 @@ func (s *securityService) buildResp(ctx *gofr.Context, model *stores.Security, m
 		Name:            model.Name,
 		Image:           model.Image,
 		LTP:             model.LTP,
+		Tier:            model.Tier,
 		CreatedAt:       model.CreatedAt,
 		UpdatedAt:       model.CreatedAt,
 		SecurityStat:    nil,
@@ -387,11 +458,16 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 			Type      string
 			Period    int
 			Indicator string
+			Tier      int
 		}
-	}, len(securityMetrics))
+	}, 0)
 
 	for i := range securityMetrics {
-		resp.SecurityMetrics[i] = &struct {
+		if _, allowedForUserTier := metricsMap[securityMetrics[i].MetricID]; !allowedForUserTier {
+			continue
+		}
+
+		resp.SecurityMetrics = append(resp.SecurityMetrics, &struct {
 			ID              int
 			SecurityID      int
 			MetricID        int
@@ -404,6 +480,7 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 				Type      string
 				Period    int
 				Indicator string
+				Tier      int
 			}
 		}{
 			ID:              securityMetrics[i].ID,
@@ -418,21 +495,34 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 				Type      string
 				Period    int
 				Indicator string
+				Tier      int
 			}{
 				ID:        securityMetrics[i].MetricID,
 				Name:      metricsMap[securityMetrics[i].MetricID].Name,
 				Type:      metricsMap[securityMetrics[i].MetricID].Type.String(),
 				Period:    metricsMap[securityMetrics[i].MetricID].Period,
 				Indicator: metricsMap[securityMetrics[i].MetricID].Indicator.String(),
+				Tier:      metricsMap[securityMetrics[i].MetricID].Tier,
 			},
-		}
+		})
 	}
 
 	return nil
 }
 
-func (s *securityService) getMetricsMap(ctx *gofr.Context) (map[int]*stores.Metric, error) {
-	metrics, err := s.metricsStore.Index(ctx, &stores.MetricFilter{}, 0, 0)
+func (s *securityService) getMetricsMap(ctx *gofr.Context, userID int) (map[int]*stores.Metric, error) {
+	var filter stores.MetricFilter
+
+	if userID != 0 {
+		userTier, err := s.getUserTier(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		filter.MaxTier = &userTier
+	}
+
+	metrics, err := s.metricsStore.Index(ctx, &filter, 0, 0)
 	if err != nil {
 		return nil, err
 	}

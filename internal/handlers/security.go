@@ -20,6 +20,7 @@ type Security struct {
 	Image         string  `json:"image"`
 	LTP           float64 `json:"ltp"`
 	PreviousClose float64 `json:"previousClose"`
+	Tier          int     `json:"tier"`
 	CreatedAt     string  `json:"createdAt"`
 	UpdatedAt     string  `json:"updatedAt"`
 	MarketData    *struct {
@@ -35,6 +36,7 @@ type Security struct {
 			Type            string  `json:"type"`
 			Period          int     `json:"period"`
 			Indicator       string  `json:"indicator"`
+			Tier            int     `json:"tier"`
 			Value           float64 `json:"value"`
 			NormalizedValue float64 `json:"normalizedValue"`
 		} `json:"metrics"`
@@ -49,6 +51,7 @@ type SecurityCreate struct {
 	Name     string  `json:"name"`
 	Image    string  `json:"image"`
 	LTP      float64 `json:"ltp"`
+	Tier     int     `json:"tier"`
 }
 
 type SecurityUpdate struct {
@@ -58,6 +61,7 @@ type SecurityUpdate struct {
 	Name     string  `json:"name"`
 	Image    string  `json:"image"`
 	LTP      float64 `json:"ltp"`
+	Tier     *int    `json:"tier"`
 }
 
 type securityHandler struct {
@@ -69,7 +73,17 @@ func NewSecurityHandler(svc services.SecurityService) *securityHandler {
 }
 
 func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
-	var filter services.SecurityFilter
+	var (
+		filter services.SecurityFilter
+		err    error
+	)
+
+	if ctx.Param("userId") != "" {
+		filter.UserID, err = strconv.Atoi(ctx.Param("userId"))
+		if err != nil {
+			return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
+		}
+	}
 
 	if ctx.Param("symbol") != "" {
 		filter.Symbol = ctx.Param("symbol")
@@ -78,8 +92,6 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	if ctx.Param("isin") != "" {
 		filter.ISIN = ctx.Param("isin")
 	}
-
-	var err error
 
 	page := 1
 	if ctx.Param("page") != "" {
@@ -124,7 +136,16 @@ func (h *securityHandler) Read(ctx *gofr.Context) (interface{}, error) {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
 	}
 
-	security, err := h.svc.Read(ctx, id)
+	var userID int
+
+	if ctx.Param("userId") != "" {
+		userID, err = strconv.Atoi(ctx.Param("userId"))
+		if err != nil {
+			return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
+		}
+	}
+
+	security, err := h.svc.Read(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -149,6 +170,7 @@ func (h *securityHandler) Create(ctx *gofr.Context) (interface{}, error) {
 		Name:     payload.Name,
 		Image:    payload.Image,
 		LTP:      payload.LTP,
+		Tier:     payload.Tier,
 	}
 
 	security, err := h.svc.Create(ctx, model)
@@ -180,6 +202,7 @@ func (h *securityHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 		Name:     payload.Name,
 		Image:    payload.Image,
 		LTP:      payload.LTP,
+		Tier:     payload.Tier,
 	}
 
 	security, err := h.svc.Patch(ctx, id, model)
@@ -201,6 +224,7 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 		Name:          model.Name,
 		Image:         model.Image,
 		LTP:           model.LTP,
+		Tier:          model.Tier,
 		PreviousClose: model.PreviousClose,
 		CreatedAt:     model.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:     model.UpdatedAt.Format(time.RFC3339),
@@ -224,6 +248,7 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 			Type            string  `json:"type"`
 			Period          int     `json:"period"`
 			Indicator       string  `json:"indicator"`
+			Tier            int     `json:"tier"`
 			Value           float64 `json:"value"`
 			NormalizedValue float64 `json:"normalizedValue"`
 		} `json:"metrics"`
@@ -240,6 +265,7 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 			Type            string  `json:"type"`
 			Period          int     `json:"period"`
 			Indicator       string  `json:"indicator"`
+			Tier            int     `json:"tier"`
 			Value           float64 `json:"value"`
 			NormalizedValue float64 `json:"normalizedValue"`
 		}, len(model.SecurityMetrics)),
@@ -252,6 +278,7 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 			Type            string  `json:"type"`
 			Period          int     `json:"period"`
 			Indicator       string  `json:"indicator"`
+			Tier            int     `json:"tier"`
 			Value           float64 `json:"value"`
 			NormalizedValue float64 `json:"normalizedValue"`
 		}{
@@ -260,6 +287,7 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 			Type:            model.SecurityMetrics[i].Metric.Type,
 			Period:          model.SecurityMetrics[i].Metric.Period,
 			Indicator:       model.SecurityMetrics[i].Metric.Indicator,
+			Tier:            model.SecurityMetrics[i].Metric.Tier,
 			Value:           model.SecurityMetrics[i].Value,
 			NormalizedValue: model.SecurityMetrics[i].NormalizedValue,
 		}

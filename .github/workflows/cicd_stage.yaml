@@ -1,0 +1,84 @@
+name: Build and Deploy to Stage
+
+on:
+  push:
+    branches: [ development ]
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_BASE_URL: asia-south1-docker.pkg.dev
+  GAR_REPO: stratifyr
+  GKE_CLUSTER: stratifyr
+  GKE_ZONE: ${{ secrets.GKE_ZONE }}
+  GKE_NAMESPACE: stratifyr-stage
+
+jobs:
+  build-deploy:
+    name: CI/CD ${{ matrix.name }} (Stage)
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - name: security-service
+            type: deployment
+            k8s_yaml: deployment_stage.yaml
+            dockerfile: ./Dockerfile
+            docker_context: .
+          - name: ltp-loader
+            type: cronjob
+            k8s_yaml: ./cmd/data-loader/cronjob-ltp-loader_stage.yaml
+            dockerfile: ./cmd/data-loader/Dockerfile
+            docker_context: ./cmd/data-loader
+          - name: stats-loader
+            type: cronjob
+            k8s_yaml: ./cmd/data-loader/cronjob-stats-loader_stage.yaml
+            dockerfile: ./cmd/data-loader/Dockerfile
+            docker_context: ./cmd/data-loader
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_KEY }}'
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install GKE gcloud auth plugin
+        run: gcloud components install gke-gcloud-auth-plugin --quiet
+
+      - name: Configure Docker for GAR
+        run: gcloud auth configure-docker ${{ env.GAR_BASE_URL }}
+
+      - name: Build and Push Docker image
+        run: |
+          IMAGE=${{ env.GAR_BASE_URL }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ matrix.name }}:dev-${{ github.sha }}
+          docker build -t $IMAGE -f ${{ matrix.dockerfile }} ${{ matrix.docker_context }}
+          docker push $IMAGE
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
+            --zone ${{ env.GKE_ZONE }} \
+            --project ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy to GKE
+        run: |
+          IMAGE=${{ env.GAR_BASE_URL }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ matrix.name }}:dev-${{ github.sha }}
+          DEPLOYMENT_FILE=${{ matrix.k8s_yaml }}
+          RESOURCE_TYPE=${{ matrix.type }}
+
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^$DEPLOYMENT_FILE$"; then
+            echo "$DEPLOYMENT_FILE changed, applying updated spec..."
+            sed -i "s|image:.*|image: $IMAGE|" $DEPLOYMENT_FILE
+            kubectl apply -f $DEPLOYMENT_FILE
+          else
+            echo "No YAML change. Updating image only..."
+            kubectl set image ${RESOURCE_TYPE}/${{ matrix.name }} ${{ matrix.name }}=$IMAGE --namespace=${{ env.GKE_NAMESPACE }}
+          fi

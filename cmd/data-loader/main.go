@@ -74,6 +74,7 @@ func (h *marketDataHandler) LoadSecurities(ctx *gofr.Context) (any, error) {
 	idxSymbol := slices.Index(headers, "Symbol")
 	idxIndustry := slices.Index(headers, "Industry")
 	idxName := slices.Index(headers, "Company Name")
+	idxTier := slices.Index(headers, "Tier")
 
 	for {
 		row, readErr := reader.Read()
@@ -85,7 +86,7 @@ func (h *marketDataHandler) LoadSecurities(ctx *gofr.Context) (any, error) {
 			return nil, errors.New("failed to read securitiesMasterFile row")
 		}
 
-		if err = h.createOrUpdateSecurity(ctx, row[idxISIN], row[idxSymbol], row[idxIndustry], row[idxName]); err != nil {
+		if err = h.createOrUpdateSecurity(ctx, row[idxISIN], row[idxSymbol], row[idxIndustry], row[idxName], row[idxTier]); err != nil {
 			fmt.Println(fmt.Sprintf("-[%s] fail, %s", row[idxISIN], err))
 			continue
 		}
@@ -107,6 +108,7 @@ func (h *marketDataHandler) LoadMetrics(ctx *gofr.Context) (any, error) {
 	idxName := slices.Index(headers, "Name")
 	idxType := slices.Index(headers, "Type")
 	idxPeriod := slices.Index(headers, "Period")
+	idxTier := slices.Index(headers, "Tier")
 
 	for {
 		row, readErr := reader.Read()
@@ -118,7 +120,7 @@ func (h *marketDataHandler) LoadMetrics(ctx *gofr.Context) (any, error) {
 			return nil, errors.New("failed to read metricsMasterFile row")
 		}
 
-		if err = h.createOrUpdateMetric(ctx, row[idxName], row[idxType], row[idxPeriod]); err != nil {
+		if err = h.createOrUpdateMetric(ctx, row[idxName], row[idxType], row[idxPeriod], row[idxTier]); err != nil {
 			fmt.Println(fmt.Sprintf("-[%s] fail, %s", row[idxName], err))
 			continue
 		}
@@ -443,21 +445,23 @@ func (h *marketDataHandler) LoadTodaysSecurityMetrics(ctx *gofr.Context) (any, e
 	return "\nsuccessfully loaded security metrics data @ " + today.Format(time.DateTime), nil
 }
 
-func (h *marketDataHandler) createOrUpdateSecurity(ctx *gofr.Context, ISIN, symbol, industry, name string) error {
+func (h *marketDataHandler) createOrUpdateSecurity(ctx *gofr.Context, ISIN, symbol, industry, name, tier string) error {
+	tierInt, _ := strconv.Atoi(tier)
+
 	securityID, exists, err := h.checkIfSecurityAlreadyExists(ctx, ISIN)
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		if err = h.updateSecurity(ctx, securityID, ISIN, symbol, industry, name); err != nil {
+		if err = h.updateSecurity(ctx, securityID, ISIN, symbol, industry, name, tierInt); err != nil {
 			return err
 		}
 
 		return nil
 	}
 
-	if err = h.createSecurity(ctx, ISIN, symbol, industry, name); err != nil {
+	if err = h.createSecurity(ctx, ISIN, symbol, industry, name, tierInt); err != nil {
 		return err
 	}
 
@@ -498,13 +502,14 @@ func (h *marketDataHandler) checkIfSecurityAlreadyExists(ctx *gofr.Context, ISIN
 	return 0, false, nil
 }
 
-func (h *marketDataHandler) updateSecurity(ctx *gofr.Context, securityID int, ISIN, symbol, industry, name string) error {
+func (h *marketDataHandler) updateSecurity(ctx *gofr.Context, securityID int, ISIN, symbol, industry, name string, tier int) error {
 	payload := map[string]any{
 		"userId":   1,
 		"isin":     ISIN,
 		"symbol":   symbol,
 		"industry": industry,
 		"name":     name,
+		"tier":     tier,
 	}
 
 	body, _ := json.Marshal(payload)
@@ -525,13 +530,14 @@ func (h *marketDataHandler) updateSecurity(ctx *gofr.Context, securityID int, IS
 	return nil
 }
 
-func (h *marketDataHandler) createSecurity(ctx *gofr.Context, ISIN, symbol, industry, name string) error {
+func (h *marketDataHandler) createSecurity(ctx *gofr.Context, ISIN, symbol, industry, name string, tier int) error {
 	payload := map[string]any{
 		"userId":   1,
 		"isin":     ISIN,
 		"symbol":   symbol,
 		"industry": industry,
 		"name":     name,
+		"tier":     tier,
 	}
 
 	body, _ := json.Marshal(payload)
@@ -552,8 +558,9 @@ func (h *marketDataHandler) createSecurity(ctx *gofr.Context, ISIN, symbol, indu
 	return nil
 }
 
-func (h *marketDataHandler) createOrUpdateMetric(ctx *gofr.Context, name, typ, period string) error {
+func (h *marketDataHandler) createOrUpdateMetric(ctx *gofr.Context, name, typ, period, tier string) error {
 	interval, _ := strconv.Atoi(period)
+	tierInt, _ := strconv.Atoi(tier)
 
 	metricID, exists, err := h.checkIfMetricAlreadyExists(ctx, typ, interval)
 	if err != nil {
@@ -561,14 +568,14 @@ func (h *marketDataHandler) createOrUpdateMetric(ctx *gofr.Context, name, typ, p
 	}
 
 	if exists {
-		if err = h.updateMetric(ctx, metricID, name); err != nil {
+		if err = h.updateMetric(ctx, metricID, name, tierInt); err != nil {
 			return err
 		}
 
 		return nil
 	}
 
-	if err = h.createMetric(ctx, name, typ, interval); err != nil {
+	if err = h.createMetric(ctx, name, typ, interval, tierInt); err != nil {
 		return err
 	}
 
@@ -609,10 +616,11 @@ func (h *marketDataHandler) checkIfMetricAlreadyExists(ctx *gofr.Context, typ st
 	return 0, false, nil
 }
 
-func (h *marketDataHandler) updateMetric(ctx *gofr.Context, metricID int, name string) error {
+func (h *marketDataHandler) updateMetric(ctx *gofr.Context, metricID int, name string, tier int) error {
 	payload := map[string]any{
 		"userId": 1,
 		"name":   name,
+		"tier":   tier,
 	}
 
 	body, _ := json.Marshal(payload)
@@ -633,12 +641,13 @@ func (h *marketDataHandler) updateMetric(ctx *gofr.Context, metricID int, name s
 	return nil
 }
 
-func (h *marketDataHandler) createMetric(ctx *gofr.Context, name, typ string, period int) error {
+func (h *marketDataHandler) createMetric(ctx *gofr.Context, name, typ string, period, tier int) error {
 	payload := map[string]any{
 		"userId": 1,
 		"name":   name,
 		"type":   typ,
 		"period": period,
+		"tier":   tier,
 	}
 
 	body, _ := json.Marshal(payload)

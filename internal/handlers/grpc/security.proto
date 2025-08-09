@@ -13,9 +13,10 @@ message Security {
   string image = 6;
   double ltp = 7;
   double previous_close = 8;
-  string created_at = 9;
-  string updated_at = 10;
-  MarketData market_data = 11;
+  int32 tier = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  MarketData market_data = 12;
 }
 
 message MarketData {
@@ -34,14 +35,16 @@ message Metric {
   string type = 3;
   int32 period = 4;
   string indicator = 5;
-  double value = 6;
-  double normalized_value = 7;
+  int32 tier = 6;
+  double value = 7;
+  double normalized_value = 8;
 }
 
 message SecurityIndexRequest {
-  repeated int32 ids = 1;
-  string isin = 2;
-  string symbol = 3;
+  int32 userId = 1;
+  repeated int32 ids = 2;
+  string isin = 3;
+  string symbol = 4;
 }
 
 message SecurityIndexResponse {
