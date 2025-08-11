@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: ltp-loader
-  namespace: stratifyr
+  namespace: stratifyr-prod
 spec:
   schedule: "* 3-10 * * 1-5"
   successfulJobsHistoryLimit: 1
