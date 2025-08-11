@@ -10,7 +10,7 @@ env:
   GAR_REPO: stratifyr
   GKE_CLUSTER: stratifyr
   GKE_ZONE: ${{ secrets.GKE_ZONE }}
-  GKE_NAMESPACE: stratifyr
+  GKE_NAMESPACE: stratifyr-prod
 
 jobs:
   build-deploy:
