@@ -2,15 +2,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main ]
-
-env:
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GAR_BASE_URL: asia-south1-docker.pkg.dev
-  GAR_REPO: stratifyr
-  GKE_CLUSTER: stratifyr
-  GKE_ZONE: ${{ secrets.GKE_ZONE }}
-  GKE_NAMESPACE: stratifyr-prod
+    branches: [ development ]
 
 jobs:
   build-deploy:
@@ -22,17 +14,17 @@ jobs:
         include:
           - name: security-service
             type: deployment
-            k8s_yaml: deployment.yaml
             dockerfile: ./Dockerfile
             docker_context: .
+            port: 8002
           - name: ltp-loader
+            cron: "* 3-10 * * 1-5"
             type: cronjob
-            k8s_yaml: ./cmd/data-loader/cronjob-ltp-loader.yaml
             dockerfile: ./cmd/data-loader/Dockerfile
             docker_context: ./cmd/data-loader
           - name: stats-loader
+            cron: "30 13 * * 1-5"
             type: cronjob
-            k8s_yaml: ./cmd/data-loader/cronjob-stats-loader.yaml
             dockerfile: ./cmd/data-loader/Dockerfile
             docker_context: ./cmd/data-loader
 
@@ -42,43 +34,50 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@v2
+      - name: Log in to Github Container Registry
+        uses: docker/login-action@v2
         with:
-          credentials_json: '${{ secrets.GCP_KEY }}'
-
-      - name: Setup gcloud CLI
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Install GKE gcloud auth plugin
-        run: gcloud components install gke-gcloud-auth-plugin --quiet
-
-      - name: Configure Docker for GAR
-        run: gcloud auth configure-docker ${{ env.GAR_BASE_URL }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+          registry: ghcr.io
 
       - name: Build and Push Docker image
         run: |
-          IMAGE=${{ env.GAR_BASE_URL }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ matrix.name }}:${{ github.sha }}
+          IMAGE=ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ matrix.name }}:${{ github.sha }}
           docker build -t $IMAGE -f ${{ matrix.dockerfile }} ${{ matrix.docker_context }}
           docker push $IMAGE
 
-      - name: Get GKE credentials
-        run: |
-          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
-            --zone ${{ env.GKE_ZONE }} \
-            --project ${{ env.GCP_PROJECT_ID }}
-
-      - name: Deploy to GKE
-        run: |
-          IMAGE=${{ env.GAR_BASE_URL }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ matrix.name }}:${{ github.sha }}
-          DEPLOYMENT_FILE=${{ matrix.k8s_yaml }}
-          RESOURCE_TYPE=${{ matrix.type }}
-
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^$DEPLOYMENT_FILE$"; then
-            echo "$DEPLOYMENT_FILE changed, applying updated spec..."
-            sed -i "s|image:.*|image: $IMAGE|" $DEPLOYMENT_FILE
-            kubectl apply -f $DEPLOYMENT_FILE
-          else
-            echo "No YAML change. Updating image only..."
-            kubectl set image ${RESOURCE_TYPE}/${{ matrix.name }} ${{ matrix.name }}=$IMAGE --namespace=${{ env.GKE_NAMESPACE }}
-          fi
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} -p ${{ secrets.GHCR_TOKEN }}
+            IMAGE=ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ matrix.name }}:${{ github.sha }}
+            docker pull $IMAGE
+            
+            if [[ "${{ matrix.type }}" == "deployment" ]]; then
+              docker rm -f ${{ matrix.name }} || true
+              docker run -d \
+                --name ${{ matrix.name }} \
+                --network stratifyr-net \
+                --env-file /root/envs/${{ matrix.name }}.env \
+                -p 127.0.0.1:${{ matrix.port }}:8000 \
+                $IMAGE
+            else
+              CRON_CMD="docker rm -f ${{ matrix.name }} || true && docker run --rm \
+                --name ${{ matrix.name }} \
+                --network stratifyr-net \
+                --env-file /root/envs/${{ matrix.name }}.env \
+                $IMAGE"
+            
+              CRON_CMD_ESCAPED=$(echo "$CRON_CMD" | sed 's/%/\\%/g')
+            
+              # Remove old cron line for this job
+              crontab -l | grep -v "${{ matrix.name }}" | crontab -
+            
+              # Add new cron line using matrix cron
+              (crontab -l 2>/dev/null; echo "${{ matrix.cron }} $CRON_CMD_ESCAPED # ${{ matrix.name }}") | crontab -
+            fi
