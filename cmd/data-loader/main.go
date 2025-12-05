@@ -74,7 +74,7 @@ func (h *marketDataHandler) LoadSecurities(ctx *gofr.Context) (any, error) {
 	idxSymbol := slices.Index(headers, "Symbol")
 	idxIndustry := slices.Index(headers, "Industry")
 	idxName := slices.Index(headers, "Company Name")
-	idxTier := slices.Index(headers, "Tier")
+	//idxTier := slices.Index(headers, "Tier")
 
 	for {
 		row, readErr := reader.Read()
@@ -86,7 +86,7 @@ func (h *marketDataHandler) LoadSecurities(ctx *gofr.Context) (any, error) {
 			return nil, errors.New("failed to read securitiesMasterFile row")
 		}
 
-		if err = h.createOrUpdateSecurity(ctx, row[idxISIN], row[idxSymbol], row[idxIndustry], row[idxName], row[idxTier]); err != nil {
+		if err = h.createOrUpdateSecurity(ctx, row[idxISIN], row[idxSymbol], row[idxIndustry], row[idxName], "0"); err != nil {
 			fmt.Println(fmt.Sprintf("-[%s] fail, %s", row[idxISIN], err))
 			continue
 		}
