@@ -431,7 +431,7 @@ func (h *marketDataHandler) LoadTodaysSecurityMetrics(ctx *gofr.Context) (any, e
 		for j := range metricIDs {
 			metricID := metricIDs[j]
 
-			if err = h.createSecurityMetric(ctx, securityID, metricID, today); err != nil {
+			if err = h.createOrUpdateSecurityMetric(ctx, securityID, metricID, today); err != nil {
 				fmt.Println(fmt.Sprintf("--[%s][%s] fail, %s", securityISINs[i], metricsNames[metricID], err))
 				continue
 			}
