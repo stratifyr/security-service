@@ -68,14 +68,14 @@ jobs:
               docker run -d \
                 --name ${{ matrix.name }} \
                 --network stratifyr-net \
-                --env-file /root/envs/${{ matrix.name }}.env \
+                --env-file /home/${{ secrets.VPS_USER }}/envs/${{ matrix.name }}.env \
                 -p 127.0.0.1:${{ matrix.port }}:8000 \
                 $IMAGE
             else
               CRON_CMD="docker rm -f ${{ matrix.name }} || true && docker run --rm \
                 --name ${{ matrix.name }} \
                 --network stratifyr-net \
-                --env-file /root/envs/${{ matrix.name }}.env \
+                --env-file /home/${{ secrets.VPS_USER }}/envs/${{ matrix.name }}.env \
                 $IMAGE"
             
               CRON_CMD_ESCAPED=$(echo "$CRON_CMD" | sed 's/%/\\%/g')
