@@ -6,7 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o data-loader
 
 FROM alpine:latest
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata coreutils
 WORKDIR /src/
 COPY --from=builder /src/configs/.env ./configs/.env
 COPY --from=builder /src/data-loader ./data-loader
