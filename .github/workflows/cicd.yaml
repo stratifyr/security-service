@@ -28,7 +28,7 @@ jobs:
             dockerfile: ./cmd/data-loader/stats-loader.Dockerfile
             docker_context: ./cmd/data-loader
           - name: ca-backfiller
-            cron: "30 13 * * 6"
+            cron: "30 15 * * 5"
             type: cronjob
             dockerfile: ./cmd/data-loader/ca-backfiller.Dockerfile
             docker_context: ./cmd/data-loader
