@@ -51,38 +51,3 @@ jobs:
           IMAGE=ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ matrix.name }}:${{ github.sha }}
           docker build -t $IMAGE -f ${{ matrix.dockerfile }} ${{ matrix.docker_context }}
           docker push $IMAGE
-
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} -p ${{ secrets.GHCR_TOKEN }}
-            IMAGE=ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ matrix.name }}:${{ github.sha }}
-            docker pull $IMAGE
-            
-            if [[ "${{ matrix.type }}" == "deployment" ]]; then
-              docker rm -f ${{ matrix.name }} || true
-              docker run -d \
-                --name ${{ matrix.name }} \
-                --network stratifyr-net \
-                --env-file /home/${{ secrets.VPS_USER }}/envs/${{ matrix.name }}.env \
-                -p 127.0.0.1:${{ matrix.port }}:8000 \
-                $IMAGE
-            else
-              CRON_CMD="docker rm -f ${{ matrix.name }} || true && docker run --rm \
-                --name ${{ matrix.name }} \
-                --network stratifyr-net \
-                --env-file /home/${{ secrets.VPS_USER }}/envs/${{ matrix.name }}.env \
-                $IMAGE"
-            
-              CRON_CMD_ESCAPED=$(echo "$CRON_CMD" | sed 's/%/\\%/g')
-            
-              # Remove old cron line for this job
-              crontab -l | grep -v "${{ matrix.name }}" | crontab -
-            
-              # Add new cron line using matrix cron
-              (crontab -l 2>/dev/null; echo "${{ matrix.cron }} $CRON_CMD_ESCAPED # ${{ matrix.name }}") | crontab -
-            fi
