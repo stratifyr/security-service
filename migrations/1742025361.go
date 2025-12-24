@@ -56,23 +56,6 @@ func setupInitialSchemas() migration.Migrate {
 				return err
 			}
 
-			if _, err := d.SQL.Exec(`CREATE TABLE security_metrics (
-										id INT PRIMARY KEY AUTO_INCREMENT,
-										security_id INT NOT NULL,
-										metric_id INT NOT NULL,
-										date DATE NOT NULL,
-										value DECIMAL(13,2) NOT NULL,
-										created_at TIMESTAMP NOT NULL,
-										updated_at TIMESTAMP NOT NULL,
-                             
-                                        CONSTRAINT uk_security_metrics_security_id_metric_id_date UNIQUE (security_id, metric_id, date),
-										CONSTRAINT fk_security_metrics_security_id FOREIGN KEY (security_id) REFERENCES securities(id),
-										CONSTRAINT fk_security_metrics_metric_id FOREIGN KEY (metric_id) REFERENCES metrics(id),
-                                        INDEX idx_security_prices_security_id_date (security_id, date)
-									);`); err != nil {
-				return err
-			}
-
 			if _, err := d.SQL.Exec(`CREATE TABLE market_holidays (
 										id INT PRIMARY KEY AUTO_INCREMENT,
 										date DATE NOT NULL,

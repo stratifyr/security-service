@@ -10,4 +10,4 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /src/
 COPY --from=builder /src/configs/.env ./configs/.env
 COPY --from=builder /src/data-loader ./data-loader
-ENTRYPOINT ["sh", "-c", "./data-loader load security-stats && ./data-loader load security-metrics"]
+ENTRYPOINT ["./data-loader", "load", "security-stats"]

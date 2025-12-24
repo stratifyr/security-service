@@ -13,6 +13,5 @@ COPY --from=builder /src/data-loader ./data-loader
 ENTRYPOINT ["sh", "-c", "\
   START_DATE=$(date -I -d '-182 days') && \
   END_DATE=$(date -I) && \
-  ./data-loader load security-stats --start-date=$START_DATE --end-date=$END_DATE && \
-  ./data-loader load security-metrics\
+  ./data-loader load security-stats --start-date=$START_DATE --end-date=$END_DATE\
 "]

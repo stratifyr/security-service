@@ -3,236 +3,223 @@ package services
 import (
 	"fmt"
 	"math"
+	"sort"
+	"strconv"
+	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/stores"
 )
 
 type SecurityMetricService interface {
-	Index(ctx *gofr.Context, f *SecurityMetricFilter, page, perPage int) ([]*SecurityMetric, int, error)
-	Read(ctx *gofr.Context, id int) (*SecurityMetric, error)
-	Create(ctx *gofr.Context, payload *SecurityMetricCreate) (*SecurityMetric, error)
-	Patch(ctx *gofr.Context, id int, payload *SecurityMetricUpdate) (*SecurityMetric, error)
-}
-
-type SecurityMetricFilter struct {
-	SecurityID int
-	MetricID   int
-	Date       time.Time
+	Get(ctx *gofr.Context, securityID int, date time.Time) ([]*SecurityMetric, error)
 }
 
 type SecurityMetric struct {
-	ID         int
-	SecurityID int
-	MetricID   int
-	Date       time.Time
-	Value      float64
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-}
-
-type SecurityMetricCreate struct {
-	UserID     int
-	SecurityID int
-	MetricID   int
-	Date       time.Time
-	Value      float64
-}
-
-type SecurityMetricUpdate struct {
-	UserID         int
-	Value          float64
-	RecomputeValue bool
+	Metric *Metric
+	Value  float64
 }
 
 type securityMetricService struct {
+	mu                sync.Mutex
 	marketDayService  MarketDayService
 	metricStore       stores.MetricStore
 	securityStatStore stores.SecurityStatStore
-	store             stores.SecurityMetricStore
 }
 
-func NewSecurityMetricService(marketDayService MarketDayService, metricStore stores.MetricStore,
-	securityStatStore stores.SecurityStatStore, store stores.SecurityMetricStore) *securityMetricService {
+func NewSecurityMetricService(marketDayService MarketDayService, metricStore stores.MetricStore, securityStatStore stores.SecurityStatStore) *securityMetricService {
 	return &securityMetricService{
+		mu:                sync.Mutex{},
 		marketDayService:  marketDayService,
 		metricStore:       metricStore,
 		securityStatStore: securityStatStore,
-		store:             store,
 	}
 }
 
-func (s *securityMetricService) Index(ctx *gofr.Context, f *SecurityMetricFilter, page, perPage int) ([]*SecurityMetric, int, error) {
-	limit := perPage
-	offset := limit * (page - 1)
-
-	filter := &stores.SecurityMetricFilter{
-		SecurityID: f.SecurityID,
-		MetricID:   f.MetricID,
-		Date:       f.Date,
-	}
-
-	securityMetrics, err := s.store.Index(ctx, filter, limit, offset)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	count, err := s.store.Count(ctx, filter)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if count == 0 {
-		return nil, 0, nil
-	}
-
-	var resp = make([]*SecurityMetric, len(securityMetrics))
-
-	for i := range securityMetrics {
-		resp[i] = s.buildResp(securityMetrics[i])
-	}
-
-	return resp, count, nil
-}
-
-func (s *securityMetricService) Read(ctx *gofr.Context, id int) (*SecurityMetric, error) {
-	securityMetric, err := s.store.Retrieve(ctx, id)
+func (s *securityMetricService) Get(ctx *gofr.Context, securityID int, date time.Time) ([]*SecurityMetric, error) {
+	metrics, err := s.metricStore.Index(ctx, &stores.MetricFilter{}, 0, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.buildResp(securityMetric), nil
+	s.mu.Lock()
+	metricValues, err := s.getMetricValues(ctx, securityID, date, metrics)
+	if err != nil {
+		return nil, err
+	}
+	s.mu.Unlock()
+
+	var resp = make([]*SecurityMetric, 0)
+
+	for i := range metrics {
+		value, ok := metricValues[strconv.Itoa(metrics[i].ID)]
+		if !ok {
+			continue
+		}
+
+		valueFloat, _ := strconv.ParseFloat(value, 64)
+
+		resp = append(resp, &SecurityMetric{
+			Metric: &Metric{
+				ID:        metrics[i].ID,
+				Name:      metrics[i].Name,
+				Type:      metrics[i].Type.String(),
+				Period:    metrics[i].Period,
+				Indicator: metrics[i].Indicator.String(),
+				Tier:      metrics[i].Tier,
+				CreatedAt: metrics[i].CreatedAt,
+				UpdatedAt: metrics[i].UpdatedAt,
+			},
+			Value: valueFloat,
+		})
+	}
+
+	return resp, nil
 }
 
-func (s *securityMetricService) Create(ctx *gofr.Context, payload *SecurityMetricCreate) (*SecurityMetric, error) {
-	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+func (s *securityMetricService) getMetricValues(ctx *gofr.Context, securityID int, date time.Time, metrics []*stores.Metric) (map[string]string, error) {
+	isCacheable := time.Since(date) <= 72*time.Hour
+
+	if isCacheable {
+		values, err := s.getMetricValuesFromCache(ctx, securityID, date)
+		if err == nil {
+			return values, nil
+		}
+
+		ctx.Logger.Warnf("failed to get metric values from cache: %v", map[string]any{
+			"error":      err,
+			"securityId": securityID,
+			"date":       date,
+		})
 	}
 
-	marketDays, count, err := s.marketDayService.Index(ctx,
-		&MarketDayFilter{DateBetween: &struct {
-			StartDate time.Time
-			EndDate   time.Time
-		}{StartDate: payload.Date, EndDate: payload.Date}})
-	if count != 1 || marketDays[0].Format(time.DateOnly) != payload.Date.Format(time.DateOnly) {
-		return nil, &ErrResp{Code: 400, Message: "cannot add metric for market holiday - " + payload.Date.Format(time.DateOnly)}
-	}
-
-	if payload.Value == 0 {
-		payload.Value, err = s.computeMetricValue(ctx, payload.SecurityID, payload.MetricID, payload.Date)
-		if err != nil {
-			return nil, err
+	maxPeriod := 0
+	for i := range metrics {
+		if metrics[i].Period > maxPeriod {
+			maxPeriod = metrics[i].Period
 		}
 	}
 
-	model := &stores.SecurityMetric{
-		SecurityID: payload.SecurityID,
-		MetricID:   payload.MetricID,
-		Date:       payload.Date,
-		Value:      payload.Value,
-		CreatedAt:  time.Now().UTC(),
-		UpdatedAt:  time.Now().UTC(),
-	}
-
-	securityMetric, err := s.store.Create(ctx, model)
+	marketDays, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
+		N         int
+		Reference time.Time
+	}{N: maxPeriod, Reference: date}})
 	if err != nil {
 		return nil, err
 	}
 
-	return s.buildResp(securityMetric), nil
-}
-
-func (s *securityMetricService) Patch(ctx *gofr.Context, id int, payload *SecurityMetricUpdate) (*SecurityMetric, error) {
-	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
-	}
-
-	securityMetric, err := s.store.Retrieve(ctx, id)
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{securityID}, Dates: marketDays}, 0, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	if payload.Value != 0 {
-		securityMetric.Value = payload.Value
+	sort.Slice(securityStats, func(i, j int) bool {
+		return securityStats[i].Date.After(securityStats[j].Date)
+	})
+
+	var values = make(map[string]string)
+
+	for i := range metrics {
+		n := metrics[i].Period
+
+		if len(securityStats) < n {
+			ctx.Logger.Warnf("cannot compute securityId:%d_%s_%d, not enough data", securityID, metrics[i].Type.String(), metrics[i].Period)
+			continue
+		}
+
+		value := s.computeMetricValue(metrics[i], securityStats[:n])
+		values[strconv.Itoa(metrics[i].ID)] = fmt.Sprintf("%0.2f", value)
 	}
 
-	if payload.RecomputeValue {
-		payload.Value, err = s.computeMetricValue(ctx, securityMetric.SecurityID, securityMetric.MetricID, securityMetric.Date)
-		if err != nil {
-			return nil, err
+	if isCacheable {
+		if err = s.setMetricValuesToCache(ctx, values, securityID, date); err != nil {
+			ctx.Logger.Warnf("failed to set metric values in cache: %v", map[string]any{
+				"error":      err,
+				"securityId": securityID,
+				"date":       date,
+			})
 		}
 	}
 
-	securityMetric, err = s.store.Update(ctx, id, securityMetric)
+	return values, nil
+}
+
+func (s *securityMetricService) computeMetricValue(metric *stores.Metric, securityStats []*stores.SecurityStat) float64 {
+	switch metric.Type {
+	case stores.SMA:
+		return s.computeSMA(securityStats)
+	case stores.EMA:
+		k := 2.0 / float64(len(securityStats)+1)
+		smaSeed := s.computeSMA(securityStats)
+		return s.computeEMA(k, smaSeed, securityStats)
+	case stores.RSI:
+		return s.computeRSI(securityStats)
+	case stores.ROC:
+		return s.computeROC(securityStats)
+	case stores.ATR:
+		return s.computeATR(securityStats)
+	case stores.VMA:
+		return s.computeVMA(securityStats)
+	default:
+		return 0
+	}
+}
+
+func (s *securityMetricService) getMetricValuesFromCache(ctx *gofr.Context, securityID int, date time.Time) (map[string]string, error) {
+	key := fmt.Sprintf("security_metrics:security_id:%d:date:%s", securityID, date.Format(time.DateOnly))
+
+	res, err := ctx.Redis.HGetAll(ctx, key).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	return s.buildResp(securityMetric), nil
+	if len(res) == 0 {
+		return nil, redis.Nil
+	}
+
+	return res, nil
 }
 
-func (s *securityMetricService) buildResp(model *stores.SecurityMetric) *SecurityMetric {
+func (s *securityMetricService) setMetricValuesToCache(ctx *gofr.Context, values map[string]string, securityID int, date time.Time) error {
+	key := fmt.Sprintf("security_metrics:security_id:%d:date:%s", securityID, date.Format(time.DateOnly))
+
+	if err := ctx.Redis.HSet(ctx, key, values).Err(); err != nil {
+		return err
+	}
+
+	if err := ctx.Redis.Expire(ctx, key, time.Hour).Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *securityMetricService) buildResp(metric *stores.Metric, value float64) *SecurityMetric {
 	resp := &SecurityMetric{
-		ID:         model.ID,
-		SecurityID: model.SecurityID,
-		MetricID:   model.MetricID,
-		Date:       model.Date,
-		Value:      model.Value,
-		CreatedAt:  model.CreatedAt,
-		UpdatedAt:  model.UpdatedAt,
+		Metric: &Metric{
+			ID:        metric.ID,
+			Name:      metric.Name,
+			Type:      metric.Type.String(),
+			Period:    metric.Period,
+			Indicator: metric.Indicator.String(),
+			Tier:      metric.Tier,
+			CreatedAt: metric.CreatedAt,
+			UpdatedAt: metric.UpdatedAt,
+		},
+		Value: value,
 	}
 
 	return resp
 }
 
-func (s *securityMetricService) computeMetricValue(ctx *gofr.Context, securityID, metricID int, date time.Time) (float64, error) {
-	metric, err := s.metricStore.Retrieve(ctx, metricID)
-	if err != nil {
-		return 0, err
-	}
-
-	n := metric.Period
-
-	marketDays, _, err := s.marketDayService.Index(ctx,
-		&MarketDayFilter{LastNDaysFromReference: &struct {
-			N         int
-			Reference time.Time
-		}{N: n, Reference: date}})
-	if err != nil {
-		return 0, err
-	}
-
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{securityID}, Dates: marketDays}, 0, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	if len(securityStats) != n {
-		return 0, &ErrResp{Code: 400, Message: fmt.Sprintf("Cannot compute %s_%d, not enough data", metric.Type.String(), metric.Period)}
-	}
-
-	switch metric.Type {
-	case stores.SMA:
-		return s.computeSMA(metric.Period, securityStats), nil
-	case stores.EMA:
-		return s.computeEMA(metric.Period, securityStats), nil
-	case stores.RSI:
-		return s.computeRSI(metric.Period, securityStats), nil
-	case stores.ROC:
-		return s.computeROC(metric.Period, securityStats), nil
-	case stores.ATR:
-		return s.computeATR(metric.Period, securityStats), nil
-	case stores.VMA:
-		return s.computeVMA(metric.Period, securityStats), nil
-	default:
-		return 0, nil
-	}
-}
-
-func (s *securityMetricService) computeSMA(n int, lastNStats []*stores.SecurityStat) float64 {
-	var sumPrice float64
+func (s *securityMetricService) computeSMA(lastNStats []*stores.SecurityStat) float64 {
+	var (
+		sumPrice float64
+		n        = len(lastNStats)
+	)
 
 	for _, stat := range lastNStats {
 		sumPrice += stat.Close
@@ -241,28 +228,26 @@ func (s *securityMetricService) computeSMA(n int, lastNStats []*stores.SecurityS
 	return sumPrice / float64(n)
 }
 
-func (s *securityMetricService) computeEMA(n int, lastNStats []*stores.SecurityStat) float64 {
-	var sumPrice float64
-
-	for i := len(lastNStats) - 1; i >= len(lastNStats)-n; i-- {
-		sumPrice += lastNStats[i].Close
+func (s *securityMetricService) computeEMA(k, seeder float64, lastNStats []*stores.SecurityStat) float64 {
+	n := len(lastNStats)
+	if n == 0 {
+		return 0
 	}
 
-	ema := sumPrice / float64(n)
+	ema := seeder
 
-	k := 2.0 / float64(n+1)
-
-	for i := len(lastNStats) - n - 1; i >= 0; i-- {
+	for i := n - 1; i >= 0; i-- {
 		ema = lastNStats[i].Close*k + ema*(1-k)
 	}
 
 	return ema
 }
 
-func (s *securityMetricService) computeRSI(n int, lastNStats []*stores.SecurityStat) float64 {
+func (s *securityMetricService) computeRSI(lastNStats []*stores.SecurityStat) float64 {
 	var (
 		totalProfit float64
 		totalLoss   float64
+		n           = len(lastNStats)
 	)
 
 	for i := 1; i < n; i++ {
@@ -286,15 +271,19 @@ func (s *securityMetricService) computeRSI(n int, lastNStats []*stores.SecurityS
 	return 100 - (100 / (1 + rs))
 }
 
-func (s *securityMetricService) computeROC(n int, lastNStats []*stores.SecurityStat) float64 {
+func (s *securityMetricService) computeROC(lastNStats []*stores.SecurityStat) float64 {
+	n := len(lastNStats)
 	currentPrice := lastNStats[0].Close
 	nDaysPriorPrice := lastNStats[n-1].Close
 
 	return ((currentPrice - nDaysPriorPrice) / nDaysPriorPrice) * 100
 }
 
-func (s *securityMetricService) computeATR(n int, lastNStats []*stores.SecurityStat) float64 {
-	var totalTR float64
+func (s *securityMetricService) computeATR(lastNStats []*stores.SecurityStat) float64 {
+	var (
+		totalTR float64
+		n       = len(lastNStats)
+	)
 
 	for i := 1; i < n; i++ {
 		high := lastNStats[i].High
@@ -308,8 +297,11 @@ func (s *securityMetricService) computeATR(n int, lastNStats []*stores.SecurityS
 	return totalTR / float64(n)
 }
 
-func (s *securityMetricService) computeVMA(n int, lastNStats []*stores.SecurityStat) float64 {
-	var sumVolume float64
+func (s *securityMetricService) computeVMA(lastNStats []*stores.SecurityStat) float64 {
+	var (
+		sumVolume float64
+		n         = len(lastNStats)
+	)
 
 	for _, stat := range lastNStats {
 		sumVolume += float64(stat.Volume)

@@ -48,7 +48,6 @@ type Security struct {
 		Volume     int
 	}
 	SecurityMetrics []*struct {
-		ID              int
 		SecurityID      int
 		MetricID        int
 		Date            time.Time
@@ -87,21 +86,21 @@ type SecurityUpdate struct {
 }
 
 type securityService struct {
-	marketDayService    MarketDayService
-	metricsStore        stores.MetricStore
-	securityMetricStore stores.SecurityMetricStore
-	securityStatStore   stores.SecurityStatStore
-	store               stores.SecurityStore
+	marketDayService      MarketDayService
+	securityMetricService SecurityMetricService
+	metricsStore          stores.MetricStore
+	securityStatStore     stores.SecurityStatStore
+	store                 stores.SecurityStore
 }
 
-func NewSecurityService(marketDayService MarketDayService, metricStore stores.MetricStore, securityMetricStore stores.SecurityMetricStore,
+func NewSecurityService(marketDayService MarketDayService, securityMetricService SecurityMetricService, metricStore stores.MetricStore,
 	securityStatStore stores.SecurityStatStore, store stores.SecurityStore) *securityService {
 	return &securityService{
-		marketDayService:    marketDayService,
-		metricsStore:        metricStore,
-		securityMetricStore: securityMetricStore,
-		securityStatStore:   securityStatStore,
-		store:               store,
+		marketDayService:      marketDayService,
+		securityMetricService: securityMetricService,
+		metricsStore:          metricStore,
+		securityStatStore:     securityStatStore,
+		store:                 store,
 	}
 }
 
@@ -440,13 +439,12 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 
 	date := resp.SecurityStat.Date
 
-	securityMetrics, err := s.securityMetricStore.Index(ctx, &stores.SecurityMetricFilter{SecurityID: resp.ID, Date: date}, 0, 0)
+	securityMetrics, err := s.securityMetricService.Get(ctx, resp.ID, date)
 	if err != nil {
 		return err
 	}
 
 	resp.SecurityMetrics = make([]*struct {
-		ID              int
 		SecurityID      int
 		MetricID        int
 		Date            time.Time
@@ -463,12 +461,11 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 	}, 0)
 
 	for i := range securityMetrics {
-		if _, allowedForUserTier := metricsMap[securityMetrics[i].MetricID]; !allowedForUserTier {
+		if _, allowedForUserTier := metricsMap[securityMetrics[i].Metric.ID]; !allowedForUserTier {
 			continue
 		}
 
 		resp.SecurityMetrics = append(resp.SecurityMetrics, &struct {
-			ID              int
 			SecurityID      int
 			MetricID        int
 			Date            time.Time
@@ -483,10 +480,9 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 				Tier      int
 			}
 		}{
-			ID:              securityMetrics[i].ID,
-			SecurityID:      securityMetrics[i].SecurityID,
-			MetricID:        securityMetrics[i].MetricID,
-			Date:            securityMetrics[i].Date,
+			SecurityID:      resp.ID,
+			MetricID:        securityMetrics[i].Metric.ID,
+			Date:            date,
 			Value:           securityMetrics[i].Value,
 			NormalizedValue: 0,
 			Metric: &struct {
@@ -497,12 +493,12 @@ func (s *securityService) bindSecurityMetricsDetails(ctx *gofr.Context, resp *Se
 				Indicator string
 				Tier      int
 			}{
-				ID:        securityMetrics[i].MetricID,
-				Name:      metricsMap[securityMetrics[i].MetricID].Name,
-				Type:      metricsMap[securityMetrics[i].MetricID].Type.String(),
-				Period:    metricsMap[securityMetrics[i].MetricID].Period,
-				Indicator: metricsMap[securityMetrics[i].MetricID].Indicator.String(),
-				Tier:      metricsMap[securityMetrics[i].MetricID].Tier,
+				ID:        securityMetrics[i].Metric.ID,
+				Name:      metricsMap[securityMetrics[i].Metric.ID].Name,
+				Type:      metricsMap[securityMetrics[i].Metric.ID].Type.String(),
+				Period:    metricsMap[securityMetrics[i].Metric.ID].Period,
+				Indicator: metricsMap[securityMetrics[i].Metric.ID].Indicator.String(),
+				Tier:      metricsMap[securityMetrics[i].Metric.ID].Tier,
 			},
 		})
 	}

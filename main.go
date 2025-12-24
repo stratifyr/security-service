@@ -22,15 +22,14 @@ func main() {
 	securityStore := stores.NewSecurityStore()
 	marketHolidayStore := stores.NewMarketHolidayStore()
 	securityStatStore := stores.NewSecurityStatStore()
-	securityMetricStore := stores.NewSecurityMetricStore()
 
 	industryService := services.NewIndustryService(industryStore)
 	metricService := services.NewMetricService(metricStore)
 	marketHolidayService := services.NewMarketHolidayService(marketHolidayStore)
 	marketDayService := services.NewMarketDayService(marketHolidayStore)
 	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore)
-	securityMetricService := services.NewSecurityMetricService(marketDayService, metricStore, securityStatStore, securityMetricStore)
-	securityService := services.NewSecurityService(marketDayService, metricStore, securityMetricStore, securityStatStore, securityStore)
+	securityMetricService := services.NewSecurityMetricService(marketDayService, metricStore, securityStatStore)
+	securityService := services.NewSecurityService(marketDayService, securityMetricService, metricStore, securityStatStore, securityStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)
 	metricHandler := handlers.NewMetricHandler(metricService)
@@ -61,16 +60,12 @@ func main() {
 	app.POST("/securities", securityHandler.Create)
 	app.GET("/securities/{id}", securityHandler.Read)
 	app.PATCH("/securities/{id}", securityHandler.Patch)
+	app.GET("/securities/{id}/metrics", securityMetricHandler.Get)
 
 	app.GET("/security-stats", securityStatHandler.Index)
 	app.POST("/security-stats", securityStatHandler.Create)
 	app.GET("/security-stats/{id}", securityStatHandler.Read)
 	app.PATCH("/security-stats/{id}", securityStatHandler.Patch)
-
-	app.GET("/security-metrics", securityMetricHandler.Index)
-	app.POST("/security-metrics", securityMetricHandler.Create)
-	app.GET("/security-metrics/{id}", securityMetricHandler.Read)
-	app.PATCH("/security-metrics/{id}", securityMetricHandler.Patch)
 
 	app.Run()
 }
