@@ -8,16 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stratifyr/security-service/cmd/data-loader/internal/data-providers"
 	"gofr.dev/pkg/gofr"
+
+	"github.com/stratifyr/security-service/cmd/data-loader/internal/data-providers"
 )
 
-func NewCMDHandler(dataProvider dataProviders.DataProvider) *handler {
+func NewCMDHandler(dataProvider dataProviders.Provider) *handler {
 	return &handler{dataProvider: dataProvider}
 }
 
 type handler struct {
-	dataProvider dataProviders.DataProvider
+	dataProvider dataProviders.Provider
 }
 
 func (h *handler) LoadLTP(ctx *gofr.Context) (any, error) {
@@ -32,7 +33,7 @@ func (h *handler) LoadLTP(ctx *gofr.Context) (any, error) {
 		return nil, fmt.Errorf("security not found with symbol %v", symbolFilter)
 	}
 
-	ltpData, err := h.dataProvider.LTPBulk(ctx, securities)
+	ltpMap, err := h.dataProvider.LTP(ctx, securities)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ltp data, err: %v", err)
 	}
@@ -42,18 +43,13 @@ func (h *handler) LoadLTP(ctx *gofr.Context) (any, error) {
 	for i := range securities {
 		fmt.Println(securities[i])
 
-		idx := slices.IndexFunc(ltpData, func(data *dataProviders.LTPData) bool {
-			return data.Symbol == securities[i]
-		})
-
-		if idx == -1 {
+		ltp, ok := ltpMap[securities[i]]
+		if !ok {
 			errs = append(errs, fmt.Sprintf("[%s] ltp data not found", securities[i]))
 			continue
 		}
 
-		data := ltpData[idx]
-
-		if err = h.updateLTP(ctx, securityIDMap[securities[i]], data.LTP); err != nil {
+		if err = h.updateLTP(ctx, securityIDMap[securities[i]], ltp); err != nil {
 			errs = append(errs, fmt.Sprint(securities[i], err))
 			continue
 		}
@@ -89,7 +85,7 @@ func (h *handler) LoadSecurityStats(ctx *gofr.Context) (any, error) {
 		return nil, fmt.Errorf("security not found with symbol %s", symbolFilter)
 	}
 
-	ohlcData, err := h.dataProvider.OHLCBulk(ctx, securities)
+	ohlcData, err := h.dataProvider.OHLC(ctx, securities)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ohlc data, err: %v", err)
 	}
@@ -99,16 +95,13 @@ func (h *handler) LoadSecurityStats(ctx *gofr.Context) (any, error) {
 	for i := range securities {
 		fmt.Println(securities[i])
 
-		idx := slices.IndexFunc(ohlcData, func(data *dataProviders.OHLCData) bool {
-			return data.Symbol == securities[i]
-		})
-
-		if idx == -1 {
+		ohlc, ok := ohlcData[securities[i]]
+		if !ok {
 			errs = append(errs, fmt.Sprintf("[%s] ohlc data not found", securities[i]))
 			continue
 		}
 
-		if err = h.createSecurityStat(ctx, securityIDMap[securities[i]], today, ohlcData[idx]); err != nil {
+		if err = h.createSecurityStat(ctx, securityIDMap[securities[i]], today, ohlc); err != nil {
 			errs = append(errs, fmt.Sprintf("[%s] %v", securities[i], err))
 			continue
 		}
