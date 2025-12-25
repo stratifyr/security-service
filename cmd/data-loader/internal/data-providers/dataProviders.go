@@ -22,12 +22,12 @@ type DataProvider interface {
 }
 
 type LTPData struct {
-	ISIN string
-	LTP  float64
+	Symbol string
+	LTP    float64
 }
 
 type OHLCData struct {
-	ISIN   string
+	Symbol string
 	Open   float64
 	High   float64
 	Low    float64

@@ -31,32 +31,19 @@ data-loader load market-holidays
 data-loader load ltp
 ```
 ```bash
-data-loader load ltp --isin=INE883A01011
+data-loader load ltp --symbol=HDFCBANK
 ```
 **load security-stats:** To load open, high, close and volume stats for the securities
 ```bash
 data-loader load security-stats
 ```
 ```bash
-data-loader load security-stats --isin=INE883A01011
+data-loader load security-stats --symbol=HDFCBANK
+```
+**backfill security-stats:** To backfill the open, high, close and volume stats for the securities to accomodate corporate actions
+```bash
+data-loader backfill security-stats
 ```
 ```bash
-data-loader load security-stats --start-date=2024-01-01 --end-date=2024-12-31
+data-loader backfill security-stats --symbol=HDFCBANK
 ```
-```bash
-data-loader load security-stats --isin=INE883A01011 --start-date=2024-01-01 --end-date=2024-12-31
-```
-**load security-metrics:** To load configured metrics like SMA, EMA, RSI etc. for the securities
-```bash
-data-loader load security-metrics
-```
-```bash
-data-loader load security-metrics --isin=INE883A01011
-```
-```bash
-data-loader load security-metrics --start-date=2024-01-01 --end-date=2024-12-31
-```
-```bash
-data-loader load security-metrics --isin=INE883A01011 --start-date=2024-01-01 --end-date=2024-12-31
-```
-

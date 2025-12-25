@@ -116,6 +116,16 @@ func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCre
 		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
 	}
 
+	securityStats, err := s.store.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{payload.SecurityID}, Dates: []time.Time{payload.Date}}, 1, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(securityStats) > 0 {
+		return s.Patch(ctx, securityStats[0].ID, &SecurityStatUpdate{UserID: payload.UserID, Open: payload.Open,
+			Close: payload.Close, High: payload.High, Low: payload.Low, Volume: payload.Volume})
+	}
+
 	marketDays, count, err := s.marketDayService.Index(ctx,
 		&MarketDayFilter{DateBetween: &struct {
 			StartDate time.Time

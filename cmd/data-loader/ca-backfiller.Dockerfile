@@ -6,12 +6,8 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o data-loader
 
 FROM alpine:latest
-RUN apk add --no-cache ca-certificates tzdata coreutils
+RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /src/
 COPY --from=builder /src/configs/.env ./configs/.env
 COPY --from=builder /src/data-loader ./data-loader
-ENTRYPOINT ["sh", "-c", "\
-  START_DATE=$(date -I -d '-182 days') && \
-  END_DATE=$(date -I) && \
-  ./data-loader load security-stats --start-date=$START_DATE --end-date=$END_DATE\
-"]
+ENTRYPOINT ["./data-loader", "backfill", "security-stats"]
