@@ -81,20 +81,16 @@ func (s *securityMetricService) Get(ctx *gofr.Context, securityID int, date time
 }
 
 func (s *securityMetricService) getMetricValues(ctx *gofr.Context, securityID int, date time.Time, metrics []*stores.Metric) (map[string]string, error) {
-	isCacheable := true
-
-	if isCacheable {
-		values, err := s.getMetricValuesFromCache(ctx, securityID, date)
-		if err == nil {
-			return values, nil
-		}
-
-		ctx.Logger.Warnf("failed to get metric values from cache: %v", map[string]any{
-			"error":      err,
-			"securityId": securityID,
-			"date":       date,
-		})
+	values, err := s.getMetricValuesFromCache(ctx, securityID, date)
+	if err == nil {
+		return values, nil
 	}
+
+	ctx.Logger.Warnf("failed to get metric values from cache: %v", map[string]any{
+		"error":      err,
+		"securityId": securityID,
+		"date":       date,
+	})
 
 	maxPeriod := 0
 	for i := range metrics {
@@ -120,7 +116,7 @@ func (s *securityMetricService) getMetricValues(ctx *gofr.Context, securityID in
 		return securityStats[i].Date.After(securityStats[j].Date)
 	})
 
-	var values = make(map[string]string)
+	values = make(map[string]string)
 
 	for i := range metrics {
 		n := metrics[i].Period
@@ -134,14 +130,12 @@ func (s *securityMetricService) getMetricValues(ctx *gofr.Context, securityID in
 		values[strconv.Itoa(metrics[i].ID)] = fmt.Sprintf("%0.2f", value)
 	}
 
-	if isCacheable {
-		if err = s.setMetricValuesToCache(ctx, values, securityID, date); err != nil {
-			ctx.Logger.Warnf("failed to set metric values in cache: %v", map[string]any{
-				"error":      err,
-				"securityId": securityID,
-				"date":       date,
-			})
-		}
+	if err = s.setMetricValuesToCache(ctx, values, securityID, date); err != nil {
+		ctx.Logger.Warnf("failed to set metric values in cache: %v", map[string]any{
+			"error":      err,
+			"securityId": securityID,
+			"date":       date,
+		})
 	}
 
 	return values, nil
@@ -190,7 +184,7 @@ func (s *securityMetricService) setMetricValuesToCache(ctx *gofr.Context, values
 		return err
 	}
 
-	if err := ctx.Redis.Expire(ctx, key, time.Hour).Err(); err != nil {
+	if err := ctx.Redis.Expire(ctx, key, 5*time.Hour).Err(); err != nil {
 		return err
 	}
 
