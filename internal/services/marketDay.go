@@ -1,9 +1,10 @@
 package services
 
 import (
-	"gofr.dev/pkg/gofr/http"
 	"slices"
 	"time"
+
+	"gofr.dev/pkg/gofr/http"
 
 	"gofr.dev/pkg/gofr"
 
@@ -58,8 +59,8 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 		return nil, 0, http.ErrorMissingParam{Params: []string{"lastNDays", "dateBetween"}}
 	}
 
-	if n > 366 {
-		return nil, 0, &ErrResp{Code: 400, Message: "date range is too long, please pass interval within a year"}
+	if n > 366*5 {
+		return nil, 0, &ErrResp{Code: 400, Message: "date range is too long, please pass interval within 5 years"}
 	}
 
 	marketHolidays, err := s.marketHolidayStore.Index(ctx, &stores.MarketHolidayFilter{

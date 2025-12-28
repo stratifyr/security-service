@@ -93,6 +93,13 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 		filter.ISIN = ctx.Param("isin")
 	}
 
+	if ctx.Param("date") != "" {
+		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
+		if err != nil {
+			return nil, http.ErrorInvalidParam{Params: []string{"date"}}
+		}
+	}
+
 	page := 1
 	if ctx.Param("page") != "" {
 		page, err = strconv.Atoi(ctx.Param("page"))

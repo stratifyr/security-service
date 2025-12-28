@@ -23,6 +23,7 @@ type SecurityFilter struct {
 	IDs    []int
 	ISIN   string
 	Symbol string
+	Date   time.Time
 }
 
 type Security struct {
@@ -149,7 +150,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		securityIDs[i] = securities[i].ID
 	}
 
-	securityStatsMap, err := s.getStatsMap(ctx, securityIDs)
+	securityStatsMap, err := s.getStatsMap(ctx, securityIDs, f.Date)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -198,7 +199,7 @@ func (s *securityService) Read(ctx *gofr.Context, id, userID int) (*Security, er
 		return nil, err
 	}
 
-	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID})
+	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID}, time.Time{})
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +244,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		return nil, err
 	}
 
-	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID})
+	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID}, time.Time{})
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +304,7 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		return nil, err
 	}
 
-	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID})
+	securityStatsMap, err := s.getStatsMap(ctx, []int{security.ID}, time.Time{})
 	if err != nil {
 		return nil, err
 	}
@@ -532,15 +533,18 @@ func (s *securityService) getMetricsMap(ctx *gofr.Context, userID int) (map[int]
 	return metricsMap, nil
 }
 
-func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int) (map[int]*stores.SecurityStat, error) {
-	dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDays: 2})
-	if err != nil {
-		return nil, err
-	}
+func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, statDate time.Time) (map[int]*stores.SecurityStat, error) {
+	date := statDate
+	if statDate.IsZero() {
+		dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDays: 2})
+		if err != nil {
+			return nil, err
+		}
 
-	date := dates[0]
-	if dates[0].Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
-		date = dates[1]
+		date = dates[0]
+		if dates[0].Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
+			date = dates[1]
+		}
 	}
 
 	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: []time.Time{date}}, 0, 0)

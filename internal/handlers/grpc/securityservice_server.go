@@ -37,6 +37,15 @@ func (s *SecurityServiceGoFrServer) Index(ctx *gofr.Context) (any, error) {
 		Symbol: payload.Symbol,
 	}
 
+	var err error
+
+	if payload.Date != "" {
+		filter.Date, err = time.Parse(time.DateOnly, payload.Date)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	securities, count, err := s.svc.Index(ctx, filter, 0, 0)
 	if err != nil {
 		return nil, err

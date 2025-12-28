@@ -36,6 +36,7 @@ const (
 	Gold
 	Silver
 	Utilities
+	Metals
 )
 
 type Industry int
@@ -105,6 +106,7 @@ func (ex Industry) String() string {
 		Gold:                             "Gold",
 		Silver:                           "Silver",
 		Utilities:                        "Utilities",
+		Metals:                           "Metals",
 	}
 
 	return conversionMap[ex]
@@ -138,6 +140,7 @@ func IndustryFromString(str string) (Industry, error) {
 		"Gold":                              Gold,
 		"Silver":                            Silver,
 		"Utilities":                         Utilities,
+		"Metals":                            Metals,
 	}
 
 	industry, ok := conversionMap[str]

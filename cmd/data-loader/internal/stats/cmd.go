@@ -116,8 +116,8 @@ func (h *handler) LoadSecurityStats(ctx *gofr.Context) (any, error) {
 
 func (h *handler) BackFillSecurityStats(ctx *gofr.Context) (any, error) {
 	today := time.Now()
-	sixMonthsEarlier := today.AddDate(0, -6, 0)
-	startDate, endDate := sixMonthsEarlier, today
+	threeYearsEarlier := today.AddDate(-2, 0, 0)
+	startDate, endDate := threeYearsEarlier, today.AddDate(0, 0, -1)
 
 	symbolFilter := ctx.Param("symbol")
 

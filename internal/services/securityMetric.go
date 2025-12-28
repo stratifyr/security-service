@@ -81,7 +81,7 @@ func (s *securityMetricService) Get(ctx *gofr.Context, securityID int, date time
 }
 
 func (s *securityMetricService) getMetricValues(ctx *gofr.Context, securityID int, date time.Time, metrics []*stores.Metric) (map[string]string, error) {
-	isCacheable := time.Since(date) <= 72*time.Hour
+	isCacheable := true
 
 	if isCacheable {
 		values, err := s.getMetricValuesFromCache(ctx, securityID, date)

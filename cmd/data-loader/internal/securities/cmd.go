@@ -169,7 +169,7 @@ func (h *handler) createSecurity(ctx *gofr.Context, ISIN, symbol, industry, name
 	if resp.StatusCode != 201 {
 		b, _ := io.ReadAll(resp.Body)
 
-		return fmt.Errorf("non 201 resp POST /security-service/securities, resp: %v", b)
+		return fmt.Errorf("non 201 resp POST /security-service/securities, resp: %s", b)
 	}
 
 	return nil
