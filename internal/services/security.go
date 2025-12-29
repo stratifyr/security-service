@@ -545,6 +545,16 @@ func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, stat
 		if dates[0].Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
 			date = dates[1]
 		}
+	} else {
+		dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
+			N         int
+			Reference time.Time
+		}{N: 1, Reference: date}})
+		if err != nil {
+			return nil, err
+		}
+
+		date = dates[0]
 	}
 
 	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: []time.Time{date}}, 0, 0)
