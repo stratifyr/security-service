@@ -156,7 +156,7 @@ func (c *client) OHLC(ctx *gofr.Context, symbols []string) (map[string]*OHLCData
 		return nil, errors.New("unexpected resp POST /v2/marketfeed/quote, err: " + err.Error())
 	}
 
-	var ohlcData map[string]*OHLCData
+	var ohlcData = make(map[string]*OHLCData)
 
 	for i := range symbols {
 		securityID := c.symbolToDhanID[symbols[i]]
