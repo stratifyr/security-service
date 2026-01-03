@@ -245,7 +245,7 @@ func (s *securityMetricService) computeRSI(lastNStats []*stores.SecurityStat) fl
 	)
 
 	for i := 1; i < n; i++ {
-		deltaP := lastNStats[i].Close - lastNStats[i-1].Close
+		deltaP := lastNStats[i-1].Close - lastNStats[i].Close
 
 		if deltaP > 0 {
 			totalProfit += deltaP
