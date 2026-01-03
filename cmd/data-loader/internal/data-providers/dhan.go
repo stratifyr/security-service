@@ -285,6 +285,11 @@ func extractDhanIDMappings() (map[string]int, map[int]string, error) {
 		return nil, nil, err
 	}
 
+	idxSeries, err := idx("SERIES")
+	if err != nil {
+		return nil, nil, err
+	}
+
 	symbolToID := make(map[string]int)
 	idToSymbol := make(map[int]string)
 
@@ -300,6 +305,10 @@ func extractDhanIDMappings() (map[string]int, map[int]string, error) {
 		}
 
 		rowNo++
+
+		if row[idxSeries] != "EQ" {
+			continue
+		}
 
 		symbol := strings.TrimSpace(row[idxSymbol])
 		id, _ := strconv.Atoi(row[idxSecurityID])
