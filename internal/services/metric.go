@@ -12,7 +12,7 @@ import (
 )
 
 type MetricService interface {
-	Index(ctx *gofr.Context, f *MetricFilter, page, perPage int) ([]*Metric, int, error)
+	Index(ctx *gofr.Context, f *MetricFilter) ([]*Metric, error)
 	Read(ctx *gofr.Context, id int) (*Metric, error)
 	Create(ctx *gofr.Context, payload *MetricCreate) (*Metric, error)
 	Patch(ctx *gofr.Context, id int, payload *MetricUpdate) (*Metric, error)
@@ -20,16 +20,14 @@ type MetricService interface {
 
 type MetricFilter struct {
 	UserID int
-	Type   string
-	Period int
 }
 
 type Metric struct {
 	ID        int
 	Name      string
-	Type      string
+	Type      stores.MetricType
 	Period    int
-	Indicator string
+	Indicator stores.MetricIndicator
 	Tier      int
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -66,46 +64,23 @@ func NewMetricService(store stores.MetricStore) *metricService {
 	return &metricService{store: store}
 }
 
-func (s *metricService) Index(ctx *gofr.Context, f *MetricFilter, page, perPage int) ([]*Metric, int, error) {
-	limit := perPage
-	offset := limit * (page - 1)
-
+func (s *metricService) Index(ctx *gofr.Context, f *MetricFilter) ([]*Metric, error) {
 	filter := &stores.MetricFilter{
-		Type:    nil,
-		Period:  f.Period,
 		MaxTier: nil,
-	}
-
-	if f.Type != "" {
-		metricType, err := stores.MetricTypeFromString(f.Type)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		filter.Type = &metricType
 	}
 
 	if f.UserID != 0 {
 		userTier, err := s.getUserTier(ctx, f.UserID)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 
 		filter.MaxTier = &userTier
 	}
 
-	metrics, err := s.store.Index(ctx, filter, limit, offset)
+	metrics, err := s.store.Index(ctx, filter)
 	if err != nil {
-		return nil, 0, err
-	}
-
-	count, err := s.store.Count(ctx, filter)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if count == 0 {
-		return nil, 0, nil
+		return nil, err
 	}
 
 	var resp = make([]*Metric, len(metrics))
@@ -114,7 +89,7 @@ func (s *metricService) Index(ctx *gofr.Context, f *MetricFilter, page, perPage 
 		resp[i] = s.buildResp(metrics[i])
 	}
 
-	return resp, count, nil
+	return resp, nil
 }
 
 func (s *metricService) Read(ctx *gofr.Context, id int) (*Metric, error) {
@@ -231,9 +206,9 @@ func (s *metricService) buildResp(model *stores.Metric) *Metric {
 	resp := &Metric{
 		ID:        model.ID,
 		Name:      model.Name,
-		Type:      model.Type.String(),
+		Type:      model.Type,
 		Period:    model.Period,
-		Indicator: model.Indicator.String(),
+		Indicator: model.Indicator,
 		Tier:      model.Tier,
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,

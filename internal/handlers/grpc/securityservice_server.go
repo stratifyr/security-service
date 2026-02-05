@@ -93,12 +93,12 @@ func (s *SecurityServiceGoFrServer) buildResponse(securities []*services.Securit
 			resp.Securities[i].MarketData.Metrics[j] = &Metric{
 				Id:              int32(securities[i].SecurityMetrics[j].Metric.ID),
 				Name:            securities[i].SecurityMetrics[j].Metric.Name,
-				Type:            securities[i].SecurityMetrics[j].Metric.Type,
+				Type:            securities[i].SecurityMetrics[j].Metric.Type.String(),
 				Period:          int32(securities[i].SecurityMetrics[j].Metric.Period),
-				Indicator:       securities[i].SecurityMetrics[j].Metric.Indicator,
+				Indicator:       securities[i].SecurityMetrics[j].Metric.Indicator.String(),
 				Tier:            int32(securities[i].SecurityMetrics[j].Metric.Tier),
 				Value:           securities[i].SecurityMetrics[j].Value,
-				NormalizedValue: securities[i].SecurityMetrics[j].NormalizedValue,
+				NormalizedValue: securities[i].SecurityMetrics[j].ZValue,
 			}
 		}
 	}

@@ -4,94 +4,135 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strconv"
-	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/vmihailenco/msgpack/v5"
 	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/stores"
 )
 
 type SecurityMetricService interface {
-	Get(ctx *gofr.Context, securityID int, date time.Time) ([]*SecurityMetric, error)
+	Get(ctx *gofr.Context, userID int, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error)
 }
 
 type SecurityMetric struct {
 	Metric *Metric
 	Value  float64
+	ZValue float64
 }
 
 type securityMetricService struct {
-	mu                sync.Mutex
 	marketDayService  MarketDayService
-	metricStore       stores.MetricStore
+	metricService     MetricService
 	securityStatStore stores.SecurityStatStore
 }
 
-func NewSecurityMetricService(marketDayService MarketDayService, metricStore stores.MetricStore, securityStatStore stores.SecurityStatStore) *securityMetricService {
+func NewSecurityMetricService(marketDayService MarketDayService, metricService MetricService, securityStatStore stores.SecurityStatStore) *securityMetricService {
 	return &securityMetricService{
-		mu:                sync.Mutex{},
 		marketDayService:  marketDayService,
-		metricStore:       metricStore,
+		metricService:     metricService,
 		securityStatStore: securityStatStore,
 	}
 }
 
-func (s *securityMetricService) Get(ctx *gofr.Context, securityID int, date time.Time) ([]*SecurityMetric, error) {
-	metrics, err := s.metricStore.Index(ctx, &stores.MetricFilter{}, 0, 0)
+func (s *securityMetricService) Get(ctx *gofr.Context, userID int, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
+	metrics, err := s.metricService.Index(ctx, &MetricFilter{UserID: userID})
 	if err != nil {
 		return nil, err
 	}
 
-	s.mu.Lock()
-	metricValues, err := s.getMetricValues(ctx, securityID, date, metrics)
+	securityMetrics, err := s.getSecurityMetricsFromCache(ctx, securityIDs, date, metrics)
+	if err == nil {
+		return securityMetrics, nil
+	}
+
+	ctx.Logger.Warnf("failed to get security metrics from cache: %v", map[string]any{
+		"error":       err,
+		"securityIds": securityIDs,
+		"date":        date,
+	})
+
+	securityMetrics, err = s.computeSecurityMetrics(ctx, securityIDs, date, metrics)
 	if err != nil {
 		return nil, err
 	}
-	s.mu.Unlock()
 
-	var resp = make([]*SecurityMetric, 0)
-
-	for i := range metrics {
-		value, ok := metricValues[strconv.Itoa(metrics[i].ID)]
-		if !ok {
-			continue
-		}
-
-		valueFloat, _ := strconv.ParseFloat(value, 64)
-
-		resp = append(resp, &SecurityMetric{
-			Metric: &Metric{
-				ID:        metrics[i].ID,
-				Name:      metrics[i].Name,
-				Type:      metrics[i].Type.String(),
-				Period:    metrics[i].Period,
-				Indicator: metrics[i].Indicator.String(),
-				Tier:      metrics[i].Tier,
-				CreatedAt: metrics[i].CreatedAt,
-				UpdatedAt: metrics[i].UpdatedAt,
-			},
-			Value: valueFloat,
+	if err = s.setSecurityMetricsToCache(ctx, securityMetrics, date); err != nil {
+		ctx.Logger.Warnf("failed to set security metrics in cache: %v", map[string]any{
+			"error":       err,
+			"securityIds": securityIDs,
+			"date":        date,
 		})
 	}
 
-	return resp, nil
+	return securityMetrics, nil
 }
 
-func (s *securityMetricService) getMetricValues(ctx *gofr.Context, securityID int, date time.Time, metrics []*stores.Metric) (map[string]string, error) {
-	values, err := s.getMetricValuesFromCache(ctx, securityID, date)
-	if err == nil {
-		return values, nil
+type metricValues struct {
+	ID     int
+	Value  float64
+	ZValue float64
+}
+
+func (s *securityMetricService) getSecurityMetricsFromCache(ctx *gofr.Context, securityIDs []int, date time.Time, metrics []*Metric) (map[int][]*SecurityMetric, error) {
+	metricsMap := make(map[int]*Metric)
+	for _, m := range metrics {
+		metricsMap[m.ID] = m
 	}
 
-	ctx.Logger.Warnf("failed to get metric values from cache: %v", map[string]any{
-		"error":      err,
-		"securityId": securityID,
-		"date":       date,
-	})
+	var keys = make([]string, len(securityIDs))
 
+	for i, securityID := range securityIDs {
+		keys[i] = fmt.Sprintf("security_metrics:security_id:%d:date:%s", securityID, date.Format(time.DateOnly))
+	}
+
+	vals, err := ctx.Redis.MGet(ctx, keys...).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	securityMetrics := make(map[int][]*SecurityMetric)
+
+	for i, val := range vals {
+		if val == nil {
+			continue
+		}
+
+		var metricVals []metricValues
+		if err = msgpack.Unmarshal([]byte(val.(string)), &metricVals); err != nil {
+			return nil, err
+		}
+
+		sm := make([]*SecurityMetric, 0)
+
+		for j := range metricVals {
+			mv := &metricVals[j]
+
+			metric, ok := metricsMap[mv.ID]
+			if !ok {
+				continue
+			}
+
+			sm = append(sm, &SecurityMetric{
+				Metric: metric,
+				Value:  mv.Value,
+				ZValue: mv.ZValue,
+			})
+		}
+
+		securityMetrics[securityIDs[i]] = sm
+	}
+
+	if len(securityMetrics) != len(securityIDs) {
+		return nil, redis.Nil
+	}
+
+	return securityMetrics, nil
+}
+
+func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securityIDs []int, date time.Time, metrics []*Metric) (map[int][]*SecurityMetric, error) {
 	maxPeriod := 0
 	for i := range metrics {
 		if metrics[i].Period > maxPeriod {
@@ -107,106 +148,110 @@ func (s *securityMetricService) getMetricValues(ctx *gofr.Context, securityID in
 		return nil, err
 	}
 
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{securityID}, Dates: marketDays}, 0, 0)
-	if err != nil {
-		return nil, err
-	}
+	var securityMetrics = make(map[int][]*SecurityMetric)
 
-	sort.Slice(securityStats, func(i, j int) bool {
-		return securityStats[i].Date.After(securityStats[j].Date)
-	})
-
-	values = make(map[string]string)
-
-	for i := range metrics {
-		n := metrics[i].Period
-
-		if len(securityStats) < n {
-			ctx.Logger.Warnf("cannot compute securityId:%d_%s_%d, not enough data", securityID, metrics[i].Type.String(), metrics[i].Period)
-			continue
+	for _, securityID := range securityIDs {
+		securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{securityID}, Dates: marketDays}, 0, 0)
+		if err != nil {
+			return nil, err
 		}
 
-		value := s.computeMetricValue(metrics[i], securityStats[:n])
-		values[strconv.Itoa(metrics[i].ID)] = fmt.Sprintf("%0.2f", value)
-	}
-
-	if err = s.setMetricValuesToCache(ctx, values, securityID, date); err != nil {
-		ctx.Logger.Warnf("failed to set metric values in cache: %v", map[string]any{
-			"error":      err,
-			"securityId": securityID,
-			"date":       date,
+		sort.Slice(securityStats, func(i, j int) bool {
+			return securityStats[i].Date.After(securityStats[j].Date)
 		})
+
+		var sm = make([]*SecurityMetric, 0)
+
+		for i := range metrics {
+			n := metrics[i].Period
+
+			if len(securityStats) < n {
+				ctx.Logger.Warnf("cannot compute securityId:%d_%s_%d, not enough data", securityID, metrics[i].Type.String(), metrics[i].Period)
+				continue
+			}
+
+			value, normalizedValue := s.computeMetricValue(metrics[i], securityStats[:n])
+
+			sm = append(sm, &SecurityMetric{
+				Metric: &Metric{
+					ID:        metrics[i].ID,
+					Name:      metrics[i].Name,
+					Type:      metrics[i].Type,
+					Period:    metrics[i].Period,
+					Indicator: metrics[i].Indicator,
+					Tier:      metrics[i].Tier,
+					CreatedAt: metrics[i].CreatedAt,
+					UpdatedAt: metrics[i].UpdatedAt,
+				},
+				Value:  value,
+				ZValue: normalizedValue,
+			})
+		}
+
+		securityMetrics[securityID] = sm
 	}
 
-	return values, nil
+	return securityMetrics, nil
 }
 
-func (s *securityMetricService) computeMetricValue(metric *stores.Metric, securityStats []*stores.SecurityStat) float64 {
-	switch metric.Type {
-	case stores.SMA:
-		return s.computeSMA(securityStats)
-	case stores.EMA:
-		k := 2.0 / float64(len(securityStats)+1)
-		smaSeed := s.computeSMA(securityStats)
-		return s.computeEMA(k, smaSeed, securityStats)
-	case stores.RSI:
-		return s.computeRSI(securityStats)
-	case stores.ROC:
-		return s.computeROC(securityStats)
-	case stores.ATR:
-		return s.computeATR(securityStats)
-	case stores.VMA:
-		return s.computeVMA(securityStats)
-	default:
-		return 0
-	}
-}
+func (s *securityMetricService) setSecurityMetricsToCache(ctx *gofr.Context, securityMetrics map[int][]*SecurityMetric, date time.Time) error {
+	pipe := ctx.Redis.Pipeline()
 
-func (s *securityMetricService) getMetricValuesFromCache(ctx *gofr.Context, securityID int, date time.Time) (map[string]string, error) {
-	key := fmt.Sprintf("security_metrics:security_id:%d:date:%s", securityID, date.Format(time.DateOnly))
+	for securityID, metrics := range securityMetrics {
+		key := fmt.Sprintf("security_metrics:security_id:%d:date:%s", securityID, date.Format(time.DateOnly))
 
-	res, err := ctx.Redis.HGetAll(ctx, key).Result()
-	if err != nil {
-		return nil, err
+		metricValue := make([]*metricValues, len(metrics))
+
+		for i, metric := range metrics {
+			metricValue[i] = &metricValues{
+				ID:     metric.Metric.ID,
+				Value:  metric.Value,
+				ZValue: metric.ZValue,
+			}
+		}
+
+		bytes, err := msgpack.Marshal(metricValue)
+		if err != nil {
+			return err
+		}
+
+		pipe.SetEx(ctx, key, bytes, 5*time.Hour)
 	}
 
-	if len(res) == 0 {
-		return nil, redis.Nil
-	}
-
-	return res, nil
-}
-
-func (s *securityMetricService) setMetricValuesToCache(ctx *gofr.Context, values map[string]string, securityID int, date time.Time) error {
-	key := fmt.Sprintf("security_metrics:security_id:%d:date:%s", securityID, date.Format(time.DateOnly))
-
-	if err := ctx.Redis.HSet(ctx, key, values).Err(); err != nil {
-		return err
-	}
-
-	if err := ctx.Redis.Expire(ctx, key, 5*time.Hour).Err(); err != nil {
+	if _, err := pipe.Exec(ctx); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *securityMetricService) buildResp(metric *stores.Metric, value float64) *SecurityMetric {
-	resp := &SecurityMetric{
-		Metric: &Metric{
-			ID:        metric.ID,
-			Name:      metric.Name,
-			Type:      metric.Type.String(),
-			Period:    metric.Period,
-			Indicator: metric.Indicator.String(),
-			Tier:      metric.Tier,
-			CreatedAt: metric.CreatedAt,
-			UpdatedAt: metric.UpdatedAt,
-		},
-		Value: value,
-	}
+func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats []*stores.SecurityStat) (float64, float64) {
+	dayStat := securityStats[0]
 
-	return resp
+	switch metric.Type {
+	case stores.SMA:
+		value := s.computeSMA(securityStats)
+		return value, (dayStat.Close - value) / value
+	case stores.EMA:
+		k := 2.0 / float64(len(securityStats)+1)
+		smaSeed := s.computeSMA(securityStats)
+		value := s.computeEMA(k, smaSeed, securityStats)
+		return value, (dayStat.Close - value) / value
+	case stores.RSI:
+		value := s.computeRSI(securityStats)
+		return value, value / 100
+	case stores.ROC:
+		value := s.computeROC(securityStats)
+		return value, value / 100
+	case stores.ATR:
+		value := s.computeATR(securityStats)
+		return value, -value / dayStat.Close
+	case stores.VMA:
+		value := s.computeVMA(securityStats)
+		return value, (float64(dayStat.Volume) - value) / value
+	default:
+		return 0, 0
+	}
 }
 
 func (s *securityMetricService) computeSMA(lastNStats []*stores.SecurityStat) float64 {

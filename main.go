@@ -28,7 +28,7 @@ func main() {
 	marketHolidayService := services.NewMarketHolidayService(marketHolidayStore)
 	marketDayService := services.NewMarketDayService(marketHolidayStore)
 	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore)
-	securityMetricService := services.NewSecurityMetricService(marketDayService, metricStore, securityStatStore)
+	securityMetricService := services.NewSecurityMetricService(marketDayService, metricService, securityStatStore)
 	securityService := services.NewSecurityService(marketDayService, securityMetricService, metricStore, securityStatStore, securityStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)
@@ -37,7 +37,6 @@ func main() {
 	marketDayHandler := handlers.NewMarketDayHandler(marketDayService)
 	securityHandler := handlers.NewSecurityHandler(securityService)
 	securityStatHandler := handlers.NewSecurityStatHandler(securityStatService)
-	securityMetricHandler := handlers.NewSecurityMetricHandler(securityMetricService)
 
 	grpc.RegisterSecurityServiceServerWithGofr(app, grpc.NewSecurityServiceGoFrServer(securityService))
 
@@ -60,7 +59,6 @@ func main() {
 	app.POST("/securities", securityHandler.Create)
 	app.GET("/securities/{id}", securityHandler.Read)
 	app.PATCH("/securities/{id}", securityHandler.Patch)
-	app.GET("/securities/{id}/metrics", securityMetricHandler.Get)
 
 	app.GET("/security-stats", securityStatHandler.Index)
 	app.POST("/security-stats", securityStatHandler.Create)

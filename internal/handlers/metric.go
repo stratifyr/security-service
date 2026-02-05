@@ -57,34 +57,7 @@ func (h *metricHandler) Index(ctx *gofr.Context) (interface{}, error) {
 		}
 	}
 
-	if ctx.Param("type") != "" {
-		filter.Type = ctx.Param("type")
-	}
-
-	if ctx.Param("period") != "" {
-		filter.Period, err = strconv.Atoi(ctx.Param("period"))
-		if err != nil {
-			return nil, http.ErrorInvalidParam{Params: []string{"period"}}
-		}
-	}
-
-	page := 1
-	if ctx.Param("page") != "" {
-		page, err = strconv.Atoi(ctx.Param("page"))
-		if err != nil || page < 1 {
-			return nil, http.ErrorInvalidParam{Params: []string{"page"}}
-		}
-	}
-
-	perPage := 20
-	if ctx.Param("perPage") != "" {
-		perPage, err = strconv.Atoi(ctx.Param("perPage"))
-		if err != nil || perPage < 1 {
-			return nil, http.ErrorInvalidParam{Params: []string{"perPage"}}
-		}
-	}
-
-	metrics, count, err := h.svc.Index(ctx, &filter, page, perPage)
+	metrics, err := h.svc.Index(ctx, &filter)
 	if err != nil {
 		return nil, err
 	}
@@ -97,11 +70,6 @@ func (h *metricHandler) Index(ctx *gofr.Context) (interface{}, error) {
 
 	return response.Raw{Data: map[string]any{
 		"data": resp,
-		"meta": map[string]any{
-			"page":    page,
-			"perPage": perPage,
-			"total":   count,
-		},
 	}}, nil
 }
 
@@ -178,9 +146,9 @@ func (h *metricHandler) buildResp(model *services.Metric) *Metric {
 	resp := &Metric{
 		ID:        model.ID,
 		Name:      model.Name,
-		Type:      model.Type,
+		Type:      model.Type.String(),
 		Period:    model.Period,
-		Indicator: model.Indicator,
+		Indicator: model.Indicator.String(),
 		Tier:      model.Tier,
 		CreatedAt: model.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: model.UpdatedAt.Format(time.RFC3339),

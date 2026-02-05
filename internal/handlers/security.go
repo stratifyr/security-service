@@ -291,12 +291,12 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 		}{
 			ID:              model.SecurityMetrics[i].Metric.ID,
 			Name:            model.SecurityMetrics[i].Metric.Name,
-			Type:            model.SecurityMetrics[i].Metric.Type,
+			Type:            model.SecurityMetrics[i].Metric.Type.String(),
 			Period:          model.SecurityMetrics[i].Metric.Period,
-			Indicator:       model.SecurityMetrics[i].Metric.Indicator,
+			Indicator:       model.SecurityMetrics[i].Metric.Indicator.String(),
 			Tier:            model.SecurityMetrics[i].Metric.Tier,
 			Value:           model.SecurityMetrics[i].Value,
-			NormalizedValue: model.SecurityMetrics[i].NormalizedValue,
+			NormalizedValue: model.SecurityMetrics[i].ZValue,
 		}
 	}
 
