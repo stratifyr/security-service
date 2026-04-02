@@ -118,20 +118,7 @@ func (h *handler) createOrUpdateMetric(ctx *gofr.Context, name, typ, period, tie
 	interval, _ := strconv.Atoi(period)
 	tierInt, _ := strconv.Atoi(tier)
 
-	metricID, exists, err := h.checkIfMetricAlreadyExists(ctx, typ, interval)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		if err = h.updateMetric(ctx, metricID, name, tierInt); err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	if err = h.createMetric(ctx, name, typ, interval, tierInt); err != nil {
+	if err := h.createMetric(ctx, name, typ, interval, tierInt); err != nil {
 		return err
 	}
 
