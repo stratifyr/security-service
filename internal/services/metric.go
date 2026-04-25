@@ -1,9 +1,6 @@
 package services
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -12,14 +9,10 @@ import (
 )
 
 type MetricService interface {
-	Index(ctx *gofr.Context, f *MetricFilter) ([]*Metric, error)
+	Index(ctx *gofr.Context) ([]*Metric, error)
 	Read(ctx *gofr.Context, id int) (*Metric, error)
 	Create(ctx *gofr.Context, payload *MetricCreate) (*Metric, error)
 	Patch(ctx *gofr.Context, id int, payload *MetricUpdate) (*Metric, error)
-}
-
-type MetricFilter struct {
-	UserID int
 }
 
 type Metric struct {
@@ -64,21 +57,8 @@ func NewMetricService(store stores.MetricStore) *metricService {
 	return &metricService{store: store}
 }
 
-func (s *metricService) Index(ctx *gofr.Context, f *MetricFilter) ([]*Metric, error) {
-	filter := &stores.MetricFilter{
-		MaxTier: nil,
-	}
-
-	if f.UserID != 0 {
-		userTier, err := s.getUserTier(ctx, f.UserID)
-		if err != nil {
-			return nil, err
-		}
-
-		filter.MaxTier = &userTier
-	}
-
-	metrics, err := s.store.Index(ctx, filter)
+func (s *metricService) Index(ctx *gofr.Context) ([]*Metric, error) {
+	metrics, err := s.store.Index(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +96,6 @@ func (s *metricService) Create(ctx *gofr.Context, payload *MetricCreate) (*Metri
 		Type:      metricType,
 		Period:    payload.Period,
 		Indicator: MetricTypeIndicator[metricType],
-		Tier:      payload.Tier,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
@@ -143,63 +122,12 @@ func (s *metricService) Patch(ctx *gofr.Context, id int, payload *MetricUpdate) 
 		metric.Name = payload.Name
 	}
 
-	if payload.Tier != nil {
-		metric.Tier = *payload.Tier
-	}
-
 	metric, err = s.store.Update(ctx, id, metric)
 	if err != nil {
 		return nil, err
 	}
 
 	return s.buildResp(metric), nil
-}
-
-func (s *metricService) getUserTier(ctx *gofr.Context, userID int) (int, error) {
-	httpService := ctx.GetHTTPService("account-service")
-
-	resp, err := httpService.Get(ctx, fmt.Sprintf("users/%d", userID), nil)
-	if err != nil {
-		ctx.Logger.Errorf("failed GET /account-service/users/{id}, %v", map[string]interface{}{
-			"err":    err.Error(),
-			"userId": userID,
-		})
-
-		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-
-		ctx.Logger.Errorf("non 200 resp GET /account-service/users/{id}, %v", map[string]interface{}{
-			"code": resp.StatusCode,
-			"resp": string(body),
-		})
-
-		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
-	}
-
-	var res struct {
-		Data *struct {
-			Plan *struct {
-				Tier int `json:"tier"`
-			} `json:"plan"`
-		} `json:"data"`
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(&res)
-	if err != nil {
-		ctx.Logger.Error("unexpected response from GET /account-service/users/{id}, %v", map[string]interface{}{
-			"resp":         fmt.Sprintf("%s", resp.Body),
-			"unmarshalErr": err,
-		})
-
-		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
-	}
-
-	return res.Data.Plan.Tier, nil
 }
 
 func (s *metricService) buildResp(model *stores.Metric) *Metric {
@@ -209,7 +137,6 @@ func (s *metricService) buildResp(model *stores.Metric) *Metric {
 		Type:      model.Type,
 		Period:    model.Period,
 		Indicator: model.Indicator,
-		Tier:      model.Tier,
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,
 	}

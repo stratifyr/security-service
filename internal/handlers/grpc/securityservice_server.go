@@ -22,22 +22,10 @@ func (s *SecurityServiceGoFrServer) Index(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	var ids []int
-
-	if len(payload.Ids) > 0 {
-		for i := range payload.Ids {
-			ids = append(ids, int(payload.Ids[i]))
-		}
-	}
-
-	filter := &services.SecurityFilter{
-		UserID: int(payload.UserId),
-		IDs:    ids,
-		ISIN:   payload.Isin,
-		Symbol: payload.Symbol,
-	}
-
-	var err error
+	var (
+		filter services.SecurityFilter
+		err    error
+	)
 
 	if payload.Date != "" {
 		filter.Date, err = time.Parse(time.DateOnly, payload.Date)
@@ -46,7 +34,7 @@ func (s *SecurityServiceGoFrServer) Index(ctx *gofr.Context) (any, error) {
 		}
 	}
 
-	securities, count, err := s.svc.Index(ctx, filter, 0, 0)
+	securities, count, err := s.svc.Index(ctx, &filter, 0, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +58,6 @@ func (s *SecurityServiceGoFrServer) buildResponse(securities []*services.Securit
 			Image:         securities[i].Image,
 			Ltp:           securities[i].LTP,
 			PreviousClose: securities[i].PreviousClose,
-			Tier:          int32(securities[i].Tier),
 			CreatedAt:     securities[i].CreatedAt.Format(time.RFC3339),
 			UpdatedAt:     securities[i].UpdatedAt.Format(time.RFC3339),
 		}
@@ -96,7 +83,6 @@ func (s *SecurityServiceGoFrServer) buildResponse(securities []*services.Securit
 				Type:            securities[i].SecurityMetrics[j].Metric.Type.String(),
 				Period:          int32(securities[i].SecurityMetrics[j].Metric.Period),
 				Indicator:       securities[i].SecurityMetrics[j].Metric.Indicator.String(),
-				Tier:            int32(securities[i].SecurityMetrics[j].Metric.Tier),
 				Value:           securities[i].SecurityMetrics[j].Value,
 				NormalizedValue: securities[i].SecurityMetrics[j].ZValue,
 			}

@@ -14,7 +14,7 @@ import (
 )
 
 type SecurityMetricService interface {
-	Get(ctx *gofr.Context, userID int, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error)
+	Get(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error)
 }
 
 type SecurityMetric struct {
@@ -37,8 +37,8 @@ func NewSecurityMetricService(marketDayService MarketDayService, metricService M
 	}
 }
 
-func (s *securityMetricService) Get(ctx *gofr.Context, userID int, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
-	metrics, err := s.metricService.Index(ctx, &MetricFilter{UserID: userID})
+func (s *securityMetricService) Get(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
+	metrics, err := s.metricService.Index(ctx)
 	if err != nil {
 		return nil, err
 	}

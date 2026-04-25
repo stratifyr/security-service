@@ -17,7 +17,6 @@ type Metric struct {
 	Type      string `json:"type"`
 	Period    int    `json:"period"`
 	Indicator string `json:"indicator"`
-	Tier      int    `json:"tier"`
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
 }
@@ -27,13 +26,11 @@ type MetricCreate struct {
 	Name   string `json:"name"`
 	Type   string `json:"type"`
 	Period int    `json:"period"`
-	Tier   int    `json:"tier"`
 }
 
 type MetricUpdate struct {
 	UserID int    `json:"userId"`
 	Name   string `json:"name"`
-	Tier   *int   `json:"tier"`
 }
 
 type metricHandler struct {
@@ -45,19 +42,7 @@ func NewMetricHandler(svc services.MetricService) *metricHandler {
 }
 
 func (h *metricHandler) Index(ctx *gofr.Context) (interface{}, error) {
-	var (
-		filter services.MetricFilter
-		err    error
-	)
-
-	if ctx.Param("userId") != "" {
-		filter.UserID, err = strconv.Atoi(ctx.Param("userId"))
-		if err != nil {
-			return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
-		}
-	}
-
-	metrics, err := h.svc.Index(ctx, &filter)
+	metrics, err := h.svc.Index(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +86,6 @@ func (h *metricHandler) Create(ctx *gofr.Context) (interface{}, error) {
 		Name:   payload.Name,
 		Type:   payload.Type,
 		Period: payload.Period,
-		Tier:   payload.Tier,
 	}
 
 	metric, err := h.svc.Create(ctx, model)
@@ -129,7 +113,6 @@ func (h *metricHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 	model := &services.MetricUpdate{
 		UserID: payload.UserID,
 		Name:   payload.Name,
-		Tier:   payload.Tier,
 	}
 
 	metric, err := h.svc.Patch(ctx, id, model)
@@ -149,7 +132,6 @@ func (h *metricHandler) buildResp(model *services.Metric) *Metric {
 		Type:      model.Type.String(),
 		Period:    model.Period,
 		Indicator: model.Indicator.String(),
-		Tier:      model.Tier,
 		CreatedAt: model.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: model.UpdatedAt.Format(time.RFC3339),
 	}

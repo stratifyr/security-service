@@ -1,9 +1,6 @@
 package services
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -13,17 +10,13 @@ import (
 
 type SecurityService interface {
 	Index(ctx *gofr.Context, f *SecurityFilter, page, perPage int) ([]*Security, int, error)
-	Read(ctx *gofr.Context, id, userID int) (*Security, error)
+	Read(ctx *gofr.Context, id int) (*Security, error)
 	Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error)
 	Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error)
 }
 
 type SecurityFilter struct {
-	UserID int
-	IDs    []int
-	ISIN   string
-	Symbol string
-	Date   time.Time
+	Date time.Time
 }
 
 type Security struct {
@@ -35,7 +28,6 @@ type Security struct {
 	Image           string
 	LTP             float64
 	PreviousClose   float64
-	Tier            int
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	SecurityStat    *SecurityStat
@@ -50,7 +42,6 @@ type SecurityCreate struct {
 	Name     string
 	Image    string
 	LTP      float64
-	Tier     int
 }
 
 type SecurityUpdate struct {
@@ -60,7 +51,6 @@ type SecurityUpdate struct {
 	Name     string
 	Image    string
 	LTP      float64
-	Tier     *int
 }
 
 type securityService struct {
@@ -90,28 +80,12 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		f.Date = time.Now()
 	}
 
-	filter := &stores.SecurityFilter{
-		IDs:     f.IDs,
-		Symbol:  f.Symbol,
-		ISIN:    f.ISIN,
-		MaxTier: nil,
-	}
-
-	if f.UserID != 0 {
-		userTier, err := s.getUserTier(ctx, f.UserID)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		filter.MaxTier = &userTier
-	}
-
-	securities, err := s.store.Index(ctx, filter, limit, offset)
+	securities, err := s.store.Index(ctx, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	count, err := s.store.Count(ctx, filter)
+	count, err := s.store.Count(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -136,7 +110,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		return nil, 0, err
 	}
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, f.UserID, securityIDs, prevMarketDay)
+	securityMetrics, err := s.securityMetricService.Get(ctx, securityIDs, prevMarketDay)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -150,7 +124,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 	return resp, count, nil
 }
 
-func (s *securityService) Read(ctx *gofr.Context, id, userID int) (*Security, error) {
+func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 	security, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
@@ -166,7 +140,7 @@ func (s *securityService) Read(ctx *gofr.Context, id, userID int) (*Security, er
 		return nil, err
 	}
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, userID, []int{security.ID}, prevMarketDay)
+	securityMetrics, err := s.securityMetricService.Get(ctx, []int{security.ID}, prevMarketDay)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +165,6 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		Name:      payload.Name,
 		Image:     payload.Image,
 		LTP:       payload.LTP,
-		Tier:      payload.Tier,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
@@ -211,7 +184,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		return nil, err
 	}
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, payload.UserID, []int{security.ID}, prevMarketDay)
+	securityMetrics, err := s.securityMetricService.Get(ctx, []int{security.ID}, prevMarketDay)
 	if err != nil {
 		return nil, err
 	}
@@ -252,10 +225,6 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		security.LTP = payload.LTP
 	}
 
-	if payload.Tier != nil {
-		security.Tier = *payload.Tier
-	}
-
 	security, err = s.store.Update(ctx, id, security)
 	if err != nil {
 		return nil, err
@@ -271,59 +240,12 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		return nil, err
 	}
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, payload.UserID, []int{security.ID}, prevMarketDay)
+	securityMetrics, err := s.securityMetricService.Get(ctx, []int{security.ID}, prevMarketDay)
 	if err != nil {
 		return nil, err
 	}
 
 	return s.buildResp(security, securityStats, securityMetrics), nil
-}
-
-func (s *securityService) getUserTier(ctx *gofr.Context, userID int) (int, error) {
-	httpService := ctx.GetHTTPService("account-service")
-
-	resp, err := httpService.Get(ctx, fmt.Sprintf("users/%d", userID), nil)
-	if err != nil {
-		ctx.Logger.Errorf("failed GET /account-service/users/{id}, %v", map[string]interface{}{
-			"err":    err.Error(),
-			"userId": userID,
-		})
-
-		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-
-		ctx.Logger.Errorf("non 200 resp GET /account-service/users/{id}, %v", map[string]interface{}{
-			"code": resp.StatusCode,
-			"resp": string(body),
-		})
-
-		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
-	}
-
-	var res struct {
-		Data *struct {
-			Plan *struct {
-				Tier int `json:"tier"`
-			} `json:"plan"`
-		} `json:"data"`
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(&res)
-	if err != nil {
-		ctx.Logger.Error("unexpected response from GET /account-service/users/{id}, %v", map[string]interface{}{
-			"resp":         fmt.Sprintf("%s", resp.Body),
-			"unmarshalErr": err,
-		})
-
-		return 0, &ErrResp{Code: 503, Message: "something went wrong!"}
-	}
-
-	return res.Data.Plan.Tier, nil
 }
 
 func (s *securityService) getPrevMarketDay(ctx *gofr.Context, referenceDate time.Time) (time.Time, error) {
@@ -367,7 +289,6 @@ func (s *securityService) buildResp(model *stores.Security, securityStats map[in
 		Name:            model.Name,
 		Image:           model.Image,
 		LTP:             model.LTP,
-		Tier:            model.Tier,
 		CreatedAt:       model.CreatedAt,
 		UpdatedAt:       model.CreatedAt,
 		SecurityStat:    nil,
