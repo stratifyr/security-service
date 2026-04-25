@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package security;
+
+option go_package = "github.com/stratifyr/security-service/internal/handlers/grpc";
+
+service SecurityService {
+  rpc GetMarketDays(GetMarketDaysRequest) returns (GetMarketDaysResponse);
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
+  rpc GetSecurities(GetSecuritiesRequest) returns (GetSecuritiesResponse);
+}
+
+message GetMarketDaysRequest {
+  string start_date = 1;
+  string end_date = 2;
+}
+
+message GetMarketDaysResponse {
+  repeated string days = 1;
+}
+
+message GetMetricsRequest {}
+
+message GetMetricsResponse {
+  repeated Metric metrics = 1;
+  int32 total = 2;
+}
+
+message GetSecuritiesRequest {
+  string date = 5;
+}
+
+message GetSecuritiesResponse {
+  repeated Security securities = 1;
+  int32 total = 2;
+}
+
+message Security {
+  int32 id = 1;
+  string isin = 2;
+  string symbol = 3;
+  string industry = 4;
+  string name = 5;
+  string image = 6;
+  double ltp = 7;
+  double previous_close = 8;
+  string created_at = 9;
+  string updated_at = 10;
+  MarketData market_data = 11;
+}
+
+message MarketData {
+  string date = 1;
+  double open = 2;
+  double close = 3;
+  double high = 4;
+  double low = 5;
+  int32 volume = 6;
+  repeated SecurityMetric metrics = 7;
+}
+
+message SecurityMetric {
+  int32 id = 1;
+  string name = 2;
+  string type = 3;
+  int32 period = 4;
+  string indicator = 5;
+  double value = 6;
+  double normalized_value = 7;
+}
+
+message Metric {
+  int32 id = 1;
+  string name = 2;
+  string type = 3;
+  int32 period = 4;
+  string indicator = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}

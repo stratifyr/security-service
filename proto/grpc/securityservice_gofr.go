@@ -2,7 +2,7 @@
 // versions:
 // 	gofr-cli v0.7.0
 // 	gofr.dev v1.39.0
-// 	source: security.proto
+// 	source: security-service.proto
 
 package grpc
 
@@ -14,28 +14,28 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/stratifyr/security-service/internal/services"
+	"github.com/stratifyr/security-service/proto"
 )
 
 // NewSecurityServiceGoFrServer creates a new instance of SecurityServiceGoFrServer
-func NewSecurityServiceGoFrServer(svc services.SecurityService) *SecurityServiceGoFrServer {
+func NewSecurityServiceGoFrServer() *SecurityServiceGoFrServer {
 	return &SecurityServiceGoFrServer{
-		svc: svc,
 		health: getOrCreateHealthServer(), // Initialize the health server
 	}
 }
 
 // SecurityServiceServerWithGofr is the interface for the server implementation
 type SecurityServiceServerWithGofr interface {
-	Index(*gofr.Context) (any, error)
+	GetMarketDays(*gofr.Context) (any, error)
+	GetMetrics(*gofr.Context) (any, error)
+	GetSecurities(*gofr.Context) (any, error)
 }
 
 // SecurityServiceServerWrapper wraps the server and handles request and response logic
 type SecurityServiceServerWrapper struct {
-	SecurityServiceServer
+	proto.SecurityServiceServer
 	*healthServer
 	Container *container.Container
 	server    SecurityServiceServerWithGofr
@@ -44,16 +44,48 @@ type SecurityServiceServerWrapper struct {
 
 
 
-// Unary method handler for Index
-func (h *SecurityServiceServerWrapper) Index(ctx context.Context, req *SecurityIndexRequest) (*SecurityIndexResponse, error) {
-	gctx := h.getGofrContext(ctx, &SecurityIndexRequestWrapper{ctx: ctx, SecurityIndexRequest: req})
+// Unary method handler for GetMarketDays
+func (h *SecurityServiceServerWrapper) GetMarketDays(ctx context.Context, req *proto.GetMarketDaysRequest) (*proto.GetMarketDaysResponse, error) {
+	gctx := h.getGofrContext(ctx, &GetMarketDaysRequestWrapper{ctx: ctx, GetMarketDaysRequest: req})
 	
-	res, err := h.server.Index(gctx)
+	res, err := h.server.GetMarketDays(gctx)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, ok := res.(*SecurityIndexResponse)
+	resp, ok := res.(*proto.GetMarketDaysResponse)
+	if !ok {
+		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
+	}
+	
+	return resp, nil
+}
+// Unary method handler for GetMetrics
+func (h *SecurityServiceServerWrapper) GetMetrics(ctx context.Context, req *proto.GetMetricsRequest) (*proto.GetMetricsResponse, error) {
+	gctx := h.getGofrContext(ctx, &GetMetricsRequestWrapper{ctx: ctx, GetMetricsRequest: req})
+	
+	res, err := h.server.GetMetrics(gctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, ok := res.(*proto.GetMetricsResponse)
+	if !ok {
+		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
+	}
+	
+	return resp, nil
+}
+// Unary method handler for GetSecurities
+func (h *SecurityServiceServerWrapper) GetSecurities(ctx context.Context, req *proto.GetSecuritiesRequest) (*proto.GetSecuritiesResponse, error) {
+	gctx := h.getGofrContext(ctx, &GetSecuritiesRequestWrapper{ctx: ctx, GetSecuritiesRequest: req})
+	
+	res, err := h.server.GetSecurities(gctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, ok := res.(*proto.GetSecuritiesResponse)
 	if !ok {
 		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
 	}
@@ -68,11 +100,11 @@ func (h *SecurityServiceServerWrapper) mustEmbedUnimplementedSecurityServiceServ
 func RegisterSecurityServiceServerWithGofr(app *gofr.App, srv SecurityServiceServerWithGofr) {
 	registerServerWithGofr(app, srv, func(s grpc.ServiceRegistrar, srv any) {
 		wrapper := &SecurityServiceServerWrapper{
-			server: srv.(SecurityServiceServerWithGofr),
+			server:       srv.(SecurityServiceServerWithGofr),
 			healthServer: getOrCreateHealthServer(),
 		}
 
-		RegisterSecurityServiceServer(s, wrapper)
+		proto.RegisterSecurityServiceServer(s, wrapper)
 
 		wrapper.Server.SetServingStatus("Hello", healthpb.HealthCheckResponse_SERVING)
 	})

@@ -11,7 +11,7 @@ import (
 	"gofr.dev/pkg/gofr/http"
 )
 
-const metricsCacheKey = "cache:security-service:store:metrics"
+const metricsCacheKey = "security-service:server-cache:metrics"
 
 type MetricStore interface {
 	Index(ctx *gofr.Context) ([]*Metric, error)

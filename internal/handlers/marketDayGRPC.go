@@ -1,0 +1,58 @@
+package handlers
+
+import (
+	"time"
+
+	"gofr.dev/pkg/gofr"
+
+	"github.com/stratifyr/security-service/internal/services"
+	"github.com/stratifyr/security-service/proto"
+)
+
+type marketDayGRPCHandler struct {
+	svc services.MarketDayService
+}
+
+func NewMarketDayGRPCHandler(svc services.MarketDayService) *marketDayGRPCHandler {
+	return &marketDayGRPCHandler{svc: svc}
+}
+
+func (h *marketDayGRPCHandler) Index(ctx *gofr.Context) (any, error) {
+	var payload proto.GetMarketDaysRequest
+
+	if err := ctx.Bind(&payload); err != nil {
+		return nil, err
+	}
+
+	startDate, err := time.Parse(time.DateOnly, payload.StartDate)
+	if err != nil {
+		return nil, err
+	}
+
+	endDate, err := time.Parse(time.DateOnly, payload.EndDate)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := &services.MarketDayFilter{
+		DateBetween: &struct {
+			StartDate time.Time
+			EndDate   time.Time
+		}{StartDate: startDate, EndDate: endDate},
+	}
+
+	marketDays, _, err := h.svc.Index(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &proto.GetMarketDaysResponse{
+		Days: make([]string, len(marketDays)),
+	}
+
+	for i := range marketDays {
+		resp.Days[i] = marketDays[i].Format(time.DateOnly)
+	}
+
+	return resp, nil
+}

@@ -2,14 +2,15 @@
 // versions:
 // 	gofr-cli v0.7.0
 // 	gofr.dev v1.39.0
-// 	source: security.proto
+// 	source: security-service.proto
 
 package grpc
 
 import (
 	"fmt"
-	"google.golang.org/grpc"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"gofr.dev/pkg/gofr"
 
