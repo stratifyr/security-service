@@ -2,9 +2,11 @@ package stores
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/stratifyr/security-service/client"
 	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/datasource"
 	"gofr.dev/pkg/gofr/http"
@@ -109,6 +111,12 @@ func (s *securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, error) {
 	query := "INSERT INTO securities (isin, symbol, industry, name, image, ltp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 
+	// todo: make this even driven based on changes in DB logs
+	cacheKey := fmt.Sprintf(client.SecuritiesCacheKey, time.Now().Format(time.DateOnly))
+	if err := ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
+		return nil, datasource.ErrorDB{Err: err}
+	}
+
 	result, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.CreatedAt, st.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
@@ -123,6 +131,12 @@ func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, erro
 }
 
 func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Security, error) {
+	// todo: make this even driven based on changes in DB logs
+	cacheKey := fmt.Sprintf(client.SecuritiesCacheKey, time.Now().Format(time.DateOnly))
+	if err := ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
+		return nil, datasource.ErrorDB{Err: err}
+	}
+
 	query := `UPDATE securities SET isin = ?, symbol = ?, industry = ?, name = ?, image = ?, ltp = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 

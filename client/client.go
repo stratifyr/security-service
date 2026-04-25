@@ -75,10 +75,10 @@ func (c *securityServiceClient) GetMarketDays(ctx *gofr.Context, startDate, endD
 }
 
 func (c *securityServiceClient) GetMetrics(ctx *gofr.Context) ([]*proto.Metric, error) {
-	var result proto.GetMetricsResponse
-
 	bytes, err := c.cache.Get(ctx, MetricsCacheKey).Bytes()
 	if err == nil {
+		var result proto.GetMetricsResponse
+
 		if err = googleproto.Unmarshal(bytes, &result); err == nil {
 			return result.GetMetrics(), nil
 		}
@@ -102,33 +102,28 @@ func (c *securityServiceClient) GetMetrics(ctx *gofr.Context) ([]*proto.Metric, 
 }
 
 func (c *securityServiceClient) GetSecurities(ctx *gofr.Context, date time.Time) ([]*proto.Security, error) {
-	cacheable := date.Format(time.DateOnly) != time.Now().Format(time.DateOnly)
 	key := fmt.Sprintf(SecuritiesCacheKey, date.Format(time.DateOnly))
 
-	if cacheable {
-		bytes, err := c.cache.Get(ctx, key).Bytes()
-		if err == nil {
-			var result proto.GetSecuritiesResponse
+	bytes, err := c.cache.Get(ctx, key).Bytes()
+	if err == nil {
+		var result proto.GetSecuritiesResponse
 
-			if err = googleproto.Unmarshal(bytes, &result); err == nil {
-				return result.GetSecurities(), nil
-			}
+		if err = googleproto.Unmarshal(bytes, &result); err == nil {
+			return result.GetSecurities(), nil
 		}
-
-		ctx.Logger.Warnf("client cache miss, key: %s, err: %s", key, err.Error())
 	}
+
+	ctx.Logger.Warnf("client cache miss, key: %s, err: %s", key, err.Error())
 
 	resp, err := c.grpcConn.GetSecurities(ctx, &proto.GetSecuritiesRequest{Date: date.Format(time.DateOnly)})
 	if err != nil {
 		return nil, fmt.Errorf("failed rpc /security-service/GetSecurities, %s", err.Error())
 	}
 
-	if cacheable {
-		bytes, err := googleproto.Marshal(resp)
-		if err == nil {
-			if err = c.cache.Set(ctx, key, bytes, 30*24*time.Hour).Err(); err != nil {
-				ctx.Logger.Warnf("failed to client cache, key: %s, err: %s", key, err.Error())
-			}
+	bytes, err = googleproto.Marshal(resp)
+	if err == nil {
+		if err = c.cache.Set(ctx, key, bytes, 30*24*time.Hour).Err(); err != nil {
+			ctx.Logger.Warnf("failed to client cache, key: %s, err: %s", key, err.Error())
 		}
 	}
 
