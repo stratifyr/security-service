@@ -116,8 +116,8 @@ func (h *handler) LoadSecurityStats(ctx *gofr.Context) (any, error) {
 
 func (h *handler) BackFillSecurityStats(ctx *gofr.Context) (any, error) {
 	today := time.Now()
-	twoYearsEarlier := today.AddDate(-2, 0, 0)
-	startDate, endDate := twoYearsEarlier, today.AddDate(0, 0, -1)
+	fourYearsEarlier := today.AddDate(-4, 0, 0)
+	startDate, endDate := fourYearsEarlier, today.AddDate(0, 0, -1)
 
 	symbolFilter := ctx.Param("symbol")
 
@@ -138,7 +138,7 @@ func (h *handler) BackFillSecurityStats(ctx *gofr.Context) (any, error) {
 	var errs []string
 
 	for i := range securities {
-		fmt.Println(securities[i])
+		fmt.Printf("\n%s ", securities[i])
 
 		historicalData, err := h.dataProvider.HistoricalOHLC(ctx, securities[i], startDate, endDate)
 		if err != nil {
@@ -146,16 +146,32 @@ func (h *handler) BackFillSecurityStats(ctx *gofr.Context) (any, error) {
 			continue
 		}
 
-		for _, date := range marketDays {
-			fmt.Sprintln(securities[i], date.Format(time.DateOnly))
+		slices.SortFunc(marketDays, func(a, b time.Time) int {
+			if a.After(b) {
+				return -1
+			}
+
+			return 1
+		})
+
+		for j, date := range marketDays {
+			if j == 0 {
+				fmt.Printf("[%s,", date.Format(time.DateOnly))
+			}
+
+			if j == len(marketDays)-1 {
+				fmt.Printf("%s]\n", date.Format(time.DateOnly))
+			}
 
 			idx := slices.IndexFunc(historicalData, func(ohlc *dataProviders.HistoricalOHLC) bool {
 				return ohlc.Date.Format(time.DateOnly) == date.Format(time.DateOnly)
 			})
 
 			if idx == -1 {
-				errs = append(errs, fmt.Sprintf("[%s %s] historical data not found", securities[i], date.Format(time.DateOnly)))
-				continue
+				if j != len(marketDays)-1 {
+					fmt.Printf("%s]", date.Format(time.DateOnly))
+				}
+				break
 			}
 
 			if err = h.createSecurityStat(ctx, securityIDMap[securities[i]], date, historicalData[idx].OHLCData); err != nil {
