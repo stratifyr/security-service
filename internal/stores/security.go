@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/stratifyr/security-service/client"
@@ -13,11 +14,15 @@ import (
 )
 
 type SecurityStore interface {
-	Index(ctx *gofr.Context, limit, offset int) ([]*Security, error)
-	Count(ctx *gofr.Context) (int, error)
+	Index(ctx *gofr.Context, f *SecurityFilter, limit, offset int) ([]*Security, error)
+	Count(ctx *gofr.Context, f *SecurityFilter) (int, error)
 	Retrieve(ctx *gofr.Context, id int) (*Security, error)
 	Create(ctx *gofr.Context, security *Security) (*Security, error)
 	Update(ctx *gofr.Context, id int, security *Security) (*Security, error)
+}
+
+type SecurityFilter struct {
+	Symbol string
 }
 
 type Security struct {
@@ -38,19 +43,19 @@ func NewSecurityStore() *securityStore {
 	return &securityStore{}
 }
 
-func (s *securityStore) Index(ctx *gofr.Context, limit, offset int) ([]*Security, error) {
-	var values []interface{}
+func (s *securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, offset int) ([]*Security, error) {
+	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, isin, symbol, industry, name, image, ltp, created_at, updated_at
-              FROM securities`
+              FROM securities %s`
 
 	if limit > 0 {
 		query += " LIMIT ? OFFSET ?"
 
-		values = []interface{}{limit, offset}
+		values = append(values, limit, offset)
 	}
 
-	rows, err := ctx.SQL.QueryContext(ctx, query, values...)
+	rows, err := ctx.SQL.QueryContext(ctx, fmt.Sprintf(query, whereClause), values...)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -77,12 +82,14 @@ func (s *securityStore) Index(ctx *gofr.Context, limit, offset int) ([]*Security
 	return securities, nil
 }
 
-func (s *securityStore) Count(ctx *gofr.Context) (int, error) {
-	query := `SELECT COUNT(*) FROM securities`
+func (s *securityStore) Count(ctx *gofr.Context, filter *SecurityFilter) (int, error) {
+	whereClause, values := filter.buildWhereClause()
+
+	query := `SELECT COUNT(*) FROM securities %s`
 
 	var count int
 
-	err := ctx.SQL.QueryRowContext(ctx, query).Scan(&count)
+	err := ctx.SQL.QueryRowContext(ctx, fmt.Sprintf(query, whereClause), values...).Scan(&count)
 	if err != nil {
 		return 0, datasource.ErrorDB{Err: err}
 	}
@@ -146,4 +153,17 @@ func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Securi
 	}
 
 	return s.Retrieve(ctx, id)
+}
+
+func (f *SecurityFilter) buildWhereClause() (clause string, values []interface{}) {
+	if f.Symbol != "" {
+		clause += " AND symbol = ?"
+		values = append(values, f.Symbol)
+	}
+
+	if clause != "" {
+		clause = "WHERE" + strings.TrimPrefix(clause, " AND")
+	}
+
+	return clause, values
 }

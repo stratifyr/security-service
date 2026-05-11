@@ -65,7 +65,7 @@ func (h *handler) Load(ctx *gofr.Context) (any, error) {
 func (h *handler) createOrUpdateSecurity(ctx *gofr.Context, ISIN, symbol, industry, name, tier string) error {
 	tierInt, _ := strconv.Atoi(tier)
 
-	securityID, exists, err := h.checkIfSecurityAlreadyExists(ctx, ISIN)
+	securityID, exists, err := h.checkIfSecurityAlreadyExists(ctx, symbol)
 	if err != nil {
 		return err
 	}
@@ -85,10 +85,10 @@ func (h *handler) createOrUpdateSecurity(ctx *gofr.Context, ISIN, symbol, indust
 	return nil
 }
 
-func (h *handler) checkIfSecurityAlreadyExists(ctx *gofr.Context, ISIN string) (int, bool, error) {
+func (h *handler) checkIfSecurityAlreadyExists(ctx *gofr.Context, symbol string) (int, bool, error) {
 	securityService := ctx.GetHTTPService("security-service")
 
-	resp, err := securityService.Get(ctx, "securities", map[string]any{"isin": ISIN})
+	resp, err := securityService.Get(ctx, "securities", map[string]any{"symbol": symbol})
 	if err != nil {
 		return 0, false, fmt.Errorf("failed GET /security-service/securities, err: %v", err)
 	}

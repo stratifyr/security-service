@@ -16,7 +16,8 @@ type SecurityService interface {
 }
 
 type SecurityFilter struct {
-	Date time.Time
+	Symbol string
+	Date   time.Time
 }
 
 type Security struct {
@@ -80,12 +81,16 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		f.Date = time.Now()
 	}
 
-	securities, err := s.store.Index(ctx, limit, offset)
+	filter := &stores.SecurityFilter{
+		Symbol: f.Symbol,
+	}
+
+	securities, err := s.store.Index(ctx, filter, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	count, err := s.store.Count(ctx)
+	count, err := s.store.Count(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}

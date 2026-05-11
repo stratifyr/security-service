@@ -74,6 +74,10 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 		err    error
 	)
 
+	if ctx.Param("symbol") != "" {
+		filter.Symbol = ctx.Param("symbol")
+	}
+
 	if ctx.Param("date") != "" {
 		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
 		if err != nil {
