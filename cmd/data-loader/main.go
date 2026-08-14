@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"fmt"
 
 	"gofr.dev/pkg/gofr"
 
@@ -19,7 +20,8 @@ func main() {
 
 	client, err := dataProviders.New(app)
 	if err != nil {
-		app.Logger().Fatalf("failed to get data provider, err: %s", err)
+		fmt.Println("failed to get data provider, err: " + err.Error())
+		return
 	}
 
 	securitiesCMDHandler := securities.NewCMDHandler()

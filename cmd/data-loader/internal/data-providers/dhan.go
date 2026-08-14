@@ -1,7 +1,11 @@
 package dataProviders
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
 	_ "embed"
+	"encoding/base32"
+	"encoding/binary"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -17,7 +21,7 @@ import (
 )
 
 type client struct {
-	apiKey         string
+	accessToken    string
 	clientID       string
 	symbolToDhanID map[string]int
 	dhanIDToSymbol map[int]string
@@ -26,14 +30,29 @@ type client struct {
 func NewDhanHQClient(app *gofr.App) (*client, error) {
 	app.AddHTTPService("dhan-api", "https://api.dhan.co")
 
-	apiKey := app.Config.Get("DHAN_API_KEY")
-	if apiKey == "" {
-		return nil, errors.New("missing DHAN_API_KEY")
-	}
-
 	clientID := app.Config.Get("DHAN_CLIENT_ID")
 	if clientID == "" {
 		return nil, errors.New("missing DHAN_CLIENT_ID")
+	}
+
+	totpSecret := app.Config.Get("DHAN_TOTP_SECRET")
+	if totpSecret == "" {
+		return nil, errors.New("missing DHAN_TOTP_SECRET")
+	}
+
+	pin := app.Config.Get("DHAN_PIN")
+	if pin == "" {
+		return nil, errors.New("missing DHAN_PIN")
+	}
+
+	totp, err := generateTOTP(totpSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	apiKey, err := getApiKey(clientID, pin, totp)
+	if err != nil {
+		return nil, err
 	}
 
 	symbolToID, idToSymbol, err := extractDhanIDMappings()
@@ -42,7 +61,7 @@ func NewDhanHQClient(app *gofr.App) (*client, error) {
 	}
 
 	return &client{
-		apiKey:         apiKey,
+		accessToken:    apiKey,
 		clientID:       clientID,
 		symbolToDhanID: symbolToID,
 		dhanIDToSymbol: idToSymbol,
@@ -63,7 +82,7 @@ func (c *client) LTP(ctx *gofr.Context, symbols []string) (map[string]float64, e
 	}
 
 	body, _ := json.Marshal(payload)
-	headers := map[string]string{"Content-Type": "application/json", "access-token": c.apiKey, "client-id": c.clientID}
+	headers := map[string]string{"Content-Type": "application/json", "access-token": c.accessToken, "client-id": c.clientID}
 
 	resp, err := ctx.GetHTTPService("dhan-api").PostWithHeaders(ctx, "v2/marketfeed/ltp", nil, body, headers)
 	if err != nil {
@@ -122,7 +141,7 @@ func (c *client) OHLC(ctx *gofr.Context, symbols []string) (map[string]*OHLCData
 	}
 
 	body, _ := json.Marshal(payload)
-	headers := map[string]string{"Content-Type": "application/json", "access-token": c.apiKey, "client-id": c.clientID}
+	headers := map[string]string{"Content-Type": "application/json", "access-token": c.accessToken, "client-id": c.clientID}
 
 	resp, err := ctx.GetHTTPService("dhan-api").PostWithHeaders(ctx, "v2/marketfeed/quote", nil, body, headers)
 	if err != nil {
@@ -191,7 +210,7 @@ func (c *client) HistoricalOHLC(ctx *gofr.Context, symbol string, startDate, end
 	}
 
 	body, _ := json.Marshal(payload)
-	headers := map[string]string{"Content-Type": "application/json", "access-token": c.apiKey}
+	headers := map[string]string{"Content-Type": "application/json", "access-token": c.accessToken}
 
 	resp, err := ctx.GetHTTPService("dhan-api").PostWithHeaders(ctx, "v2/charts/historical", nil, body, headers)
 	if err != nil {
@@ -238,6 +257,83 @@ func (c *client) HistoricalOHLC(ctx *gofr.Context, symbol string, startDate, end
 	}
 
 	return historicalData, nil
+}
+
+func generateTOTP(secret string) (string, error) {
+	now := time.Now()
+
+	// If less than 5 seconds remain in the current TOTP window, wait for the next window.
+	remaining := 30 - (now.Unix() % 30)
+
+	if remaining <= 5 {
+		time.Sleep(time.Duration(remaining+1) * time.Second)
+		now = time.Now()
+	}
+
+	secret = strings.ToUpper(strings.TrimSpace(secret))
+	secret = strings.TrimRight(secret, "=")
+
+	key, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(secret)
+	if err != nil {
+		return "", fmt.Errorf("invalid TOTP secret: %w", err)
+	}
+
+	counter := uint64(now.Unix() / 30)
+
+	var counterBytes [8]byte
+	binary.BigEndian.PutUint64(counterBytes[:], counter)
+
+	mac := hmac.New(sha1.New, key)
+	mac.Write(counterBytes[:])
+	hash := mac.Sum(nil)
+
+	offset := hash[len(hash)-1] & 0x0f
+
+	code := (uint32(hash[offset])&0x7f)<<24 |
+		(uint32(hash[offset+1])&0xff)<<16 |
+		(uint32(hash[offset+2])&0xff)<<8 |
+		(uint32(hash[offset+3]) & 0xff)
+
+	return fmt.Sprintf("%06d", code%1000000), nil
+}
+
+func getApiKey(clientID, pin, totp string) (string, error) {
+	url := fmt.Sprintf("https://auth.dhan.co/app/generateAccessToken?dhanClientId=%s&pin=%s&totp=%s", clientID, pin, totp)
+
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	c := &http.Client{Timeout: 30 * time.Second}
+	resp, err := c.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed POST https://auth.dhan.co/app/generateAccessToken: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+
+		return "", fmt.Errorf("non 200 resp POST https://auth.dhan.co/app/generateAccessToken, resp: %s", string(b))
+	}
+
+	var res struct {
+		Status      string `json:"status"`
+		Message     string `json:"message"`
+		AccessToken string `json:"accessToken"`
+	}
+
+	if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return "", fmt.Errorf("unexpected resp POST https://auth.dhan.co/app/generateAccessToken: %w", err)
+	}
+
+	if res.Status == "error" {
+		return "", fmt.Errorf("failed to generate access token, msg: %s", res.Message)
+	}
+
+	return res.AccessToken, nil
 }
 
 func extractDhanIDMappings() (map[string]int, map[int]string, error) {
