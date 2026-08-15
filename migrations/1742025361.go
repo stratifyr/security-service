@@ -68,6 +68,19 @@ func setupInitialSchemas() migration.Migrate {
 				return err
 			}
 
+			if _, err := d.SQL.Exec(`CREATE TABLE market_data_jobs (
+										id INT PRIMARY KEY AUTO_INCREMENT,
+										type INT NOT NULL,
+										status enum('CREATED', 'COMPLETED', 'FAILED') NOT NULL,
+										logs JSON NULL,
+										created_at TIMESTAMP NOT NULL,
+										updated_at TIMESTAMP NOT NULL,
+										
+                             			INDEX idx_market_data_jobs (status)
+									);`); err != nil {
+				return err
+			}
+
 			return nil
 		},
 	}
