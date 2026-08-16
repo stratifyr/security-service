@@ -1,10 +1,10 @@
 module github.com/stratifyr/security-service/daemon/stats-loader
 
-go 1.26.6
+go 1.26.0
 
 require (
-	github.com/stratifyr/security-service-client v0.0.0-20260816143237-1e60bea84907
-	github.com/stratifyr/security-service-proto v0.0.0-20260816140417-8973eb71174e
+	github.com/stratifyr/security-service-client v0.0.0-20260816150426-ea74ba841a53
+	github.com/stratifyr/security-service-proto v0.0.0-20260816145909-ddc61aa6e6ae
 	gofr.dev v1.59.0
 )
 
@@ -59,7 +59,7 @@ require (
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.21.0 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.21.0 // indirect
-	github.com/redis/go-redis/v9 v9.22.0 // indirect
+	github.com/redis/go-redis/v9 v9.21.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/segmentio/kafka-go v0.4.51 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
