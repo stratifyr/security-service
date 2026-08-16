@@ -17,22 +17,10 @@ jobs:
             dockerfile: ./Dockerfile
             docker_context: .
             port: 8002
-          - name: ltp-loader
-            cron: "* 3-10 * * 1-5"
-            type: cronjob
-            dockerfile: ./cmd/data-loader/ltp-loader.Dockerfile
-            docker_context: ./cmd/data-loader
-          - name: stats-loader
-            cron: "30 13 * * 1-5"
-            type: cronjob
-            dockerfile: ./cmd/data-loader/stats-loader.Dockerfile
-            docker_context: ./cmd/data-loader
-          - name: ca-backfiller
-            cron: "30 15 * * 5"
-            type: cronjob
-            dockerfile: ./cmd/data-loader/ca-backfiller.Dockerfile
-            docker_context: ./cmd/data-loader
-
+          - name: market-data-loader
+            type: deployment
+            dockerfile: ./daemon/market-data-loader/Dockerfile
+            docker_context: ./daemon/market-data-loader
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

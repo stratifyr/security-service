@@ -1,9 +1,8 @@
-package dataProviders
+package dataproviders
 
 import (
 	"crypto/hmac"
 	"crypto/sha1"
-	_ "embed"
 	"encoding/base32"
 	"encoding/binary"
 	"encoding/csv"
@@ -30,9 +29,24 @@ type client struct {
 func NewDhanHQClient(app *gofr.App) (*client, error) {
 	app.AddHTTPService("dhan-api", "https://api.dhan.co")
 
+	symbolToID, idToSymbol, err := extractDhanIDMappings()
+	if err != nil {
+		return nil, err
+	}
+
 	clientID := app.Config.Get("DHAN_CLIENT_ID")
 	if clientID == "" {
 		return nil, errors.New("missing DHAN_CLIENT_ID")
+	}
+
+	accessToken := app.Config.Get("DHAN_ACCESS_TOKEN")
+	if accessToken != "" {
+		return &client{
+			accessToken:    accessToken,
+			clientID:       clientID,
+			symbolToDhanID: symbolToID,
+			dhanIDToSymbol: idToSymbol,
+		}, nil
 	}
 
 	totpSecret := app.Config.Get("DHAN_TOTP_SECRET")
@@ -50,18 +64,13 @@ func NewDhanHQClient(app *gofr.App) (*client, error) {
 		return nil, err
 	}
 
-	apiKey, err := getApiKey(clientID, pin, totp)
-	if err != nil {
-		return nil, err
-	}
-
-	symbolToID, idToSymbol, err := extractDhanIDMappings()
+	accessToken, err = getApiKey(clientID, pin, totp)
 	if err != nil {
 		return nil, err
 	}
 
 	return &client{
-		accessToken:    apiKey,
+		accessToken:    accessToken,
 		clientID:       clientID,
 		symbolToDhanID: symbolToID,
 		dhanIDToSymbol: idToSymbol,

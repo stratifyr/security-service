@@ -1,7 +1,8 @@
-package dataProviders
+package dataproviders
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -33,4 +34,8 @@ type OHLCData struct {
 type HistoricalOHLC struct {
 	Date time.Time
 	*OHLCData
+}
+
+func (o OHLCData) String() string {
+	return fmt.Sprintf("{o=%0.2f, h=%0.2f, l=%0.2f, c=%0.2f, v=%d}", o.Open, o.High, o.Low, o.Close, o.Volume)
 }
