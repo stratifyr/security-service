@@ -9,15 +9,18 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
+	"github.com/stratifyr/security-service/client"
+
 	dataProviders "github.com/stratifyr/security-service/daemon/stats-loader/internal/data-providers"
 )
 
 type daemon struct {
-	dataProvider dataProviders.Provider
+	dataProvider          dataProviders.Provider
+	securityServiceClient client.SecurityServiceClient
 }
 
-func NewDaemon(dataProvider dataProviders.Provider) *daemon {
-	return &daemon{dataProvider: dataProvider}
+func NewDaemon(dataProvider dataProviders.Provider, securityServiceClient client.SecurityServiceClient) *daemon {
+	return &daemon{dataProvider: dataProvider, securityServiceClient: securityServiceClient}
 }
 
 func (d *daemon) Start(ctx *gofr.Context) error {
@@ -47,32 +50,34 @@ func (d *daemon) Start(ctx *gofr.Context) error {
 }
 
 func (d *daemon) processMarketDataJob(ctx *gofr.Context) error {
-	job, err := GetNextPendingJob(ctx)
+	pendingJobs, err := d.securityServiceClient.GetMarketDataJobs(ctx, "CREATED")
 	if err != nil {
 		return err
 	}
 
-	if job == nil {
+	if len(pendingJobs) < 1 {
 		ctx.Logger.Debug("no pending job found")
 		return nil
 	}
 
-	ctx.Logger.Infof("processing %s job id:%d", strings.ToLower(job.Type), job.ID)
+	job := pendingJobs[0]
 
-	jobProcessor, err := GetJobProcessor(job.Type, d.dataProvider)
+	ctx.Logger.Infof("processing %s job id:%d", strings.ToLower(job.Type), job.Id)
+
+	jobProcessor, err := GetJobProcessor(job.Type, d.dataProvider, d.securityServiceClient)
 	if err != nil {
 		return err
 	}
 
 	logs, err := jobProcessor.Process(ctx)
 	if err != nil {
-		_ = UpdateJobStatus(ctx, job.ID, "FAILED", logs)
+		_ = d.securityServiceClient.UpdateMarketDataJobStatus(ctx, job.Id, "FAILED", logs)
 		return err
 	}
 
-	_ = UpdateJobStatus(ctx, job.ID, "COMPLETED", logs)
+	_ = d.securityServiceClient.UpdateMarketDataJobStatus(ctx, job.Id, "COMPLETED", logs)
 
-	ctx.Logger.Infof("processed %s job id:%d", strings.ToLower(job.Type), job.ID)
+	ctx.Logger.Infof("processed %s job id:%d", strings.ToLower(job.Type), job.Id)
 
 	return nil
 }

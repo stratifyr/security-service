@@ -2,20 +2,23 @@ package jobprocessors
 
 import (
 	"fmt"
-	"slices"
 	"time"
 
 	"gofr.dev/pkg/gofr"
+
+	"github.com/stratifyr/security-service/client"
+	"github.com/stratifyr/security-service/proto"
 
 	dataProviders "github.com/stratifyr/security-service/daemon/stats-loader/internal/data-providers"
 )
 
 type statsLoader struct {
-	dataProvider dataProviders.Provider
+	dataProvider          dataProviders.Provider
+	securityServiceClient client.SecurityServiceClient
 }
 
-func NewStatsLoader(dataProvider dataProviders.Provider) JobProcessor {
-	return &statsLoader{dataProvider}
+func NewStatsLoader(dataProvider dataProviders.Provider, securityServiceClient client.SecurityServiceClient) JobProcessor {
+	return &statsLoader{dataProvider, securityServiceClient}
 }
 
 func (s *statsLoader) Process(ctx *gofr.Context) (logs *Logs, err error) {
@@ -24,7 +27,7 @@ func (s *statsLoader) Process(ctx *gofr.Context) (logs *Logs, err error) {
 
 	today := time.Now()
 
-	marketDays, err := getMarketDays(ctx, today, today)
+	marketDays, err := s.securityServiceClient.GetMarketDays(ctx, today, today)
 	if err != nil {
 		return logs, err
 	}
@@ -33,35 +36,49 @@ func (s *statsLoader) Process(ctx *gofr.Context) (logs *Logs, err error) {
 		return logs, fmt.Errorf("cannot load stats on market holiday %v", today.Format(time.DateOnly))
 	}
 
-	symbolFilter := ctx.Param("symbol")
-
-	securities, securityIDMap, err := getSecurityDetails(ctx, symbolFilter)
+	securities, err := s.securityServiceClient.GetSecurities(ctx, time.Now())
 	if err != nil {
-		return logs, err
+		return nil, err
 	}
 
-	if symbolFilter != "" && !slices.Contains(securities, symbolFilter) {
-		return logs, fmt.Errorf("security not found with symbol %s", symbolFilter)
+	var (
+		symbols       = make([]string, len(securities))
+		securityIDMap = make(map[string]int32)
+	)
+
+	for i := range securities {
+		symbols[i] = securities[i].Symbol
+		securityIDMap[securities[i].Symbol] = securities[i].Id
 	}
 
-	ohlcData, err := s.dataProvider.OHLC(ctx, securities)
+	ohlcData, err := s.dataProvider.OHLC(ctx, symbols)
 	if err != nil {
 		return logs, fmt.Errorf("failed to get ohlc data, err: %v", err)
 	}
 
-	for i := range securities {
-		ohlc, ok := ohlcData[securities[i]]
+	for i := range symbols {
+		ohlc, ok := ohlcData[symbols[i]]
 		if !ok {
-			logs.Errors = append(logs.Errors, fmt.Sprintf("%s ohlc data not found", securities[i]))
+			logs.Errors = append(logs.Errors, fmt.Sprintf("%s ohlc data not found", symbols[i]))
 			continue
 		}
 
-		if err = createSecurityStat(ctx, securityIDMap[securities[i]], today, ohlc); err != nil {
-			logs.Errors = append(logs.Errors, fmt.Sprintf("%s %v", securities[i], err))
+		payload := &proto.CreateOrUpdateSecurityStatRequest{
+			SecurityId: securityIDMap[symbols[i]],
+			Date:       today.Format(time.DateOnly),
+			Open:       ohlc.Open,
+			Close:      ohlc.Close,
+			High:       ohlc.High,
+			Low:        ohlc.Low,
+			Volume:     int32(ohlc.Volume),
+		}
+
+		if err = s.securityServiceClient.CreateOrUpdateSecurityStat(ctx, payload); err != nil {
+			logs.Errors = append(logs.Errors, fmt.Sprintf("%s %v", symbols[i], err))
 			continue
 		}
 
-		logs.Success = append(logs.Success, fmt.Sprintf("%s %s", securities[i], ohlc))
+		logs.Success = append(logs.Success, fmt.Sprintf("%s %s", symbols[i], ohlc))
 	}
 
 	return logs, nil

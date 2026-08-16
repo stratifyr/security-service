@@ -2,7 +2,10 @@ module github.com/stratifyr/security-service/daemon/stats-loader
 
 go 1.26.0
 
-require gofr.dev v1.59.0
+require (
+	github.com/stratifyr/security-service v0.0.0-20260816130420-38b8a4206f92
+	gofr.dev v1.59.0
+)
 
 require (
 	cloud.google.com/go v0.123.0 // indirect

@@ -7,15 +7,19 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
+	"github.com/stratifyr/security-service/client"
+	"github.com/stratifyr/security-service/proto"
+
 	dataProviders "github.com/stratifyr/security-service/daemon/stats-loader/internal/data-providers"
 )
 
 type statsBackfiller struct {
-	dataProvider dataProviders.Provider
+	dataProvider          dataProviders.Provider
+	securityServiceClient client.SecurityServiceClient
 }
 
-func NewStatsBackfiller(dataProvider dataProviders.Provider) JobProcessor {
-	return &statsBackfiller{dataProvider: dataProvider}
+func NewStatsBackfiller(dataProvider dataProviders.Provider, securityServiceClient client.SecurityServiceClient) JobProcessor {
+	return &statsBackfiller{dataProvider: dataProvider, securityServiceClient: securityServiceClient}
 }
 
 func (s *statsBackfiller) Process(ctx *gofr.Context) (logs *Logs, err error) {
@@ -27,26 +31,30 @@ func (s *statsBackfiller) Process(ctx *gofr.Context) (logs *Logs, err error) {
 	startDate, endDate := fourYearsEarlier, today.AddDate(0, 0, -1)
 	logs.Meta["backfill_period"] = fmt.Sprintf("%s - %s", startDate.Format(time.DateOnly), endDate.Format(time.DateOnly))
 
-	symbolFilter := ctx.Param("symbol")
-
-	securities, securityIDMap, err := getSecurityDetails(ctx, ctx.Param("symbol"))
+	securities, err := s.securityServiceClient.GetSecurities(ctx, time.Now())
 	if err != nil {
-		return logs, err
+		return nil, err
 	}
 
-	if symbolFilter != "" && !slices.Contains(securities, symbolFilter) {
-		return logs, fmt.Errorf("security not found with symbol %s", symbolFilter)
-	}
-
-	marketDays, err := getMarketDays(ctx, startDate, endDate)
-	if err != nil {
-		return logs, err
-	}
+	var (
+		symbols       = make([]string, len(securities))
+		securityIDMap = make(map[string]int32)
+	)
 
 	for i := range securities {
-		historicalData, err := s.dataProvider.HistoricalOHLC(ctx, securities[i], startDate, endDate)
+		symbols[i] = securities[i].Symbol
+		securityIDMap[securities[i].Symbol] = securities[i].Id
+	}
+
+	marketDays, err := s.securityServiceClient.GetMarketDays(ctx, startDate, endDate)
+	if err != nil {
+		return logs, err
+	}
+
+	for i := range symbols {
+		historicalData, err := s.dataProvider.HistoricalOHLC(ctx, symbols[i], startDate, endDate)
 		if err != nil {
-			logs.Errors = append(logs.Errors, fmt.Sprintf("%s %v", securities[i], err))
+			logs.Errors = append(logs.Errors, fmt.Sprintf("%s %v", symbols[i], err))
 			continue
 		}
 
@@ -61,7 +69,7 @@ func (s *statsBackfiller) Process(ctx *gofr.Context) (logs *Logs, err error) {
 		for j, date := range marketDays {
 			if j == len(marketDays)-1 {
 				logs.Success = append(logs.Success, fmt.Sprintf("%s %s - %s",
-					securities[i], marketDays[0].Format(time.DateOnly), date.Format(time.DateOnly)))
+					symbols[i], marketDays[0].Format(time.DateOnly), date.Format(time.DateOnly)))
 			}
 
 			idx := slices.IndexFunc(historicalData, func(ohlc *dataProviders.HistoricalOHLC) bool {
@@ -71,14 +79,24 @@ func (s *statsBackfiller) Process(ctx *gofr.Context) (logs *Logs, err error) {
 			if idx == -1 {
 				if j != len(marketDays)-1 {
 					logs.Success = append(logs.Success, fmt.Sprintf("%s %s - %s",
-						securities[i], marketDays[0].Format(time.DateOnly), date.Format(time.DateOnly)))
+						symbols[i], marketDays[0].Format(time.DateOnly), date.Format(time.DateOnly)))
 				}
 
 				break
 			}
 
-			if err = createSecurityStat(ctx, securityIDMap[securities[i]], date, historicalData[idx].OHLCData); err != nil {
-				logs.Errors = append(logs.Errors, fmt.Sprintf("%s %s %v", securities[i], date.Format(time.DateOnly), err))
+			payload := &proto.CreateOrUpdateSecurityStatRequest{
+				SecurityId: securityIDMap[symbols[i]],
+				Date:       date.Format(time.DateOnly),
+				Open:       historicalData[idx].Open,
+				Close:      historicalData[idx].Close,
+				High:       historicalData[idx].High,
+				Low:        historicalData[idx].Low,
+				Volume:     int32(historicalData[idx].Volume),
+			}
+
+			if err = s.securityServiceClient.CreateOrUpdateSecurityStat(ctx, payload); err != nil {
+				logs.Errors = append(logs.Errors, fmt.Sprintf("%s %s %v", symbols[i], date.Format(time.DateOnly), err))
 				continue
 			}
 		}

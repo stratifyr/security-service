@@ -2,8 +2,12 @@ package jobprocessors
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"gofr.dev/pkg/gofr"
+
+	"github.com/stratifyr/security-service/client"
 
 	dataProviders "github.com/stratifyr/security-service/daemon/stats-loader/internal/data-providers"
 )
@@ -25,15 +29,32 @@ type Logs struct {
 	Errors  []string          `json:"errors"`
 }
 
-func GetJobProcessor(marketDataJob string, dataProvider dataProviders.Provider) (JobProcessor, error) {
+func GetJobProcessor(marketDataJob string, dataProvider dataProviders.Provider, securityServiceClient client.SecurityServiceClient) (JobProcessor, error) {
 	switch marketDataJob {
 	case LoadLTP:
-		return NewLtpLoader(dataProvider), nil
+		return NewLtpLoader(dataProvider, securityServiceClient), nil
 	case LoadSecurityStats:
-		return NewStatsLoader(dataProvider), nil
+		return NewStatsLoader(dataProvider, securityServiceClient), nil
 	case BackfillSecurityStats:
-		return NewStatsBackfiller(dataProvider), nil
+		return NewStatsBackfiller(dataProvider, securityServiceClient), nil
 	default:
 		return nil, fmt.Errorf("invalid market data job type: %s", marketDataJob)
 	}
+}
+
+func initializeJobLogs(jobName string) *Logs {
+	return &Logs{
+		Job: strings.ToLower(jobName),
+		Meta: map[string]string{
+			"start_time": time.Now().Format(time.DateTime),
+		},
+	}
+}
+
+func recordJobCompletionLogs(logs *Logs, err error) {
+	if err != nil {
+		logs.Errors = append(logs.Errors, err.Error())
+	}
+
+	logs.Meta["end_time"] = time.Now().Format(time.DateTime)
 }
