@@ -31,6 +31,12 @@ func (s *SecurityServiceGoFrServer) GetMetrics(ctx *gofr.Context) (any, error) {
 func (s *SecurityServiceGoFrServer) GetSecurities(ctx *gofr.Context) (any, error) {
 	return &proto.GetSecuritiesResponse{}, nil
 }
+func (s *SecurityServiceGoFrServer) UpdateSecurity(ctx *gofr.Context) (any, error) {
+	return &proto.UpdateSecurityResponse{}, nil
+}
+func (s *SecurityServiceGoFrServer) CreateOrUpdateSecurityStat(ctx *gofr.Context) (any, error) {
+	return &proto.CreateOrUpdateSecurityStatResponse{}, nil
+}
 func (s *SecurityServiceGoFrServer) GetMarketDataJobs(ctx *gofr.Context) (any, error) {
 	return &proto.GetMarketDataJobsResponse{}, nil
 }

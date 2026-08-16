@@ -25,6 +25,8 @@ type SecurityServiceClient interface {
 	GetMarketDays(ctx context.Context, in *GetMarketDaysRequest, opts ...grpc.CallOption) (*GetMarketDaysResponse, error)
 	GetMetrics(ctx context.Context, in *GetMetricsRequest, opts ...grpc.CallOption) (*GetMetricsResponse, error)
 	GetSecurities(ctx context.Context, in *GetSecuritiesRequest, opts ...grpc.CallOption) (*GetSecuritiesResponse, error)
+	UpdateSecurity(ctx context.Context, in *UpdateSecurityRequest, opts ...grpc.CallOption) (*UpdateSecurityResponse, error)
+	CreateOrUpdateSecurityStat(ctx context.Context, in *CreateOrUpdateSecurityStatRequest, opts ...grpc.CallOption) (*CreateOrUpdateSecurityStatResponse, error)
 	GetMarketDataJobs(ctx context.Context, in *GetMarketDataJobsRequest, opts ...grpc.CallOption) (*GetMarketDataJobsResponse, error)
 	UpdateMarketDataJob(ctx context.Context, in *UpdateMarketDataJobRequest, opts ...grpc.CallOption) (*UpdateMarketDataJobResponse, error)
 }
@@ -64,6 +66,24 @@ func (c *securityServiceClient) GetSecurities(ctx context.Context, in *GetSecuri
 	return out, nil
 }
 
+func (c *securityServiceClient) UpdateSecurity(ctx context.Context, in *UpdateSecurityRequest, opts ...grpc.CallOption) (*UpdateSecurityResponse, error) {
+	out := new(UpdateSecurityResponse)
+	err := c.cc.Invoke(ctx, "/security.SecurityService/UpdateSecurity", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *securityServiceClient) CreateOrUpdateSecurityStat(ctx context.Context, in *CreateOrUpdateSecurityStatRequest, opts ...grpc.CallOption) (*CreateOrUpdateSecurityStatResponse, error) {
+	out := new(CreateOrUpdateSecurityStatResponse)
+	err := c.cc.Invoke(ctx, "/security.SecurityService/CreateOrUpdateSecurityStat", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *securityServiceClient) GetMarketDataJobs(ctx context.Context, in *GetMarketDataJobsRequest, opts ...grpc.CallOption) (*GetMarketDataJobsResponse, error) {
 	out := new(GetMarketDataJobsResponse)
 	err := c.cc.Invoke(ctx, "/security.SecurityService/GetMarketDataJobs", in, out, opts...)
@@ -89,6 +109,8 @@ type SecurityServiceServer interface {
 	GetMarketDays(context.Context, *GetMarketDaysRequest) (*GetMarketDaysResponse, error)
 	GetMetrics(context.Context, *GetMetricsRequest) (*GetMetricsResponse, error)
 	GetSecurities(context.Context, *GetSecuritiesRequest) (*GetSecuritiesResponse, error)
+	UpdateSecurity(context.Context, *UpdateSecurityRequest) (*UpdateSecurityResponse, error)
+	CreateOrUpdateSecurityStat(context.Context, *CreateOrUpdateSecurityStatRequest) (*CreateOrUpdateSecurityStatResponse, error)
 	GetMarketDataJobs(context.Context, *GetMarketDataJobsRequest) (*GetMarketDataJobsResponse, error)
 	UpdateMarketDataJob(context.Context, *UpdateMarketDataJobRequest) (*UpdateMarketDataJobResponse, error)
 	mustEmbedUnimplementedSecurityServiceServer()
@@ -106,6 +128,12 @@ func (UnimplementedSecurityServiceServer) GetMetrics(context.Context, *GetMetric
 }
 func (UnimplementedSecurityServiceServer) GetSecurities(context.Context, *GetSecuritiesRequest) (*GetSecuritiesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSecurities not implemented")
+}
+func (UnimplementedSecurityServiceServer) UpdateSecurity(context.Context, *UpdateSecurityRequest) (*UpdateSecurityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSecurity not implemented")
+}
+func (UnimplementedSecurityServiceServer) CreateOrUpdateSecurityStat(context.Context, *CreateOrUpdateSecurityStatRequest) (*CreateOrUpdateSecurityStatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateOrUpdateSecurityStat not implemented")
 }
 func (UnimplementedSecurityServiceServer) GetMarketDataJobs(context.Context, *GetMarketDataJobsRequest) (*GetMarketDataJobsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMarketDataJobs not implemented")
@@ -180,6 +208,42 @@ func _SecurityService_GetSecurities_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SecurityService_UpdateSecurity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSecurityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SecurityServiceServer).UpdateSecurity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/security.SecurityService/UpdateSecurity",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SecurityServiceServer).UpdateSecurity(ctx, req.(*UpdateSecurityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SecurityService_CreateOrUpdateSecurityStat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOrUpdateSecurityStatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SecurityServiceServer).CreateOrUpdateSecurityStat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/security.SecurityService/CreateOrUpdateSecurityStat",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SecurityServiceServer).CreateOrUpdateSecurityStat(ctx, req.(*CreateOrUpdateSecurityStatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SecurityService_GetMarketDataJobs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetMarketDataJobsRequest)
 	if err := dec(in); err != nil {
@@ -234,6 +298,14 @@ var SecurityService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSecurities",
 			Handler:    _SecurityService_GetSecurities_Handler,
+		},
+		{
+			MethodName: "UpdateSecurity",
+			Handler:    _SecurityService_UpdateSecurity_Handler,
+		},
+		{
+			MethodName: "CreateOrUpdateSecurityStat",
+			Handler:    _SecurityService_CreateOrUpdateSecurityStat_Handler,
 		},
 		{
 			MethodName: "GetMarketDataJobs",

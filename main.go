@@ -42,9 +42,10 @@ func main() {
 	marketDayGRPCHandler := handlers.NewMarketDayGRPCHandler(marketDayService)
 	metricGRPCHandler := handlers.NewMetricGRPCHandler(metricService)
 	securityGRPCHandler := handlers.NewSecurityGRPCHandler(securityService)
+	securityStatGRPCHandler := handlers.NewSecurityStatGRPCHandler(securityStatService)
 	marketDataJobGRPCHandler := handlers.NewMarketDataJobGRPCHandler(marketDataJobService)
 	securityServiceGRPCHandler := handlers.NewSecurityServiceGoFrGRPCHandler(marketDayGRPCHandler,
-		metricGRPCHandler, securityGRPCHandler, marketDataJobGRPCHandler)
+		metricGRPCHandler, securityGRPCHandler, securityStatGRPCHandler, marketDataJobGRPCHandler)
 
 	grpc.RegisterSecurityServiceServerWithGofr(app, securityServiceGRPCHandler)
 

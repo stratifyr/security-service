@@ -8,7 +8,8 @@ service SecurityService {
   rpc GetMarketDays(GetMarketDaysRequest) returns (GetMarketDaysResponse);
   rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
   rpc GetSecurities(GetSecuritiesRequest) returns (GetSecuritiesResponse);
-
+  rpc UpdateSecurity(UpdateSecurityRequest) returns (UpdateSecurityResponse);
+  rpc CreateOrUpdateSecurityStat(CreateOrUpdateSecurityStatRequest) returns (CreateOrUpdateSecurityStatResponse);
   rpc GetMarketDataJobs(GetMarketDataJobsRequest) returns (GetMarketDataJobsResponse);
   rpc UpdateMarketDataJob(UpdateMarketDataJobRequest) returns (UpdateMarketDataJobResponse);
 }
@@ -38,6 +39,33 @@ message GetSecuritiesResponse {
   int32 total = 2;
 }
 
+message UpdateSecurityRequest {
+  int32 id = 1;
+  string symbol = 2;
+  string industry = 3;
+  string name = 4;
+  string image = 5;
+  double ltp = 6;
+}
+
+message UpdateSecurityResponse {
+  Security security = 1;
+}
+
+message CreateOrUpdateSecurityStatRequest {
+  int32 securityId = 1;
+  string date = 2;
+  double open = 3;
+  double close = 4;
+  double high = 5;
+  double low = 6;
+  int32 volume = 7;
+}
+
+message CreateOrUpdateSecurityStatResponse {
+  SecurityStat securityStat = 1;
+}
+
 message GetMarketDataJobsRequest {
   string status = 1;
 }
@@ -55,15 +83,6 @@ message UpdateMarketDataJobRequest {
 
 message UpdateMarketDataJobResponse {
   MarketDataJob marketDataJob = 1;
-}
-
-message MarketDataJob {
-  int32 id = 1;
-  string type = 2;
-  string status = 3;
-  bytes logs = 4;
-  string created_at = 5;
-  string updated_at = 6;
 }
 
 message Security {
@@ -108,4 +127,26 @@ message Metric {
   string indicator = 5;
   string created_at = 6;
   string updated_at = 7;
+}
+
+message SecurityStat {
+  int32 id = 1;
+  int32 securityId = 2;
+  string date = 3;
+  double open = 4;
+  double close = 5;
+  double high = 6;
+  double low = 7;
+  int32 volume = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message MarketDataJob {
+  int32 id = 1;
+  string type = 2;
+  string status = 3;
+  bytes logs = 4;
+  string created_at = 5;
+  string updated_at = 6;
 }

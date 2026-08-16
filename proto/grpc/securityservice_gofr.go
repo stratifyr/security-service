@@ -31,6 +31,8 @@ type SecurityServiceServerWithGofr interface {
 	GetMarketDays(*gofr.Context) (any, error)
 	GetMetrics(*gofr.Context) (any, error)
 	GetSecurities(*gofr.Context) (any, error)
+	UpdateSecurity(*gofr.Context) (any, error)
+	CreateOrUpdateSecurityStat(*gofr.Context) (any, error)
 	GetMarketDataJobs(*gofr.Context) (any, error)
 	UpdateMarketDataJob(*gofr.Context) (any, error)
 }
@@ -92,6 +94,38 @@ func (h *SecurityServiceServerWrapper) GetSecurities(ctx context.Context, req *p
 		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
 	}
 	
+	return resp, nil
+}
+// Unary method handler for UpdateSecurity
+func (h *SecurityServiceServerWrapper) UpdateSecurity(ctx context.Context, req *proto.UpdateSecurityRequest) (*proto.UpdateSecurityResponse, error) {
+	gctx := h.getGofrContext(ctx, &UpdateSecurityRequestWrapper{ctx: ctx, UpdateSecurityRequest: req})
+
+	res, err := h.server.UpdateSecurity(gctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, ok := res.(*proto.UpdateSecurityResponse)
+	if !ok {
+		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
+	}
+
+	return resp, nil
+}
+// Unary method handler for CreateOrUpdateSecurityStat
+func (h *SecurityServiceServerWrapper) CreateOrUpdateSecurityStat(ctx context.Context, req *proto.CreateOrUpdateSecurityStatRequest) (*proto.CreateOrUpdateSecurityStatResponse, error) {
+	gctx := h.getGofrContext(ctx, &CreateOrUpdateSecurityStatRequestWrapper{ctx: ctx, CreateOrUpdateSecurityStatRequest: req})
+
+	res, err := h.server.CreateOrUpdateSecurityStat(gctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, ok := res.(*proto.CreateOrUpdateSecurityStatResponse)
+	if !ok {
+		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
+	}
+
 	return resp, nil
 }
 // Unary method handler for GetMarketDataJobs

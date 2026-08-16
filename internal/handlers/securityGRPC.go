@@ -40,55 +40,83 @@ func (h *securityGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	return h.buildResponse(securities, count)
+	var resp = make([]*proto.Security, len(securities))
+
+	for i := range securities {
+		resp[i] = h.buildResponse(securities[i])
+	}
+
+	return &proto.GetSecuritiesResponse{
+		Securities: resp,
+		Total:      int32(count),
+	}, nil
 }
 
-func (h *securityGRPCHandler) buildResponse(securities []*services.Security, count int) (*proto.GetSecuritiesResponse, error) {
-	resp := &proto.GetSecuritiesResponse{
-		Securities: make([]*proto.Security, len(securities)),
-		Total:      int32(count),
+func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
+	var payload proto.UpdateSecurityRequest
+
+	if err := ctx.Bind(&payload); err != nil {
+		return nil, err
 	}
 
-	for i := range resp.Securities {
-		resp.Securities[i] = &proto.Security{
-			Id:            int32(securities[i].ID),
-			Isin:          securities[i].ISIN,
-			Symbol:        securities[i].Symbol,
-			Industry:      securities[i].Industry,
-			Name:          securities[i].Name,
-			Image:         securities[i].Image,
-			Ltp:           securities[i].LTP,
-			PreviousClose: securities[i].PreviousClose,
-			CreatedAt:     securities[i].CreatedAt.Format(time.RFC3339),
-			UpdatedAt:     securities[i].UpdatedAt.Format(time.RFC3339),
-		}
+	model := &services.SecurityUpdate{
+		UserID:   1,
+		Symbol:   payload.Symbol,
+		Industry: payload.Industry,
+		Name:     payload.Name,
+		Image:    payload.Image,
+		LTP:      payload.Ltp,
+	}
 
-		if securities[i].SecurityStat == nil {
-			continue
-		}
+	security, err := h.svc.Patch(ctx, int(payload.Id), model)
+	if err != nil {
+		return nil, err
+	}
 
-		resp.Securities[i].MarketData = &proto.MarketData{
-			Date:    securities[i].SecurityStat.Date.Format(time.DateOnly),
-			Open:    securities[i].SecurityStat.Open,
-			Close:   securities[i].SecurityStat.Close,
-			High:    securities[i].SecurityStat.High,
-			Low:     securities[i].SecurityStat.Low,
-			Volume:  int32(securities[i].SecurityStat.Volume),
-			Metrics: make([]*proto.SecurityMetric, len(securities[i].SecurityMetrics)),
-		}
+	return &proto.UpdateSecurityResponse{
+		Security: h.buildResponse(security),
+	}, nil
+}
 
-		for j := range resp.Securities[i].MarketData.Metrics {
-			resp.Securities[i].MarketData.Metrics[j] = &proto.SecurityMetric{
-				Id:              int32(securities[i].SecurityMetrics[j].Metric.ID),
-				Name:            securities[i].SecurityMetrics[j].Metric.Name,
-				Type:            securities[i].SecurityMetrics[j].Metric.Type.String(),
-				Period:          int32(securities[i].SecurityMetrics[j].Metric.Period),
-				Indicator:       securities[i].SecurityMetrics[j].Metric.Indicator.String(),
-				Value:           securities[i].SecurityMetrics[j].Value,
-				NormalizedValue: securities[i].SecurityMetrics[j].ZValue,
-			}
+func (h *securityGRPCHandler) buildResponse(securitiy *services.Security) *proto.Security {
+	var resp = &proto.Security{
+		Id:            int32(securitiy.ID),
+		Isin:          securitiy.ISIN,
+		Symbol:        securitiy.Symbol,
+		Industry:      securitiy.Industry,
+		Name:          securitiy.Name,
+		Image:         securitiy.Image,
+		Ltp:           securitiy.LTP,
+		PreviousClose: securitiy.PreviousClose,
+		CreatedAt:     securitiy.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:     securitiy.UpdatedAt.Format(time.RFC3339),
+	}
+
+	if securitiy.SecurityStat == nil {
+		return resp
+	}
+
+	resp.MarketData = &proto.MarketData{
+		Date:    securitiy.SecurityStat.Date.Format(time.DateOnly),
+		Open:    securitiy.SecurityStat.Open,
+		Close:   securitiy.SecurityStat.Close,
+		High:    securitiy.SecurityStat.High,
+		Low:     securitiy.SecurityStat.Low,
+		Volume:  int32(securitiy.SecurityStat.Volume),
+		Metrics: make([]*proto.SecurityMetric, len(securitiy.SecurityMetrics)),
+	}
+
+	for j := range resp.MarketData.Metrics {
+		resp.MarketData.Metrics[j] = &proto.SecurityMetric{
+			Id:              int32(securitiy.SecurityMetrics[j].Metric.ID),
+			Name:            securitiy.SecurityMetrics[j].Metric.Name,
+			Type:            securitiy.SecurityMetrics[j].Metric.Type.String(),
+			Period:          int32(securitiy.SecurityMetrics[j].Metric.Period),
+			Indicator:       securitiy.SecurityMetrics[j].Metric.Indicator.String(),
+			Value:           securitiy.SecurityMetrics[j].Value,
+			NormalizedValue: securitiy.SecurityMetrics[j].ZValue,
 		}
 	}
 
-	return resp, nil
+	return resp
 }

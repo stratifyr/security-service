@@ -18,6 +18,8 @@ type SecurityServiceGoFrClient interface {
 	GetMarketDays(ctx *gofr.Context, req *proto.GetMarketDaysRequest, opts ...grpc.CallOption) (*proto.GetMarketDaysResponse, error)
 	GetMetrics(ctx *gofr.Context, req *proto.GetMetricsRequest, opts ...grpc.CallOption) (*proto.GetMetricsResponse, error)
 	GetSecurities(ctx *gofr.Context, req *proto.GetSecuritiesRequest, opts ...grpc.CallOption) (*proto.GetSecuritiesResponse, error)
+	UpdateSecurity(ctx *gofr.Context, req *proto.UpdateSecurityRequest, opts ...grpc.CallOption) (*proto.UpdateSecurityResponse, error)
+	CreateOrUpdateSecurityStat(ctx *gofr.Context, req *proto.CreateOrUpdateSecurityStatRequest, opts ...grpc.CallOption) (*proto.CreateOrUpdateSecurityStatResponse, error)
 	GetMarketDataJobs(ctx *gofr.Context, req *proto.GetMarketDataJobsRequest, opts ...grpc.CallOption) (*proto.GetMarketDataJobsResponse, error)
 	UpdateMarketDataJob(ctx *gofr.Context, req *proto.UpdateMarketDataJobRequest, opts ...grpc.CallOption) (*proto.UpdateMarketDataJobResponse, error)
 	HealthClient
@@ -83,6 +85,28 @@ func (h *SecurityServiceClientWrapper) GetSecurities(ctx *gofr.Context, req *pro
 		return nil, err
 	}
 	return result.(*proto.GetSecuritiesResponse), nil
+}
+func (h *SecurityServiceClientWrapper) UpdateSecurity(ctx *gofr.Context, req *proto.UpdateSecurityRequest,
+	opts ...grpc.CallOption) (*proto.UpdateSecurityResponse, error) {
+	result, err := invokeRPC(ctx, "/SecurityService/UpdateSecurity", func() (interface{}, error) {
+		return h.client.UpdateSecurity(ctx.Context, req, opts...)
+	}, "app_gRPC-Client_stats")
+
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proto.UpdateSecurityResponse), nil
+}
+func (h *SecurityServiceClientWrapper) CreateOrUpdateSecurityStat(ctx *gofr.Context, req *proto.CreateOrUpdateSecurityStatRequest,
+	opts ...grpc.CallOption) (*proto.CreateOrUpdateSecurityStatResponse, error) {
+	result, err := invokeRPC(ctx, "/SecurityService/CreateOrUpdateSecurityStat", func() (interface{}, error) {
+		return h.client.CreateOrUpdateSecurityStat(ctx.Context, req, opts...)
+	}, "app_gRPC-Client_stats")
+
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proto.CreateOrUpdateSecurityStatResponse), nil
 }
 func (h *SecurityServiceClientWrapper) GetMarketDataJobs(ctx *gofr.Context, req *proto.GetMarketDataJobsRequest,
 	opts ...grpc.CallOption) (*proto.GetMarketDataJobsResponse, error) {

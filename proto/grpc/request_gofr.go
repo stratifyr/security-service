@@ -15,6 +15,54 @@ import (
 )
 
 // Request Wrappers
+type GetMarketDaysRequestWrapper struct {
+	ctx context.Context
+	*proto.GetMarketDaysRequest
+}
+
+func (h *GetMarketDaysRequestWrapper) Context() context.Context {
+	return h.ctx
+}
+
+func (h *GetMarketDaysRequestWrapper) Param(s string) string {
+	return ""
+}
+
+func (h *GetMarketDaysRequestWrapper) PathParam(s string) string {
+	return ""
+}
+
+func (h *GetMarketDaysRequestWrapper) Bind(p interface{}) error {
+	ptr := reflect.ValueOf(p)
+	if ptr.Kind() != reflect.Ptr {
+		return fmt.Errorf("expected a pointer, got %T", p)
+	}
+
+	hValue := reflect.ValueOf(h.GetMarketDaysRequest).Elem()
+	ptrValue := ptr.Elem()
+
+	for i := 0; i < hValue.NumField(); i++ {
+		field := hValue.Type().Field(i)
+		if field.Name == "state" || field.Name == "sizeCache" || field.Name == "unknownFields" {
+			continue
+		}
+
+		if field.IsExported() {
+			ptrValue.Field(i).Set(hValue.Field(i))
+		}
+	}
+
+	return nil
+}
+
+func (h *GetMarketDaysRequestWrapper) HostName() string {
+	return ""
+}
+
+func (h *GetMarketDaysRequestWrapper) Params(s string) []string {
+	return nil
+}
+
 type GetMetricsRequestWrapper struct {
 	ctx context.Context
 	*proto.GetMetricsRequest
@@ -111,30 +159,30 @@ func (h *GetSecuritiesRequestWrapper) Params(s string) []string {
 	return nil
 }
 
-type GetMarketDaysRequestWrapper struct {
+type UpdateSecurityRequestWrapper struct {
 	ctx context.Context
-	*proto.GetMarketDaysRequest
+	*proto.UpdateSecurityRequest
 }
 
-func (h *GetMarketDaysRequestWrapper) Context() context.Context {
+func (h *UpdateSecurityRequestWrapper) Context() context.Context {
 	return h.ctx
 }
 
-func (h *GetMarketDaysRequestWrapper) Param(s string) string {
+func (h *UpdateSecurityRequestWrapper) Param(s string) string {
 	return ""
 }
 
-func (h *GetMarketDaysRequestWrapper) PathParam(s string) string {
+func (h *UpdateSecurityRequestWrapper) PathParam(s string) string {
 	return ""
 }
 
-func (h *GetMarketDaysRequestWrapper) Bind(p interface{}) error {
+func (h *UpdateSecurityRequestWrapper) Bind(p interface{}) error {
 	ptr := reflect.ValueOf(p)
 	if ptr.Kind() != reflect.Ptr {
 		return fmt.Errorf("expected a pointer, got %T", p)
 	}
 
-	hValue := reflect.ValueOf(h.GetMarketDaysRequest).Elem()
+	hValue := reflect.ValueOf(h.UpdateSecurityRequest).Elem()
 	ptrValue := ptr.Elem()
 
 	for i := 0; i < hValue.NumField(); i++ {
@@ -151,11 +199,59 @@ func (h *GetMarketDaysRequestWrapper) Bind(p interface{}) error {
 	return nil
 }
 
-func (h *GetMarketDaysRequestWrapper) HostName() string {
+func (h *UpdateSecurityRequestWrapper) HostName() string {
 	return ""
 }
 
-func (h *GetMarketDaysRequestWrapper) Params(s string) []string {
+func (h *UpdateSecurityRequestWrapper) Params(s string) []string {
+	return nil
+}
+
+type CreateOrUpdateSecurityStatRequestWrapper struct {
+	ctx context.Context
+	*proto.CreateOrUpdateSecurityStatRequest
+}
+
+func (h *CreateOrUpdateSecurityStatRequestWrapper) Context() context.Context {
+	return h.ctx
+}
+
+func (h *CreateOrUpdateSecurityStatRequestWrapper) Param(s string) string {
+	return ""
+}
+
+func (h *CreateOrUpdateSecurityStatRequestWrapper) PathParam(s string) string {
+	return ""
+}
+
+func (h *CreateOrUpdateSecurityStatRequestWrapper) Bind(p interface{}) error {
+	ptr := reflect.ValueOf(p)
+	if ptr.Kind() != reflect.Ptr {
+		return fmt.Errorf("expected a pointer, got %T", p)
+	}
+
+	hValue := reflect.ValueOf(h.CreateOrUpdateSecurityStatRequest).Elem()
+	ptrValue := ptr.Elem()
+
+	for i := 0; i < hValue.NumField(); i++ {
+		field := hValue.Type().Field(i)
+		if field.Name == "state" || field.Name == "sizeCache" || field.Name == "unknownFields" {
+			continue
+		}
+
+		if field.IsExported() {
+			ptrValue.Field(i).Set(hValue.Field(i))
+		}
+	}
+
+	return nil
+}
+
+func (h *CreateOrUpdateSecurityStatRequestWrapper) HostName() string {
+	return ""
+}
+
+func (h *CreateOrUpdateSecurityStatRequestWrapper) Params(s string) []string {
 	return nil
 }
 
