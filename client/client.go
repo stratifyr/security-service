@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -25,6 +26,10 @@ type SecurityServiceClient interface {
 	GetMarketDays(ctx *gofr.Context, startDate, endDate time.Time) ([]time.Time, error)
 	GetMetrics(ctx *gofr.Context) ([]*proto.Metric, error)
 	GetSecurities(ctx *gofr.Context, date time.Time) ([]*proto.Security, error)
+	UpdateSecurityLTP(ctx *gofr.Context, id int32, ltp float64) error
+	CreateOrUpdateSecurityStat(ctx *gofr.Context, payload *proto.CreateOrUpdateSecurityStatRequest) error
+	GetMarketDataJobs(ctx *gofr.Context, status string) ([]*proto.MarketDataJob, error)
+	UpdateMarketDataJobStatus(ctx *gofr.Context, id int32, status string, logs any) error
 }
 
 type securityServiceClient struct {
@@ -128,4 +133,45 @@ func (c *securityServiceClient) GetSecurities(ctx *gofr.Context, date time.Time)
 	}
 
 	return resp.Securities, nil
+}
+
+func (c *securityServiceClient) UpdateSecurityLTP(ctx *gofr.Context, id int32, ltp float64) error {
+	_, err := c.grpcConn.UpdateSecurity(ctx, &proto.UpdateSecurityRequest{Id: id, Ltp: ltp})
+	if err != nil {
+		return fmt.Errorf("failed rpc /security-service/UpdateSecurity, %s", err.Error())
+	}
+
+	return nil
+}
+
+func (c *securityServiceClient) CreateOrUpdateSecurityStat(ctx *gofr.Context, payload *proto.CreateOrUpdateSecurityStatRequest) error {
+	_, err := c.grpcConn.CreateOrUpdateSecurityStat(ctx, payload)
+	if err != nil {
+		return fmt.Errorf("failed rpc /security-service/CreateOrUpdateSecurityStat, %s", err.Error())
+	}
+
+	return nil
+}
+
+func (c *securityServiceClient) GetMarketDataJobs(ctx *gofr.Context, status string) ([]*proto.MarketDataJob, error) {
+	resp, err := c.grpcConn.GetMarketDataJobs(ctx, &proto.GetMarketDataJobsRequest{Status: status})
+	if err != nil {
+		return nil, fmt.Errorf("failed rpc /security-service/GetMarketDataJobs, %s", err.Error())
+	}
+
+	return resp.MarketDataJobs, nil
+}
+
+func (c *securityServiceClient) UpdateMarketDataJobStatus(ctx *gofr.Context, id int32, status string, logs any) error {
+	logBytes, err := json.Marshal(logs)
+	if err != nil {
+		return fmt.Errorf("invalid log format, %s", err.Error())
+	}
+
+	_, err = c.grpcConn.UpdateMarketDataJob(ctx, &proto.UpdateMarketDataJobRequest{Id: id, Status: status, Logs: logBytes})
+	if err != nil {
+		return fmt.Errorf("failed rpc /security-service/UpdateMarketDataJob, %s", err.Error())
+	}
+
+	return nil
 }
