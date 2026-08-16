@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/stratifyr/security-service-proto/go/pb"
 	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/services"
-	"github.com/stratifyr/security-service/proto"
 )
 
 type marketDataJobGRPCHandler struct {
@@ -19,7 +19,7 @@ func NewMarketDataJobGRPCHandler(svc services.MarketDataJobService) *marketDataJ
 }
 
 func (h *marketDataJobGRPCHandler) Index(ctx *gofr.Context) (any, error) {
-	var payload proto.GetMarketDataJobsRequest
+	var payload pb.GetMarketDataJobsRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
@@ -35,20 +35,20 @@ func (h *marketDataJobGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	var resp = make([]*proto.MarketDataJob, len(marketDataJobs))
+	var resp = make([]*pb.MarketDataJob, len(marketDataJobs))
 
 	for i := range marketDataJobs {
 		resp[i] = h.buildResponse(marketDataJobs[i])
 	}
 
-	return &proto.GetMarketDataJobsResponse{
+	return &pb.GetMarketDataJobsResponse{
 		MarketDataJobs: resp,
 		Total:          int32(count),
 	}, nil
 }
 
 func (h *marketDataJobGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
-	var payload proto.UpdateMarketDataJobRequest
+	var payload pb.UpdateMarketDataJobRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
@@ -72,19 +72,19 @@ func (h *marketDataJobGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	return &proto.UpdateMarketDataJobResponse{
+	return &pb.UpdateMarketDataJobResponse{
 		MarketDataJob: h.buildResponse(marketDataJob),
 	}, nil
 }
 
-func (h *marketDataJobGRPCHandler) buildResponse(model *services.MarketDataJob) *proto.MarketDataJob {
+func (h *marketDataJobGRPCHandler) buildResponse(model *services.MarketDataJob) *pb.MarketDataJob {
 	var logs []byte
 
 	if model.Logs != nil {
 		logs = *model.Logs
 	}
 
-	return &proto.MarketDataJob{
+	return &pb.MarketDataJob{
 		Id:        int32(model.ID),
 		Type:      model.Type.String(),
 		Status:    model.Status,

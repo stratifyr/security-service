@@ -3,9 +3,10 @@ package handlers
 import (
 	"time"
 
-	"github.com/stratifyr/security-service/internal/services"
-	"github.com/stratifyr/security-service/proto"
+	"github.com/stratifyr/security-service-proto/go/pb"
 	"gofr.dev/pkg/gofr"
+
+	"github.com/stratifyr/security-service/internal/services"
 )
 
 type securityGRPCHandler struct {
@@ -17,7 +18,7 @@ func NewSecurityGRPCHandler(svc services.SecurityService) *securityGRPCHandler {
 }
 
 func (h *securityGRPCHandler) Index(ctx *gofr.Context) (any, error) {
-	var payload proto.GetSecuritiesRequest
+	var payload pb.GetSecuritiesRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
@@ -40,20 +41,20 @@ func (h *securityGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	var resp = make([]*proto.Security, len(securities))
+	var resp = make([]*pb.Security, len(securities))
 
 	for i := range securities {
 		resp[i] = h.buildResponse(securities[i])
 	}
 
-	return &proto.GetSecuritiesResponse{
+	return &pb.GetSecuritiesResponse{
 		Securities: resp,
 		Total:      int32(count),
 	}, nil
 }
 
 func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
-	var payload proto.UpdateSecurityRequest
+	var payload pb.UpdateSecurityRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
@@ -73,13 +74,13 @@ func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	return &proto.UpdateSecurityResponse{
+	return &pb.UpdateSecurityResponse{
 		Security: h.buildResponse(security),
 	}, nil
 }
 
-func (h *securityGRPCHandler) buildResponse(securitiy *services.Security) *proto.Security {
-	var resp = &proto.Security{
+func (h *securityGRPCHandler) buildResponse(securitiy *services.Security) *pb.Security {
+	var resp = &pb.Security{
 		Id:            int32(securitiy.ID),
 		Isin:          securitiy.ISIN,
 		Symbol:        securitiy.Symbol,
@@ -96,18 +97,18 @@ func (h *securityGRPCHandler) buildResponse(securitiy *services.Security) *proto
 		return resp
 	}
 
-	resp.MarketData = &proto.MarketData{
+	resp.MarketData = &pb.MarketData{
 		Date:    securitiy.SecurityStat.Date.Format(time.DateOnly),
 		Open:    securitiy.SecurityStat.Open,
 		Close:   securitiy.SecurityStat.Close,
 		High:    securitiy.SecurityStat.High,
 		Low:     securitiy.SecurityStat.Low,
 		Volume:  int32(securitiy.SecurityStat.Volume),
-		Metrics: make([]*proto.SecurityMetric, len(securitiy.SecurityMetrics)),
+		Metrics: make([]*pb.SecurityMetric, len(securitiy.SecurityMetrics)),
 	}
 
 	for j := range resp.MarketData.Metrics {
-		resp.MarketData.Metrics[j] = &proto.SecurityMetric{
+		resp.MarketData.Metrics[j] = &pb.SecurityMetric{
 			Id:              int32(securitiy.SecurityMetrics[j].Metric.ID),
 			Name:            securitiy.SecurityMetrics[j].Metric.Name,
 			Type:            securitiy.SecurityMetrics[j].Metric.Type.String(),

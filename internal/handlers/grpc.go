@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/stratifyr/security-service/proto"
+	"github.com/stratifyr/security-service-proto/go/pb"
 	"gofr.dev/pkg/gofr"
 )
 
@@ -24,7 +24,7 @@ type SecurityServiceGoFrGRPCHandler struct {
 	securityStatGRPCHandler  *securityStatGRPCHandler
 	marketDataJobGRPCHandler *marketDataJobGRPCHandler
 
-	proto.UnimplementedSecurityServiceServer
+	pb.UnimplementedSecurityServiceServer
 }
 
 func (h *SecurityServiceGoFrGRPCHandler) GetMarketDays(ctx *gofr.Context) (any, error) {

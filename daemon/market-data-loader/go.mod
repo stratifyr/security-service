@@ -1,9 +1,10 @@
 module github.com/stratifyr/security-service/daemon/stats-loader
 
-go 1.26.0
+go 1.26.6
 
 require (
-	github.com/stratifyr/security-service v0.0.0-20260816130420-38b8a4206f92
+	github.com/stratifyr/security-service-client v0.0.0-20260816143237-1e60bea84907
+	github.com/stratifyr/security-service-proto v0.0.0-20260816140417-8973eb71174e
 	gofr.dev v1.59.0
 )
 
@@ -58,7 +59,7 @@ require (
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.21.0 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.21.0 // indirect
-	github.com/redis/go-redis/v9 v9.21.0 // indirect
+	github.com/redis/go-redis/v9 v9.22.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/segmentio/kafka-go v0.4.51 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
@@ -98,7 +99,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20260630182238-925bb5da69e7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260724162435-b2f20204f0df // indirect
 	google.golang.org/grpc v1.83.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.74.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

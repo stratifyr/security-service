@@ -5,8 +5,9 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
+	"github.com/stratifyr/security-service-proto/go/pb"
+
 	"github.com/stratifyr/security-service/internal/services"
-	"github.com/stratifyr/security-service/proto"
 )
 
 type marketDayGRPCHandler struct {
@@ -18,7 +19,7 @@ func NewMarketDayGRPCHandler(svc services.MarketDayService) *marketDayGRPCHandle
 }
 
 func (h *marketDayGRPCHandler) Index(ctx *gofr.Context) (any, error) {
-	var payload proto.GetMarketDaysRequest
+	var payload pb.GetMarketDaysRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
@@ -46,7 +47,7 @@ func (h *marketDayGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	resp := &proto.GetMarketDaysResponse{
+	resp := &pb.GetMarketDaysResponse{
 		Days: make([]string, len(marketDays)),
 	}
 

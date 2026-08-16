@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stratifyr/security-service/client"
 	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/datasource"
 	"gofr.dev/pkg/gofr/http"
 )
+
+const SecuritiesCacheKey = "security-service:client-cache:securities:date:%s"
 
 type SecurityStore interface {
 	Index(ctx *gofr.Context, f *SecurityFilter, limit, offset int) ([]*Security, error)
@@ -119,7 +120,7 @@ func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, erro
 	query := "INSERT INTO securities (isin, symbol, industry, name, image, ltp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 
 	// todo: make this even driven based on changes in DB logs
-	cacheKey := fmt.Sprintf(client.SecuritiesCacheKey, time.Now().Format(time.DateOnly))
+	cacheKey := fmt.Sprintf(SecuritiesCacheKey, time.Now().Format(time.DateOnly))
 	if err := ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -139,7 +140,7 @@ func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, erro
 
 func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Security, error) {
 	// todo: make this even driven based on changes in DB logs
-	cacheKey := fmt.Sprintf(client.SecuritiesCacheKey, time.Now().Format(time.DateOnly))
+	cacheKey := fmt.Sprintf(SecuritiesCacheKey, time.Now().Format(time.DateOnly))
 	if err := ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}

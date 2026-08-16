@@ -3,10 +3,10 @@ package handlers
 import (
 	"time"
 
+	"github.com/stratifyr/security-service-proto/go/pb"
 	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/services"
-	"github.com/stratifyr/security-service/proto"
 )
 
 type securityStatGRPCHandler struct {
@@ -18,7 +18,7 @@ func NewSecurityStatGRPCHandler(svc services.SecurityStatService) *securityStatG
 }
 
 func (h *securityStatGRPCHandler) Create(ctx *gofr.Context) (any, error) {
-	var payload proto.CreateOrUpdateSecurityStatRequest
+	var payload pb.CreateOrUpdateSecurityStatRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
@@ -42,13 +42,13 @@ func (h *securityStatGRPCHandler) Create(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	return &proto.CreateOrUpdateSecurityStatResponse{
+	return &pb.CreateOrUpdateSecurityStatResponse{
 		SecurityStat: h.buildResponse(securityStat),
 	}, nil
 }
 
-func (h *securityStatGRPCHandler) buildResponse(model *services.SecurityStat) *proto.SecurityStat {
-	return &proto.SecurityStat{
+func (h *securityStatGRPCHandler) buildResponse(model *services.SecurityStat) *pb.SecurityStat {
+	return &pb.SecurityStat{
 		Id:         int32(model.ID),
 		SecurityId: int32(model.SecurityID),
 		Date:       model.Date.Format(time.DateOnly),

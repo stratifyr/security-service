@@ -7,8 +7,8 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/stratifyr/security-service/client"
-	"github.com/stratifyr/security-service/proto"
+	client "github.com/stratifyr/security-service-client"
+	"github.com/stratifyr/security-service-proto/go/pb"
 
 	dataProviders "github.com/stratifyr/security-service/daemon/stats-loader/internal/data-providers"
 )
@@ -85,7 +85,7 @@ func (s *statsBackfiller) Process(ctx *gofr.Context) (logs *Logs, err error) {
 				break
 			}
 
-			payload := &proto.CreateOrUpdateSecurityStatRequest{
+			payload := &pb.CreateOrUpdateSecurityStatRequest{
 				SecurityId: securityIDMap[symbols[i]],
 				Date:       date.Format(time.DateOnly),
 				Open:       historicalData[idx].Open,

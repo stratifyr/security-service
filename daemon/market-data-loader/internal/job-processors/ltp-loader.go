@@ -6,7 +6,7 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/stratifyr/security-service/client"
+	client "github.com/stratifyr/security-service-client"
 
 	dataProviders "github.com/stratifyr/security-service/daemon/stats-loader/internal/data-providers"
 )

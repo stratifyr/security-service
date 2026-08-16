@@ -1,13 +1,13 @@
 package main
 
 import (
+	gofrWrapper "github.com/stratifyr/security-service-proto/go/gofr-wrapper"
 	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/handlers"
 	"github.com/stratifyr/security-service/internal/services"
 	"github.com/stratifyr/security-service/internal/stores"
 	"github.com/stratifyr/security-service/migrations"
-	"github.com/stratifyr/security-service/proto/grpc"
 )
 
 func main() {
@@ -47,7 +47,7 @@ func main() {
 	securityServiceGRPCHandler := handlers.NewSecurityServiceGoFrGRPCHandler(marketDayGRPCHandler,
 		metricGRPCHandler, securityGRPCHandler, securityStatGRPCHandler, marketDataJobGRPCHandler)
 
-	grpc.RegisterSecurityServiceServerWithGofr(app, securityServiceGRPCHandler)
+	gofrWrapper.RegisterSecurityServiceServerWithGofr(app, securityServiceGRPCHandler)
 
 	app.GET("/industries", industryHandler.Index)
 

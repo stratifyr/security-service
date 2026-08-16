@@ -3,9 +3,10 @@ package handlers
 import (
 	"time"
 
-	"github.com/stratifyr/security-service/internal/services"
-	"github.com/stratifyr/security-service/proto"
+	"github.com/stratifyr/security-service-proto/go/pb"
 	"gofr.dev/pkg/gofr"
+
+	"github.com/stratifyr/security-service/internal/services"
 )
 
 type metricGRPCHandler struct {
@@ -17,7 +18,7 @@ func NewMetricGRPCHandler(svc services.MetricService) *metricGRPCHandler {
 }
 
 func (h *metricGRPCHandler) Index(ctx *gofr.Context) (any, error) {
-	var payload proto.GetMetricsRequest
+	var payload pb.GetMetricsRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
@@ -31,14 +32,14 @@ func (h *metricGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 	return h.buildResponse(metrics)
 }
 
-func (h *metricGRPCHandler) buildResponse(metrics []*services.Metric) (*proto.GetMetricsResponse, error) {
-	resp := &proto.GetMetricsResponse{
-		Metrics: make([]*proto.Metric, len(metrics)),
+func (h *metricGRPCHandler) buildResponse(metrics []*services.Metric) (*pb.GetMetricsResponse, error) {
+	resp := &pb.GetMetricsResponse{
+		Metrics: make([]*pb.Metric, len(metrics)),
 		Total:   int32(len(metrics)),
 	}
 
 	for i := range resp.Metrics {
-		resp.Metrics[i] = &proto.Metric{
+		resp.Metrics[i] = &pb.Metric{
 			Id:        int32(metrics[i].ID),
 			Name:      metrics[i].Name,
 			Type:      metrics[i].Type.String(),
