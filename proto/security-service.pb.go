@@ -317,6 +317,305 @@ func (x *GetSecuritiesResponse) GetTotal() int32 {
 	return 0
 }
 
+type GetMarketDataJobsRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+}
+
+func (x *GetMarketDataJobsRequest) Reset() {
+	*x = GetMarketDataJobsRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_security_service_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetMarketDataJobsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMarketDataJobsRequest) ProtoMessage() {}
+
+func (x *GetMarketDataJobsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_security_service_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMarketDataJobsRequest.ProtoReflect.Descriptor instead.
+func (*GetMarketDataJobsRequest) Descriptor() ([]byte, []int) {
+	return file_security_service_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetMarketDataJobsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type GetMarketDataJobsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	MarketDataJobs []*MarketDataJob `protobuf:"bytes,1,rep,name=marketDataJobs,proto3" json:"marketDataJobs,omitempty"`
+	Total          int32            `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+}
+
+func (x *GetMarketDataJobsResponse) Reset() {
+	*x = GetMarketDataJobsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_security_service_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetMarketDataJobsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMarketDataJobsResponse) ProtoMessage() {}
+
+func (x *GetMarketDataJobsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_security_service_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMarketDataJobsResponse.ProtoReflect.Descriptor instead.
+func (*GetMarketDataJobsResponse) Descriptor() ([]byte, []int) {
+	return file_security_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetMarketDataJobsResponse) GetMarketDataJobs() []*MarketDataJob {
+	if x != nil {
+		return x.MarketDataJobs
+	}
+	return nil
+}
+
+func (x *GetMarketDataJobsResponse) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type UpdateMarketDataJobRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id     int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	Logs   []byte `protobuf:"bytes,3,opt,name=logs,proto3" json:"logs,omitempty"`
+}
+
+func (x *UpdateMarketDataJobRequest) Reset() {
+	*x = UpdateMarketDataJobRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_security_service_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UpdateMarketDataJobRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMarketDataJobRequest) ProtoMessage() {}
+
+func (x *UpdateMarketDataJobRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_security_service_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMarketDataJobRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMarketDataJobRequest) Descriptor() ([]byte, []int) {
+	return file_security_service_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *UpdateMarketDataJobRequest) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *UpdateMarketDataJobRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *UpdateMarketDataJobRequest) GetLogs() []byte {
+	if x != nil {
+		return x.Logs
+	}
+	return nil
+}
+
+type UpdateMarketDataJobResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	MarketDataJob *MarketDataJob `protobuf:"bytes,1,opt,name=marketDataJob,proto3" json:"marketDataJob,omitempty"`
+}
+
+func (x *UpdateMarketDataJobResponse) Reset() {
+	*x = UpdateMarketDataJobResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_security_service_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UpdateMarketDataJobResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMarketDataJobResponse) ProtoMessage() {}
+
+func (x *UpdateMarketDataJobResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_security_service_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMarketDataJobResponse.ProtoReflect.Descriptor instead.
+func (*UpdateMarketDataJobResponse) Descriptor() ([]byte, []int) {
+	return file_security_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *UpdateMarketDataJobResponse) GetMarketDataJob() *MarketDataJob {
+	if x != nil {
+		return x.MarketDataJob
+	}
+	return nil
+}
+
+type MarketDataJob struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id        int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type      string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Status    string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	Logs      []byte `protobuf:"bytes,4,opt,name=logs,proto3" json:"logs,omitempty"`
+	CreatedAt string `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt string `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+}
+
+func (x *MarketDataJob) Reset() {
+	*x = MarketDataJob{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_security_service_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MarketDataJob) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MarketDataJob) ProtoMessage() {}
+
+func (x *MarketDataJob) ProtoReflect() protoreflect.Message {
+	mi := &file_security_service_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MarketDataJob.ProtoReflect.Descriptor instead.
+func (*MarketDataJob) Descriptor() ([]byte, []int) {
+	return file_security_service_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *MarketDataJob) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *MarketDataJob) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *MarketDataJob) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *MarketDataJob) GetLogs() []byte {
+	if x != nil {
+		return x.Logs
+	}
+	return nil
+}
+
+func (x *MarketDataJob) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *MarketDataJob) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
 type Security struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -338,7 +637,7 @@ type Security struct {
 func (x *Security) Reset() {
 	*x = Security{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_security_service_proto_msgTypes[6]
+		mi := &file_security_service_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -351,7 +650,7 @@ func (x *Security) String() string {
 func (*Security) ProtoMessage() {}
 
 func (x *Security) ProtoReflect() protoreflect.Message {
-	mi := &file_security_service_proto_msgTypes[6]
+	mi := &file_security_service_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -364,7 +663,7 @@ func (x *Security) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Security.ProtoReflect.Descriptor instead.
 func (*Security) Descriptor() ([]byte, []int) {
-	return file_security_service_proto_rawDescGZIP(), []int{6}
+	return file_security_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Security) GetId() int32 {
@@ -461,7 +760,7 @@ type MarketData struct {
 func (x *MarketData) Reset() {
 	*x = MarketData{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_security_service_proto_msgTypes[7]
+		mi := &file_security_service_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -474,7 +773,7 @@ func (x *MarketData) String() string {
 func (*MarketData) ProtoMessage() {}
 
 func (x *MarketData) ProtoReflect() protoreflect.Message {
-	mi := &file_security_service_proto_msgTypes[7]
+	mi := &file_security_service_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -487,7 +786,7 @@ func (x *MarketData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarketData.ProtoReflect.Descriptor instead.
 func (*MarketData) Descriptor() ([]byte, []int) {
-	return file_security_service_proto_rawDescGZIP(), []int{7}
+	return file_security_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *MarketData) GetDate() string {
@@ -556,7 +855,7 @@ type SecurityMetric struct {
 func (x *SecurityMetric) Reset() {
 	*x = SecurityMetric{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_security_service_proto_msgTypes[8]
+		mi := &file_security_service_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -569,7 +868,7 @@ func (x *SecurityMetric) String() string {
 func (*SecurityMetric) ProtoMessage() {}
 
 func (x *SecurityMetric) ProtoReflect() protoreflect.Message {
-	mi := &file_security_service_proto_msgTypes[8]
+	mi := &file_security_service_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +881,7 @@ func (x *SecurityMetric) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SecurityMetric.ProtoReflect.Descriptor instead.
 func (*SecurityMetric) Descriptor() ([]byte, []int) {
-	return file_security_service_proto_rawDescGZIP(), []int{8}
+	return file_security_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SecurityMetric) GetId() int32 {
@@ -651,7 +950,7 @@ type Metric struct {
 func (x *Metric) Reset() {
 	*x = Metric{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_security_service_proto_msgTypes[9]
+		mi := &file_security_service_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -664,7 +963,7 @@ func (x *Metric) String() string {
 func (*Metric) ProtoMessage() {}
 
 func (x *Metric) ProtoReflect() protoreflect.Message {
-	mi := &file_security_service_proto_msgTypes[9]
+	mi := &file_security_service_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -677,7 +976,7 @@ func (x *Metric) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Metric.ProtoReflect.Descriptor instead.
 func (*Metric) Descriptor() ([]byte, []int) {
-	return file_security_service_proto_rawDescGZIP(), []int{9}
+	return file_security_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Metric) GetId() int32 {
@@ -757,7 +1056,39 @@ var file_security_service_proto_rawDesc = []byte{
 	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x73, 0x65, 0x63, 0x75, 0x72, 0x69,
 	0x74, 0x79, 0x2e, 0x53, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x79, 0x52, 0x0a, 0x73, 0x65, 0x63,
 	0x75, 0x72, 0x69, 0x74, 0x69, 0x65, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x74, 0x6f, 0x74, 0x61, 0x6c,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x22, 0xba, 0x02,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x22, 0x32, 0x0a,
+	0x18, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f,
+	0x62, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61,
+	0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75,
+	0x73, 0x22, 0x72, 0x0a, 0x19, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61,
+	0x74, 0x61, 0x4a, 0x6f, 0x62, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3f,
+	0x0a, 0x0e, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x73,
+	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x73, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74,
+	0x79, 0x2e, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x52,
+	0x0e, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x73, 0x12,
+	0x14, 0x0a, 0x05, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05,
+	0x74, 0x6f, 0x74, 0x61, 0x6c, 0x22, 0x58, 0x0a, 0x1a, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d,
+	0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x02, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6c,
+	0x6f, 0x67, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x6c, 0x6f, 0x67, 0x73, 0x22,
+	0x5c, 0x0a, 0x1b, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44,
+	0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3d,
+	0x0a, 0x0d, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x73, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x79,
+	0x2e, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x52, 0x0d,
+	0x6d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x22, 0x9d, 0x01,
+	0x0a, 0x0d, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x12,
+	0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x02, 0x69, 0x64, 0x12,
+	0x12, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74,
+	0x79, 0x70, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6c,
+	0x6f, 0x67, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x6c, 0x6f, 0x67, 0x73, 0x12,
+	0x1d, 0x0a, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x05, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x09, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x12, 0x1d,
+	0x0a, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x06, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x09, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x22, 0xba, 0x02,
 	0x0a, 0x08, 0x53, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x79, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x69, 0x73,
 	0x69, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x69, 0x73, 0x69, 0x6e, 0x12, 0x16,
@@ -813,7 +1144,7 @@ var file_security_service_proto_rawDesc = []byte{
 	0x61, 0x74, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65,
 	0x64, 0x41, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61,
 	0x74, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64,
-	0x41, 0x74, 0x32, 0xfe, 0x01, 0x0a, 0x0f, 0x53, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x79, 0x53,
+	0x41, 0x74, 0x32, 0xc0, 0x03, 0x0a, 0x0f, 0x53, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x79, 0x53,
 	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x50, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x72,
 	0x6b, 0x65, 0x74, 0x44, 0x61, 0x79, 0x73, 0x12, 0x1e, 0x2e, 0x73, 0x65, 0x63, 0x75, 0x72, 0x69,
 	0x74, 0x79, 0x2e, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x79, 0x73,
@@ -829,11 +1160,23 @@ var file_security_service_proto_rawDesc = []byte{
 	0x74, 0x53, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x69, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
 	0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x73, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x79, 0x2e, 0x47, 0x65,
 	0x74, 0x53, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x69, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x42, 0x3e, 0x5a, 0x3c, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x66, 0x79, 0x72, 0x2f, 0x73, 0x65, 0x63, 0x75,
-	0x72, 0x69, 0x74, 0x79, 0x2d, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x69, 0x6e, 0x74,
-	0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x73, 0x2f, 0x67,
-	0x72, 0x70, 0x63, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6e, 0x73, 0x65, 0x12, 0x5c, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74,
+	0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x73, 0x12, 0x22, 0x2e, 0x73, 0x65, 0x63, 0x75, 0x72,
+	0x69, 0x74, 0x79, 0x2e, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74,
+	0x61, 0x4a, 0x6f, 0x62, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x73,
+	0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x79, 0x2e, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x72, 0x6b, 0x65,
+	0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x62, 0x0a, 0x13, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x61, 0x72, 0x6b, 0x65,
+	0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x12, 0x24, 0x2e, 0x73, 0x65, 0x63, 0x75, 0x72,
+	0x69, 0x74, 0x79, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74,
+	0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25,
+	0x2e, 0x73, 0x65, 0x63, 0x75, 0x72, 0x69, 0x74, 0x79, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
+	0x4d, 0x61, 0x72, 0x6b, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x3e, 0x5a, 0x3c, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
+	0x63, 0x6f, 0x6d, 0x2f, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x66, 0x79, 0x72, 0x2f, 0x73, 0x65,
+	0x63, 0x75, 0x72, 0x69, 0x74, 0x79, 0x2d, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x69,
+	0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x73,
+	0x2f, 0x67, 0x72, 0x70, 0x63, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -848,35 +1191,46 @@ func file_security_service_proto_rawDescGZIP() []byte {
 	return file_security_service_proto_rawDescData
 }
 
-var file_security_service_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_security_service_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_security_service_proto_goTypes = []interface{}{
-	(*GetMarketDaysRequest)(nil),  // 0: security.GetMarketDaysRequest
-	(*GetMarketDaysResponse)(nil), // 1: security.GetMarketDaysResponse
-	(*GetMetricsRequest)(nil),     // 2: security.GetMetricsRequest
-	(*GetMetricsResponse)(nil),    // 3: security.GetMetricsResponse
-	(*GetSecuritiesRequest)(nil),  // 4: security.GetSecuritiesRequest
-	(*GetSecuritiesResponse)(nil), // 5: security.GetSecuritiesResponse
-	(*Security)(nil),              // 6: security.Security
-	(*MarketData)(nil),            // 7: security.MarketData
-	(*SecurityMetric)(nil),        // 8: security.SecurityMetric
-	(*Metric)(nil),                // 9: security.Metric
+	(*GetMarketDaysRequest)(nil),        // 0: security.GetMarketDaysRequest
+	(*GetMarketDaysResponse)(nil),       // 1: security.GetMarketDaysResponse
+	(*GetMetricsRequest)(nil),           // 2: security.GetMetricsRequest
+	(*GetMetricsResponse)(nil),          // 3: security.GetMetricsResponse
+	(*GetSecuritiesRequest)(nil),        // 4: security.GetSecuritiesRequest
+	(*GetSecuritiesResponse)(nil),       // 5: security.GetSecuritiesResponse
+	(*GetMarketDataJobsRequest)(nil),    // 6: security.GetMarketDataJobsRequest
+	(*GetMarketDataJobsResponse)(nil),   // 7: security.GetMarketDataJobsResponse
+	(*UpdateMarketDataJobRequest)(nil),  // 8: security.UpdateMarketDataJobRequest
+	(*UpdateMarketDataJobResponse)(nil), // 9: security.UpdateMarketDataJobResponse
+	(*MarketDataJob)(nil),               // 10: security.MarketDataJob
+	(*Security)(nil),                    // 11: security.Security
+	(*MarketData)(nil),                  // 12: security.MarketData
+	(*SecurityMetric)(nil),              // 13: security.SecurityMetric
+	(*Metric)(nil),                      // 14: security.Metric
 }
 var file_security_service_proto_depIdxs = []int32{
-	9, // 0: security.GetMetricsResponse.metrics:type_name -> security.Metric
-	6, // 1: security.GetSecuritiesResponse.securities:type_name -> security.Security
-	7, // 2: security.Security.market_data:type_name -> security.MarketData
-	8, // 3: security.MarketData.metrics:type_name -> security.SecurityMetric
-	0, // 4: security.SecurityService.GetMarketDays:input_type -> security.GetMarketDaysRequest
-	2, // 5: security.SecurityService.GetMetrics:input_type -> security.GetMetricsRequest
-	4, // 6: security.SecurityService.GetSecurities:input_type -> security.GetSecuritiesRequest
-	1, // 7: security.SecurityService.GetMarketDays:output_type -> security.GetMarketDaysResponse
-	3, // 8: security.SecurityService.GetMetrics:output_type -> security.GetMetricsResponse
-	5, // 9: security.SecurityService.GetSecurities:output_type -> security.GetSecuritiesResponse
-	7, // [7:10] is the sub-list for method output_type
-	4, // [4:7] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	14, // 0: security.GetMetricsResponse.metrics:type_name -> security.Metric
+	11, // 1: security.GetSecuritiesResponse.securities:type_name -> security.Security
+	10, // 2: security.GetMarketDataJobsResponse.marketDataJobs:type_name -> security.MarketDataJob
+	10, // 3: security.UpdateMarketDataJobResponse.marketDataJob:type_name -> security.MarketDataJob
+	12, // 4: security.Security.market_data:type_name -> security.MarketData
+	13, // 5: security.MarketData.metrics:type_name -> security.SecurityMetric
+	0,  // 6: security.SecurityService.GetMarketDays:input_type -> security.GetMarketDaysRequest
+	2,  // 7: security.SecurityService.GetMetrics:input_type -> security.GetMetricsRequest
+	4,  // 8: security.SecurityService.GetSecurities:input_type -> security.GetSecuritiesRequest
+	6,  // 9: security.SecurityService.GetMarketDataJobs:input_type -> security.GetMarketDataJobsRequest
+	8,  // 10: security.SecurityService.UpdateMarketDataJob:input_type -> security.UpdateMarketDataJobRequest
+	1,  // 11: security.SecurityService.GetMarketDays:output_type -> security.GetMarketDaysResponse
+	3,  // 12: security.SecurityService.GetMetrics:output_type -> security.GetMetricsResponse
+	5,  // 13: security.SecurityService.GetSecurities:output_type -> security.GetSecuritiesResponse
+	7,  // 14: security.SecurityService.GetMarketDataJobs:output_type -> security.GetMarketDataJobsResponse
+	9,  // 15: security.SecurityService.UpdateMarketDataJob:output_type -> security.UpdateMarketDataJobResponse
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_security_service_proto_init() }
@@ -958,7 +1312,7 @@ func file_security_service_proto_init() {
 			}
 		}
 		file_security_service_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Security); i {
+			switch v := v.(*GetMarketDataJobsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -970,7 +1324,7 @@ func file_security_service_proto_init() {
 			}
 		}
 		file_security_service_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MarketData); i {
+			switch v := v.(*GetMarketDataJobsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -982,7 +1336,7 @@ func file_security_service_proto_init() {
 			}
 		}
 		file_security_service_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SecurityMetric); i {
+			switch v := v.(*UpdateMarketDataJobRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -994,6 +1348,66 @@ func file_security_service_proto_init() {
 			}
 		}
 		file_security_service_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateMarketDataJobResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_security_service_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MarketDataJob); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_security_service_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Security); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_security_service_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MarketData); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_security_service_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SecurityMetric); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_security_service_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Metric); i {
 			case 0:
 				return &v.state
@@ -1012,7 +1426,7 @@ func file_security_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_security_service_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

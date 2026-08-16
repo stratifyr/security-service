@@ -31,6 +31,8 @@ type SecurityServiceServerWithGofr interface {
 	GetMarketDays(*gofr.Context) (any, error)
 	GetMetrics(*gofr.Context) (any, error)
 	GetSecurities(*gofr.Context) (any, error)
+	GetMarketDataJobs(*gofr.Context) (any, error)
+	UpdateMarketDataJob(*gofr.Context) (any, error)
 }
 
 // SecurityServiceServerWrapper wraps the server and handles request and response logic
@@ -90,6 +92,38 @@ func (h *SecurityServiceServerWrapper) GetSecurities(ctx context.Context, req *p
 		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
 	}
 	
+	return resp, nil
+}
+// Unary method handler for GetMarketDataJobs
+func (h *SecurityServiceServerWrapper) GetMarketDataJobs(ctx context.Context, req *proto.GetMarketDataJobsRequest) (*proto.GetMarketDataJobsResponse, error) {
+	gctx := h.getGofrContext(ctx, &GetMarketDataJobsRequestWrapper{ctx: ctx, GetMarketDataJobsRequest: req})
+
+	res, err := h.server.GetMarketDataJobs(gctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, ok := res.(*proto.GetMarketDataJobsResponse)
+	if !ok {
+		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
+	}
+
+	return resp, nil
+}
+// Unary method handler for UpdateMarketDataJob
+func (h *SecurityServiceServerWrapper) UpdateMarketDataJob(ctx context.Context, req *proto.UpdateMarketDataJobRequest) (*proto.UpdateMarketDataJobResponse, error) {
+	gctx := h.getGofrContext(ctx, &UpdateMarketDataJobRequestWrapper{ctx: ctx, UpdateMarketDataJobRequest: req})
+
+	res, err := h.server.UpdateMarketDataJob(gctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, ok := res.(*proto.UpdateMarketDataJobResponse)
+	if !ok {
+		return nil, status.Errorf(codes.Unknown, "unexpected response type %T", res)
+	}
+
 	return resp, nil
 }
 

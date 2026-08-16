@@ -18,6 +18,8 @@ type SecurityServiceGoFrClient interface {
 	GetMarketDays(ctx *gofr.Context, req *proto.GetMarketDaysRequest, opts ...grpc.CallOption) (*proto.GetMarketDaysResponse, error)
 	GetMetrics(ctx *gofr.Context, req *proto.GetMetricsRequest, opts ...grpc.CallOption) (*proto.GetMetricsResponse, error)
 	GetSecurities(ctx *gofr.Context, req *proto.GetSecuritiesRequest, opts ...grpc.CallOption) (*proto.GetSecuritiesResponse, error)
+	GetMarketDataJobs(ctx *gofr.Context, req *proto.GetMarketDataJobsRequest, opts ...grpc.CallOption) (*proto.GetMarketDataJobsResponse, error)
+	UpdateMarketDataJob(ctx *gofr.Context, req *proto.UpdateMarketDataJobRequest, opts ...grpc.CallOption) (*proto.UpdateMarketDataJobResponse, error)
 	HealthClient
 }
 
@@ -82,3 +84,26 @@ func (h *SecurityServiceClientWrapper) GetSecurities(ctx *gofr.Context, req *pro
 	}
 	return result.(*proto.GetSecuritiesResponse), nil
 }
+func (h *SecurityServiceClientWrapper) GetMarketDataJobs(ctx *gofr.Context, req *proto.GetMarketDataJobsRequest,
+	opts ...grpc.CallOption) (*proto.GetMarketDataJobsResponse, error) {
+	result, err := invokeRPC(ctx, "/SecurityService/GetMarketDataJobs", func() (interface{}, error) {
+		return h.client.GetMarketDataJobs(ctx.Context, req, opts...)
+	}, "app_gRPC-Client_stats")
+
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proto.GetMarketDataJobsResponse), nil
+}
+func (h *SecurityServiceClientWrapper) UpdateMarketDataJob(ctx *gofr.Context, req *proto.UpdateMarketDataJobRequest,
+	opts ...grpc.CallOption) (*proto.UpdateMarketDataJobResponse, error) {
+	result, err := invokeRPC(ctx, "/SecurityService/UpdateMarketDataJob", func() (interface{}, error) {
+		return h.client.UpdateMarketDataJob(ctx.Context, req, opts...)
+	}, "app_gRPC-Client_stats")
+
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proto.UpdateMarketDataJobResponse), nil
+}
+

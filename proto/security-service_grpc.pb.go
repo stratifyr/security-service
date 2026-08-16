@@ -25,6 +25,8 @@ type SecurityServiceClient interface {
 	GetMarketDays(ctx context.Context, in *GetMarketDaysRequest, opts ...grpc.CallOption) (*GetMarketDaysResponse, error)
 	GetMetrics(ctx context.Context, in *GetMetricsRequest, opts ...grpc.CallOption) (*GetMetricsResponse, error)
 	GetSecurities(ctx context.Context, in *GetSecuritiesRequest, opts ...grpc.CallOption) (*GetSecuritiesResponse, error)
+	GetMarketDataJobs(ctx context.Context, in *GetMarketDataJobsRequest, opts ...grpc.CallOption) (*GetMarketDataJobsResponse, error)
+	UpdateMarketDataJob(ctx context.Context, in *UpdateMarketDataJobRequest, opts ...grpc.CallOption) (*UpdateMarketDataJobResponse, error)
 }
 
 type securityServiceClient struct {
@@ -62,6 +64,24 @@ func (c *securityServiceClient) GetSecurities(ctx context.Context, in *GetSecuri
 	return out, nil
 }
 
+func (c *securityServiceClient) GetMarketDataJobs(ctx context.Context, in *GetMarketDataJobsRequest, opts ...grpc.CallOption) (*GetMarketDataJobsResponse, error) {
+	out := new(GetMarketDataJobsResponse)
+	err := c.cc.Invoke(ctx, "/security.SecurityService/GetMarketDataJobs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *securityServiceClient) UpdateMarketDataJob(ctx context.Context, in *UpdateMarketDataJobRequest, opts ...grpc.CallOption) (*UpdateMarketDataJobResponse, error) {
+	out := new(UpdateMarketDataJobResponse)
+	err := c.cc.Invoke(ctx, "/security.SecurityService/UpdateMarketDataJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SecurityServiceServer is the server API for SecurityService service.
 // All implementations must embed UnimplementedSecurityServiceServer
 // for forward compatibility
@@ -69,6 +89,8 @@ type SecurityServiceServer interface {
 	GetMarketDays(context.Context, *GetMarketDaysRequest) (*GetMarketDaysResponse, error)
 	GetMetrics(context.Context, *GetMetricsRequest) (*GetMetricsResponse, error)
 	GetSecurities(context.Context, *GetSecuritiesRequest) (*GetSecuritiesResponse, error)
+	GetMarketDataJobs(context.Context, *GetMarketDataJobsRequest) (*GetMarketDataJobsResponse, error)
+	UpdateMarketDataJob(context.Context, *UpdateMarketDataJobRequest) (*UpdateMarketDataJobResponse, error)
 	mustEmbedUnimplementedSecurityServiceServer()
 }
 
@@ -84,6 +106,12 @@ func (UnimplementedSecurityServiceServer) GetMetrics(context.Context, *GetMetric
 }
 func (UnimplementedSecurityServiceServer) GetSecurities(context.Context, *GetSecuritiesRequest) (*GetSecuritiesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSecurities not implemented")
+}
+func (UnimplementedSecurityServiceServer) GetMarketDataJobs(context.Context, *GetMarketDataJobsRequest) (*GetMarketDataJobsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMarketDataJobs not implemented")
+}
+func (UnimplementedSecurityServiceServer) UpdateMarketDataJob(context.Context, *UpdateMarketDataJobRequest) (*UpdateMarketDataJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateMarketDataJob not implemented")
 }
 func (UnimplementedSecurityServiceServer) mustEmbedUnimplementedSecurityServiceServer() {}
 
@@ -152,6 +180,42 @@ func _SecurityService_GetSecurities_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SecurityService_GetMarketDataJobs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMarketDataJobsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SecurityServiceServer).GetMarketDataJobs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/security.SecurityService/GetMarketDataJobs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SecurityServiceServer).GetMarketDataJobs(ctx, req.(*GetMarketDataJobsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SecurityService_UpdateMarketDataJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMarketDataJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SecurityServiceServer).UpdateMarketDataJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/security.SecurityService/UpdateMarketDataJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SecurityServiceServer).UpdateMarketDataJob(ctx, req.(*UpdateMarketDataJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SecurityService_ServiceDesc is the grpc.ServiceDesc for SecurityService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +234,14 @@ var SecurityService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSecurities",
 			Handler:    _SecurityService_GetSecurities_Handler,
+		},
+		{
+			MethodName: "GetMarketDataJobs",
+			Handler:    _SecurityService_GetMarketDataJobs_Handler,
+		},
+		{
+			MethodName: "UpdateMarketDataJob",
+			Handler:    _SecurityService_UpdateMarketDataJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

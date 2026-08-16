@@ -31,3 +31,9 @@ func (s *SecurityServiceGoFrServer) GetMetrics(ctx *gofr.Context) (any, error) {
 func (s *SecurityServiceGoFrServer) GetSecurities(ctx *gofr.Context) (any, error) {
 	return &proto.GetSecuritiesResponse{}, nil
 }
+func (s *SecurityServiceGoFrServer) GetMarketDataJobs(ctx *gofr.Context) (any, error) {
+	return &proto.GetMarketDataJobsResponse{}, nil
+}
+func (s *SecurityServiceGoFrServer) UpdateMarketDataJob(ctx *gofr.Context) (any, error) {
+	return &proto.UpdateMarketDataJobResponse{}, nil
+}

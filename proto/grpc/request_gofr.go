@@ -4,7 +4,6 @@
 // 	gofr.dev v1.39.0
 // 	source: security-service.proto
 
-
 package grpc
 
 import (
@@ -63,6 +62,7 @@ func (h *GetMetricsRequestWrapper) HostName() string {
 func (h *GetMetricsRequestWrapper) Params(s string) []string {
 	return nil
 }
+
 type GetSecuritiesRequestWrapper struct {
 	ctx context.Context
 	*proto.GetSecuritiesRequest
@@ -110,6 +110,7 @@ func (h *GetSecuritiesRequestWrapper) HostName() string {
 func (h *GetSecuritiesRequestWrapper) Params(s string) []string {
 	return nil
 }
+
 type GetMarketDaysRequestWrapper struct {
 	ctx context.Context
 	*proto.GetMarketDaysRequest
@@ -155,5 +156,101 @@ func (h *GetMarketDaysRequestWrapper) HostName() string {
 }
 
 func (h *GetMarketDaysRequestWrapper) Params(s string) []string {
+	return nil
+}
+
+type GetMarketDataJobsRequestWrapper struct {
+	ctx context.Context
+	*proto.GetMarketDataJobsRequest
+}
+
+func (h *GetMarketDataJobsRequestWrapper) Context() context.Context {
+	return h.ctx
+}
+
+func (h *GetMarketDataJobsRequestWrapper) Param(s string) string {
+	return ""
+}
+
+func (h *GetMarketDataJobsRequestWrapper) PathParam(s string) string {
+	return ""
+}
+
+func (h *GetMarketDataJobsRequestWrapper) Bind(p interface{}) error {
+	ptr := reflect.ValueOf(p)
+	if ptr.Kind() != reflect.Ptr {
+		return fmt.Errorf("expected a pointer, got %T", p)
+	}
+
+	hValue := reflect.ValueOf(h.GetMarketDataJobsRequest).Elem()
+	ptrValue := ptr.Elem()
+
+	for i := 0; i < hValue.NumField(); i++ {
+		field := hValue.Type().Field(i)
+		if field.Name == "state" || field.Name == "sizeCache" || field.Name == "unknownFields" {
+			continue
+		}
+
+		if field.IsExported() {
+			ptrValue.Field(i).Set(hValue.Field(i))
+		}
+	}
+
+	return nil
+}
+
+func (h *GetMarketDataJobsRequestWrapper) HostName() string {
+	return ""
+}
+
+func (h *GetMarketDataJobsRequestWrapper) Params(s string) []string {
+	return nil
+}
+
+type UpdateMarketDataJobRequestWrapper struct {
+	ctx context.Context
+	*proto.UpdateMarketDataJobRequest
+}
+
+func (h *UpdateMarketDataJobRequestWrapper) Context() context.Context {
+	return h.ctx
+}
+
+func (h *UpdateMarketDataJobRequestWrapper) Param(s string) string {
+	return ""
+}
+
+func (h *UpdateMarketDataJobRequestWrapper) PathParam(s string) string {
+	return ""
+}
+
+func (h *UpdateMarketDataJobRequestWrapper) Bind(p interface{}) error {
+	ptr := reflect.ValueOf(p)
+	if ptr.Kind() != reflect.Ptr {
+		return fmt.Errorf("expected a pointer, got %T", p)
+	}
+
+	hValue := reflect.ValueOf(h.UpdateMarketDataJobRequest).Elem()
+	ptrValue := ptr.Elem()
+
+	for i := 0; i < hValue.NumField(); i++ {
+		field := hValue.Type().Field(i)
+		if field.Name == "state" || field.Name == "sizeCache" || field.Name == "unknownFields" {
+			continue
+		}
+
+		if field.IsExported() {
+			ptrValue.Field(i).Set(hValue.Field(i))
+		}
+	}
+
+	return nil
+}
+
+func (h *UpdateMarketDataJobRequestWrapper) HostName() string {
+	return ""
+}
+
+func (h *UpdateMarketDataJobRequestWrapper) Params(s string) []string {
 	return nil
 }
