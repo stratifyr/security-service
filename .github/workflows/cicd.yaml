@@ -17,10 +17,6 @@ jobs:
             dockerfile: ./Dockerfile
             docker_context: .
             port: 8002
-          - name: market-data-loader
-            type: deployment
-            dockerfile: ./daemon/market-data-loader/Dockerfile
-            docker_context: ./daemon/market-data-loader
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
