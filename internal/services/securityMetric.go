@@ -156,7 +156,16 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 		return nil, err
 	}
 
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: marketDays}, 0, 0)
+	startDate, endDate := marketDays[len(marketDays)-1], marketDays[0]
+	if startDate.After(endDate) {
+		startDate, endDate = endDate, startDate
+	}
+
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs,
+		DateBetween: &struct {
+			Start time.Time
+			End   time.Time
+		}{Start: startDate, End: endDate}}, 0, 0)
 	if err != nil {
 		return nil, err
 	}
