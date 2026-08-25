@@ -83,7 +83,7 @@ func (s *metricService) Read(ctx *gofr.Context, id int) (*Metric, error) {
 
 func (s *metricService) Create(ctx *gofr.Context, payload *MetricCreate) (*Metric, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	metricType, err := stores.MetricTypeFromString(payload.Type)
@@ -110,7 +110,7 @@ func (s *metricService) Create(ctx *gofr.Context, payload *MetricCreate) (*Metri
 
 func (s *metricService) Patch(ctx *gofr.Context, id int, payload *MetricUpdate) (*Metric, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	metric, err := s.store.Retrieve(ctx, id)

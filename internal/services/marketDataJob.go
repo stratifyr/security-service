@@ -2,13 +2,10 @@ package services
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
-	"gofr.dev/pkg/gofr"
-	"gofr.dev/pkg/gofr/http"
-
 	"github.com/stratifyr/security-service/internal/stores"
+	"gofr.dev/pkg/gofr"
 )
 
 type MarketDataJobService interface {
@@ -56,7 +53,7 @@ func (s *marketDataJobService) Index(ctx *gofr.Context, f *MarketDataJobFilter, 
 	offset := limit * (page - 1)
 
 	if f.UserID != 1 {
-		return nil, 0, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, 0, ErrForbidden
 	}
 
 	filter := &stores.MarketDataJobFilter{
@@ -97,7 +94,7 @@ func (s *marketDataJobService) Read(ctx *gofr.Context, id int) (*MarketDataJob, 
 
 func (s *marketDataJobService) Create(ctx *gofr.Context, payload *MarketDataJobCreate) (*MarketDataJob, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	jobType, err := stores.MarketDataJobTypeFromString(payload.Type)
@@ -123,7 +120,7 @@ func (s *marketDataJobService) Create(ctx *gofr.Context, payload *MarketDataJobC
 
 func (s *marketDataJobService) Patch(ctx *gofr.Context, id int, payload *MarketDataJobUpdate) (*MarketDataJob, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	marketDataJob, err := s.store.Retrieve(ctx, id)
@@ -132,12 +129,8 @@ func (s *marketDataJobService) Patch(ctx *gofr.Context, id int, payload *MarketD
 	}
 
 	if payload.Status != "" && payload.Status != marketDataJob.Status {
-		if payload.Status != "COMPLETED" && payload.Status != "FAILED" {
-			return nil, http.ErrorInvalidParam{Params: []string{"status"}}
-		}
-
-		if marketDataJob.Status != "CREATED" {
-			return nil, &ErrResp{Code: 400, Message: fmt.Sprintf("Cannot update status from %s to %s", marketDataJob.Status, payload.Status)}
+		if marketDataJob.Status != "CREATED" || (payload.Status != "COMPLETED" && payload.Status != "FAILED") {
+			return nil, ErrInvalidStatusChange
 		}
 
 		marketDataJob.Status = payload.Status

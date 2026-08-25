@@ -95,7 +95,7 @@ func (s *marketHolidayService) Read(ctx *gofr.Context, id int) (*MarketHoliday, 
 
 func (s *marketHolidayService) Create(ctx *gofr.Context, payload *MarketHolidayCreate) (*MarketHoliday, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	model := &stores.MarketHoliday{
@@ -115,7 +115,7 @@ func (s *marketHolidayService) Create(ctx *gofr.Context, payload *MarketHolidayC
 
 func (s *marketHolidayService) Patch(ctx *gofr.Context, id int, payload *MarketHolidayUpdate) (*MarketHoliday, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	marketHoliday, err := s.store.Retrieve(ctx, id)
@@ -141,7 +141,7 @@ func (s *marketHolidayService) Patch(ctx *gofr.Context, id int, payload *MarketH
 
 func (s *marketHolidayService) Delete(ctx *gofr.Context, id, userID int) error {
 	if userID != 1 {
-		return &ErrResp{Code: 403, Message: "Forbidden"}
+		return ErrForbidden
 	}
 
 	_, err := s.store.Retrieve(ctx, id)

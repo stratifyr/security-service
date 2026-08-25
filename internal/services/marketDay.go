@@ -60,7 +60,7 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 	}
 
 	if n > 366*5 {
-		return nil, 0, &ErrResp{Code: 400, Message: "date range is too long, please pass interval within 5 years"}
+		return nil, 0, ErrDateRangeTooLong
 	}
 
 	marketHolidays, err := s.marketHolidayStore.Index(ctx, &stores.MarketHolidayFilter{

@@ -113,7 +113,7 @@ func (s *securityStatService) Read(ctx *gofr.Context, id int) (*SecurityStat, er
 
 func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCreate) (*SecurityStat, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	securityStats, err := s.store.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{payload.SecurityID}, Dates: []time.Time{payload.Date}}, 1, 0)
@@ -132,7 +132,7 @@ func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCre
 			EndDate   time.Time
 		}{StartDate: payload.Date, EndDate: payload.Date}})
 	if count != 1 || marketDays[0].Format(time.DateOnly) != payload.Date.Format(time.DateOnly) {
-		return nil, &ErrResp{Code: 400, Message: "cannot add stat for market holiday - " + payload.Date.Format(time.DateOnly)}
+		return nil, ErrMarketHolidayStat
 	}
 
 	model := &stores.SecurityStat{
@@ -157,7 +157,7 @@ func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCre
 
 func (s *securityStatService) Patch(ctx *gofr.Context, id int, payload *SecurityStatUpdate) (*SecurityStat, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	securityStat, err := s.store.Retrieve(ctx, id)

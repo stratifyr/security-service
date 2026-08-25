@@ -155,7 +155,7 @@ func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 
 func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	industry, err := stores.IndustryFromString(payload.Industry)
@@ -199,7 +199,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 
 func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
 	if payload.UserID != 1 {
-		return nil, &ErrResp{Code: 403, Message: "Forbidden"}
+		return nil, ErrForbidden
 	}
 
 	security, err := s.store.Retrieve(ctx, id)
