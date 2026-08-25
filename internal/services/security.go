@@ -271,7 +271,7 @@ func (s *securityService) getPrevMarketDay(ctx *gofr.Context, referenceDate time
 }
 
 func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int]*stores.SecurityStat, error) {
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: []time.Time{date}}, 0, 0)
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Date: date}, 0, 0)
 	if err != nil {
 		return nil, err
 	}

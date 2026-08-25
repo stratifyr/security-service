@@ -76,7 +76,7 @@ func (s *securityStatService) Index(ctx *gofr.Context, f *SecurityStatFilter, pa
 	}
 
 	if f.Date != (time.Time{}) {
-		filter.Dates = []time.Time{f.Date}
+		filter.Date = f.Date
 	}
 
 	securityStats, err := s.store.Index(ctx, &filter, limit, offset)
@@ -116,7 +116,7 @@ func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCre
 		return nil, ErrForbidden
 	}
 
-	securityStats, err := s.store.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{payload.SecurityID}, Dates: []time.Time{payload.Date}}, 1, 0)
+	securityStats, err := s.store.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{payload.SecurityID}, Date: payload.Date}, 1, 0)
 	if err != nil {
 		return nil, err
 	}

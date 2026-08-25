@@ -6,7 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/vmihailenco/msgpack/v5"
 	"gofr.dev/pkg/gofr"
 
@@ -43,18 +42,28 @@ func (s *securityMetricService) Get(ctx *gofr.Context, securityIDs []int, date t
 		return nil, err
 	}
 
-	securityMetrics, err := s.getSecurityMetricsFromCache(ctx, securityIDs, date, metrics)
-	if err == nil {
-		return securityMetrics, nil
+	cachedSecurityMetrics, err := s.getSecurityMetricsFromCache(ctx, securityIDs, date, metrics)
+	if err != nil {
+		ctx.Logger.Warnf("failed to get security metrics from cache: %v", map[string]any{
+			"error":       err,
+			"securityIds": securityIDs,
+			"date":        date,
+		})
 	}
 
-	ctx.Logger.Warnf("failed to get security metrics from cache: %v", map[string]any{
-		"error":       err,
-		"securityIds": securityIDs,
-		"date":        date,
-	})
+	if len(cachedSecurityMetrics) == len(securityIDs) {
+		return cachedSecurityMetrics, nil
+	}
 
-	securityMetrics, err = s.computeSecurityMetrics(ctx, securityIDs, date, metrics)
+	var cacheMisses []int
+
+	for _, securityID := range securityIDs {
+		if _, ok := cachedSecurityMetrics[securityID]; !ok {
+			cacheMisses = append(cacheMisses, securityID)
+		}
+	}
+
+	securityMetrics, err := s.computeSecurityMetrics(ctx, cacheMisses, date, metrics)
 	if err != nil {
 		return nil, err
 	}
@@ -62,10 +71,12 @@ func (s *securityMetricService) Get(ctx *gofr.Context, securityIDs []int, date t
 	if err = s.setSecurityMetricsToCache(ctx, securityMetrics, date); err != nil {
 		ctx.Logger.Warnf("failed to set security metrics in cache: %v", map[string]any{
 			"error":       err,
-			"securityIds": securityIDs,
+			"securityIds": cacheMisses,
 			"date":        date,
 		})
 	}
+
+	mergeMaps(securityMetrics, cachedSecurityMetrics)
 
 	return securityMetrics, nil
 }
@@ -97,6 +108,7 @@ func (s *securityMetricService) getSecurityMetricsFromCache(ctx *gofr.Context, s
 
 	for i, val := range vals {
 		if val == nil {
+			ctx.Logger.Warnf("cache miss: %s", keys[i])
 			continue
 		}
 
@@ -125,10 +137,6 @@ func (s *securityMetricService) getSecurityMetricsFromCache(ctx *gofr.Context, s
 		securityMetrics[securityIDs[i]] = sm
 	}
 
-	if len(securityMetrics) != len(securityIDs) {
-		return nil, redis.Nil
-	}
-
 	return securityMetrics, nil
 }
 
@@ -148,16 +156,33 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 		return nil, err
 	}
 
+	startDate, endDate := marketDays[len(marketDays)-1], marketDays[0]
+	if startDate.After(endDate) {
+		startDate, endDate = endDate, startDate
+	}
+
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs,
+		DateBetween: &struct {
+			Start time.Time
+			End   time.Time
+		}{Start: startDate, End: endDate}}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	securityStatsMap := make(map[int][]*stores.SecurityStat, len(securityIDs))
+
+	for _, stat := range securityStats {
+		securityStatsMap[stat.SecurityID] = append(securityStatsMap[stat.SecurityID], stat)
+	}
+
 	var securityMetrics = make(map[int][]*SecurityMetric)
 
 	for _, securityID := range securityIDs {
-		securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{securityID}, Dates: marketDays}, 0, 0)
-		if err != nil {
-			return nil, err
-		}
+		stats := securityStatsMap[securityID]
 
-		sort.Slice(securityStats, func(i, j int) bool {
-			return securityStats[i].Date.After(securityStats[j].Date)
+		sort.Slice(stats, func(i, j int) bool {
+			return stats[i].Date.After(stats[j].Date)
 		})
 
 		var sm = make([]*SecurityMetric, 0)
@@ -165,12 +190,12 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 		for i := range metrics {
 			n := metrics[i].Period
 
-			if len(securityStats) < n {
+			if len(stats) < n {
 				ctx.Logger.Warnf("cannot compute securityId:%d_%s_%d, not enough data", securityID, metrics[i].Type.String(), metrics[i].Period)
 				continue
 			}
 
-			value, normalizedValue := s.computeMetricValue(metrics[i], securityStats[:n])
+			value, normalizedValue := s.computeMetricValue(metrics[i], stats[:n])
 
 			sm = append(sm, &SecurityMetric{
 				Metric: &Metric{
@@ -347,4 +372,10 @@ func (s *securityMetricService) computeVMA(lastNStats []*stores.SecurityStat) fl
 	}
 
 	return sumVolume / float64(n)
+}
+
+func mergeMaps[K comparable, V any](dst, src map[K]V) {
+	for k, v := range src {
+		dst[k] = v
+	}
 }
