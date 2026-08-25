@@ -156,16 +156,24 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 		return nil, err
 	}
 
+	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Dates: marketDays}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	securityStatsMap := make(map[int][]*stores.SecurityStat, len(securityIDs))
+
+	for _, stat := range securityStats {
+		securityStatsMap[stat.SecurityID] = append(securityStatsMap[stat.SecurityID], stat)
+	}
+
 	var securityMetrics = make(map[int][]*SecurityMetric)
 
 	for _, securityID := range securityIDs {
-		securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{securityID}, Dates: marketDays}, 0, 0)
-		if err != nil {
-			return nil, err
-		}
+		stats := securityStatsMap[securityID]
 
-		sort.Slice(securityStats, func(i, j int) bool {
-			return securityStats[i].Date.After(securityStats[j].Date)
+		sort.Slice(stats, func(i, j int) bool {
+			return stats[i].Date.After(stats[j].Date)
 		})
 
 		var sm = make([]*SecurityMetric, 0)
@@ -173,12 +181,12 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 		for i := range metrics {
 			n := metrics[i].Period
 
-			if len(securityStats) < n {
+			if len(stats) < n {
 				ctx.Logger.Warnf("cannot compute securityId:%d_%s_%d, not enough data", securityID, metrics[i].Type.String(), metrics[i].Period)
 				continue
 			}
 
-			value, normalizedValue := s.computeMetricValue(metrics[i], securityStats[:n])
+			value, normalizedValue := s.computeMetricValue(metrics[i], stats[:n])
 
 			sm = append(sm, &SecurityMetric{
 				Metric: &Metric{
