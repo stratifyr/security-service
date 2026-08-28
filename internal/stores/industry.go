@@ -75,6 +75,7 @@ func (s *industryStore) Index(ctx *gofr.Context) []Industry {
 		Gold,
 		Silver,
 		Utilities,
+		Metals,
 	}
 }
 
