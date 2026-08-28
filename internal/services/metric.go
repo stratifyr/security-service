@@ -21,7 +21,6 @@ type Metric struct {
 	Type      stores.MetricType
 	Period    int
 	Indicator stores.MetricIndicator
-	Tier      int
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -31,13 +30,11 @@ type MetricCreate struct {
 	Name   string
 	Type   string
 	Period int
-	Tier   int
 }
 
 type MetricUpdate struct {
 	UserID int
 	Name   string
-	Tier   *int
 }
 
 var MetricTypeIndicator = map[stores.MetricType]stores.MetricIndicator{

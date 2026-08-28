@@ -204,7 +204,6 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 					Type:      metrics[i].Type,
 					Period:    metrics[i].Period,
 					Indicator: metrics[i].Indicator,
-					Tier:      metrics[i].Tier,
 					CreatedAt: metrics[i].CreatedAt,
 					UpdatedAt: metrics[i].UpdatedAt,
 				},
