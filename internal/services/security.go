@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gofr.dev/pkg/gofr"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/stratifyr/security-service/internal/stores"
 )
@@ -97,13 +98,26 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter) ([]*Securi
 		return nil, err
 	}
 
-	securityStats, err := s.getStatsMap(ctx, securityIDs, prevMarketDay)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		securityStats   map[int]*stores.SecurityStat
+		securityMetrics map[int][]*SecurityMetric
+	)
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, securityIDs, prevMarketDay)
-	if err != nil {
+	var g errgroup.Group
+
+	g.Go(func() error {
+		var err error
+		securityStats, err = s.getStatsMap(ctx, securityIDs, prevMarketDay)
+		return err
+	})
+
+	g.Go(func() error {
+		var err error
+		securityMetrics, err = s.securityMetricService.Get(ctx, securityIDs, prevMarketDay)
+		return err
+	})
+
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
