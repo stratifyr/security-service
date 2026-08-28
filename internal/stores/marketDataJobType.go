@@ -1,13 +1,8 @@
 package stores
 
 import (
-	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/http"
 )
-
-type MarketDataJobTypeStore interface {
-	Index(ctx *gofr.Context) []MetricType
-}
 
 const (
 	LoadLTP = iota
@@ -16,20 +11,6 @@ const (
 )
 
 type MarketDataJobType int
-
-type marketDataJobTypeStore struct{}
-
-func NewMarketDataJobTypeStore() *marketDataJobTypeStore {
-	return &marketDataJobTypeStore{}
-}
-
-func (s *marketDataJobTypeStore) Index(ctx *gofr.Context) []MarketDataJobType {
-	return []MarketDataJobType{
-		LoadLTP,
-		LoadSecurityStats,
-		BackfillSecurityStats,
-	}
-}
 
 func (m MarketDataJobType) String() string {
 	var conversionMap = map[MarketDataJobType]string{
