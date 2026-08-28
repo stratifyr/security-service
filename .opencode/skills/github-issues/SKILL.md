@@ -26,3 +26,4 @@ Issue-related work end to end. Three workflows share the prerequisites below; pi
 ## Shared references
 
 - **Ticket format, labels, and creation rules** (workflows A and B): read `references/ticket-creation.md` before drafting the first ticket. Workflow C creates no ticket and does not need it.
+- **Branch and PR conventions** (workflow C only): read `references/branch-and-pr.md` before creating the branch or the closing PR. Workflows A and B create neither.
