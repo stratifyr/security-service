@@ -16,7 +16,6 @@ const SecuritiesCacheKey = "security-service:client-cache:securities:date:%s"
 
 type SecurityStore interface {
 	Index(ctx *gofr.Context, f *SecurityFilter, limit, offset int) ([]*Security, error)
-	Count(ctx *gofr.Context, f *SecurityFilter) (int, error)
 	Retrieve(ctx *gofr.Context, id int) (*Security, error)
 	Create(ctx *gofr.Context, security *Security) (*Security, error)
 	Update(ctx *gofr.Context, id int, security *Security) (*Security, error)
@@ -81,21 +80,6 @@ func (s *securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, 
 	}
 
 	return securities, nil
-}
-
-func (s *securityStore) Count(ctx *gofr.Context, filter *SecurityFilter) (int, error) {
-	whereClause, values := filter.buildWhereClause()
-
-	query := `SELECT COUNT(*) FROM securities %s`
-
-	var count int
-
-	err := ctx.SQL.QueryRowContext(ctx, fmt.Sprintf(query, whereClause), values...).Scan(&count)
-	if err != nil {
-		return 0, datasource.ErrorDB{Err: err}
-	}
-
-	return count, nil
 }
 
 func (s *securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {

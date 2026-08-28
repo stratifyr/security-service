@@ -36,7 +36,7 @@ func (h *securityGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		}
 	}
 
-	securities, count, err := h.svc.Index(ctx, &filter, 0, 0)
+	securities, err := h.svc.Index(ctx, &filter)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (h *securityGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 
 	return &pb.GetSecuritiesResponse{
 		Securities: resp,
-		Total:      int32(count),
+		Total:      int32(len(securities)),
 	}, nil
 }
 
