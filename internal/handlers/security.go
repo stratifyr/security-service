@@ -12,33 +12,37 @@ import (
 )
 
 type Security struct {
-	ID            int     `json:"id"`
-	ISIN          string  `json:"isin"`
-	Symbol        string  `json:"symbol"`
-	Industry      string  `json:"industry"`
-	Name          string  `json:"name"`
-	Image         string  `json:"image"`
-	LTP           float64 `json:"ltp"`
-	PreviousClose float64 `json:"previousClose"`
-	CreatedAt     string  `json:"createdAt"`
-	UpdatedAt     string  `json:"updatedAt"`
-	MarketData    *struct {
-		Date    string  `json:"date"`
-		Open    float64 `json:"open"`
-		Close   float64 `json:"close"`
-		High    float64 `json:"high"`
-		Low     float64 `json:"low"`
-		Volume  int     `json:"volume"`
-		Metrics []*struct {
-			ID              int     `json:"id"`
-			Name            string  `json:"name"`
-			Type            string  `json:"type"`
-			Period          int     `json:"period"`
-			Indicator       string  `json:"indicator"`
-			Value           float64 `json:"value"`
-			NormalizedValue float64 `json:"normalizedValue"`
-		} `json:"metrics"`
-	} `json:"marketData"`
+	ID            int         `json:"id"`
+	ISIN          string      `json:"isin"`
+	Symbol        string      `json:"symbol"`
+	Industry      string      `json:"industry"`
+	Name          string      `json:"name"`
+	Image         string      `json:"image"`
+	LTP           float64     `json:"ltp"`
+	PreviousClose float64     `json:"previousClose"`
+	CreatedAt     string      `json:"createdAt"`
+	UpdatedAt     string      `json:"updatedAt"`
+	MarketData    *MarketData `json:"marketData"`
+}
+
+type MarketData struct {
+	Date    string              `json:"date"`
+	Open    float64             `json:"open"`
+	Close   float64             `json:"close"`
+	High    float64             `json:"high"`
+	Low     float64             `json:"low"`
+	Volume  int                 `json:"volume"`
+	Metrics []*MarketDataMetric `json:"metrics"`
+}
+
+type MarketDataMetric struct {
+	ID              int     `json:"id"`
+	Name            string  `json:"name"`
+	Type            string  `json:"type"`
+	Period          int     `json:"period"`
+	Indicator       string  `json:"indicator"`
+	Value           float64 `json:"value"`
+	NormalizedValue float64 `json:"normalizedValue"`
 }
 
 type SecurityCreate struct {
@@ -193,50 +197,18 @@ func (h *securityHandler) buildResp(model *services.Security) *Security {
 		return resp
 	}
 
-	resp.MarketData = &struct {
-		Date    string  `json:"date"`
-		Open    float64 `json:"open"`
-		Close   float64 `json:"close"`
-		High    float64 `json:"high"`
-		Low     float64 `json:"low"`
-		Volume  int     `json:"volume"`
-		Metrics []*struct {
-			ID              int     `json:"id"`
-			Name            string  `json:"name"`
-			Type            string  `json:"type"`
-			Period          int     `json:"period"`
-			Indicator       string  `json:"indicator"`
-			Value           float64 `json:"value"`
-			NormalizedValue float64 `json:"normalizedValue"`
-		} `json:"metrics"`
-	}{
-		Date:   model.SecurityStat.Date.Format(time.DateOnly),
-		Open:   model.SecurityStat.Open,
-		Close:  model.SecurityStat.Close,
-		High:   model.SecurityStat.High,
-		Low:    model.SecurityStat.Low,
-		Volume: model.SecurityStat.Volume,
-		Metrics: make([]*struct {
-			ID              int     `json:"id"`
-			Name            string  `json:"name"`
-			Type            string  `json:"type"`
-			Period          int     `json:"period"`
-			Indicator       string  `json:"indicator"`
-			Value           float64 `json:"value"`
-			NormalizedValue float64 `json:"normalizedValue"`
-		}, len(model.SecurityMetrics)),
+	resp.MarketData = &MarketData{
+		Date:    model.SecurityStat.Date.Format(time.DateOnly),
+		Open:    model.SecurityStat.Open,
+		Close:   model.SecurityStat.Close,
+		High:    model.SecurityStat.High,
+		Low:     model.SecurityStat.Low,
+		Volume:  model.SecurityStat.Volume,
+		Metrics: make([]*MarketDataMetric, len(model.SecurityMetrics)),
 	}
 
 	for i := range model.SecurityMetrics {
-		resp.MarketData.Metrics[i] = &struct {
-			ID              int     `json:"id"`
-			Name            string  `json:"name"`
-			Type            string  `json:"type"`
-			Period          int     `json:"period"`
-			Indicator       string  `json:"indicator"`
-			Value           float64 `json:"value"`
-			NormalizedValue float64 `json:"normalizedValue"`
-		}{
+		resp.MarketData.Metrics[i] = &MarketDataMetric{
 			ID:              model.SecurityMetrics[i].Metric.ID,
 			Name:            model.SecurityMetrics[i].Metric.Name,
 			Type:            model.SecurityMetrics[i].Metric.Type.String(),

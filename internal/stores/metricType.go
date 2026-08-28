@@ -1,13 +1,8 @@
 package stores
 
 import (
-	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/http"
 )
-
-type MetricTypeStore interface {
-	Index(ctx *gofr.Context) []MetricType
-}
 
 const (
 	SMA MetricType = iota
@@ -19,23 +14,6 @@ const (
 )
 
 type MetricType int
-
-type metricTypeStore struct{}
-
-func NewMetricTypeStore() *metricTypeStore {
-	return &metricTypeStore{}
-}
-
-func (s *metricTypeStore) Index(ctx *gofr.Context) []MetricType {
-	return []MetricType{
-		SMA,
-		EMA,
-		RSI,
-		ROC,
-		ATR,
-		VMA,
-	}
-}
 
 func (m MetricType) String() string {
 	var conversionMap = map[MetricType]string{

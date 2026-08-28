@@ -1,13 +1,8 @@
 package stores
 
 import (
-	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/http"
 )
-
-type MetricIndicatorStore interface {
-	Index(ctx *gofr.Context) []MetricIndicator
-}
 
 const (
 	Trend MetricIndicator = iota
@@ -17,21 +12,6 @@ const (
 )
 
 type MetricIndicator int
-
-type metricIndicatorStore struct{}
-
-func NewMetricIndicatorStore() *metricIndicatorStore {
-	return &metricIndicatorStore{}
-}
-
-func (s *metricIndicatorStore) Index(ctx *gofr.Context) []MetricIndicator {
-	return []MetricIndicator{
-		Trend,
-		Momentum,
-		Volatility,
-		Volume,
-	}
-}
 
 func (m MetricIndicator) String() string {
 	var conversionMap = map[MetricIndicator]string{
