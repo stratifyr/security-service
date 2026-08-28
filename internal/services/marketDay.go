@@ -45,11 +45,9 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 	switch {
 	case f.LastNDays > 0:
 		endDate = time.Now().UTC()
-		startDate = endDate.Add(365 * -24 * time.Hour)
 		n = f.LastNDays
 	case f.LastNDaysFromReference != nil:
 		endDate = f.LastNDaysFromReference.Reference
-		startDate = endDate.Add(365 * -24 * time.Hour)
 		n = f.LastNDaysFromReference.N
 	case f.DateBetween != nil:
 		startDate = f.DateBetween.StartDate
@@ -61,6 +59,11 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 
 	if n > 366*5 {
 		return nil, 0, ErrDateRangeTooLong
+	}
+
+	if startDate.IsZero() {
+		lookBackDays := max(n*2, 14) // to get N market days, N*2 window should be fine
+		startDate = endDate.Add(-time.Duration(lookBackDays) * 24 * time.Hour)
 	}
 
 	marketHolidays, err := s.marketHolidayStore.Index(ctx, &stores.MarketHolidayFilter{

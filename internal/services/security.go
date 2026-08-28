@@ -4,20 +4,20 @@ import (
 	"time"
 
 	"gofr.dev/pkg/gofr"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/stratifyr/security-service/internal/stores"
 )
 
 type SecurityService interface {
-	Index(ctx *gofr.Context, f *SecurityFilter, page, perPage int) ([]*Security, int, error)
+	Index(ctx *gofr.Context, f *SecurityFilter) ([]*Security, error)
 	Read(ctx *gofr.Context, id int) (*Security, error)
 	Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error)
 	Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error)
 }
 
 type SecurityFilter struct {
-	Symbol string
-	Date   time.Time
+	Date time.Time
 }
 
 type Security struct {
@@ -73,30 +73,18 @@ func NewSecurityService(marketDayService MarketDayService, securityMetricService
 	}
 }
 
-func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perPage int) ([]*Security, int, error) {
-	limit := perPage
-	offset := limit * (page - 1)
-
+func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter) ([]*Security, error) {
 	if f.Date.IsZero() {
 		f.Date = time.Now()
 	}
 
-	filter := &stores.SecurityFilter{
-		Symbol: f.Symbol,
-	}
-
-	securities, err := s.store.Index(ctx, filter, limit, offset)
+	securities, err := s.store.Index(ctx, &stores.SecurityFilter{}, 0, 0)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	count, err := s.store.Count(ctx, filter)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if count == 0 {
-		return nil, 0, nil
+	if len(securities) == 0 {
+		return nil, nil
 	}
 
 	var securityIDs = make([]int, len(securities))
@@ -107,17 +95,30 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 
 	prevMarketDay, err := s.getPrevMarketDay(ctx, f.Date)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	securityStats, err := s.getStatsMap(ctx, securityIDs, prevMarketDay)
-	if err != nil {
-		return nil, 0, err
-	}
+	var (
+		securityStats   map[int]*stores.SecurityStat
+		securityMetrics map[int][]*SecurityMetric
+	)
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, securityIDs, prevMarketDay)
-	if err != nil {
-		return nil, 0, err
+	var g errgroup.Group
+
+	g.Go(func() error {
+		var err error
+		securityStats, err = s.getStatsMap(ctx, securityIDs, prevMarketDay)
+		return err
+	})
+
+	g.Go(func() error {
+		var err error
+		securityMetrics, err = s.securityMetricService.Get(ctx, securityIDs, prevMarketDay)
+		return err
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	resp := make([]*Security, len(securities))
@@ -126,7 +127,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter, page, perP
 		resp[i] = s.buildResp(securities[i], securityStats, securityMetrics)
 	}
 
-	return resp, count, nil
+	return resp, nil
 }
 
 func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {

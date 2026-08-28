@@ -74,10 +74,6 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 		err    error
 	)
 
-	if ctx.Param("symbol") != "" {
-		filter.Symbol = ctx.Param("symbol")
-	}
-
 	if ctx.Param("date") != "" {
 		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
 		if err != nil {
@@ -85,23 +81,7 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 		}
 	}
 
-	page := 1
-	if ctx.Param("page") != "" {
-		page, err = strconv.Atoi(ctx.Param("page"))
-		if err != nil || page < 1 {
-			return nil, http.ErrorInvalidParam{Params: []string{"page"}}
-		}
-	}
-
-	perPage := 20
-	if ctx.Param("perPage") != "" {
-		perPage, err = strconv.Atoi(ctx.Param("perPage"))
-		if err != nil || perPage < 1 {
-			return nil, http.ErrorInvalidParam{Params: []string{"perPage"}}
-		}
-	}
-
-	securities, count, err := h.svc.Index(ctx, &filter, page, perPage)
+	securities, err := h.svc.Index(ctx, &filter)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +95,7 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	return response.Raw{Data: map[string]any{
 		"data": resp,
 		"meta": map[string]any{
-			"page":    page,
-			"perPage": perPage,
-			"total":   count,
+			"total": len(securities),
 		},
 	}}, nil
 }
