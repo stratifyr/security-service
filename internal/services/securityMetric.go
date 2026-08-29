@@ -37,10 +37,7 @@ func NewSecurityMetricService(marketDayService MarketDayService, metricService M
 }
 
 func (s *securityMetricService) Get(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
-	metrics, err := s.metricService.Index(ctx)
-	if err != nil {
-		return nil, err
-	}
+	metrics := s.metricService.Index(ctx)
 
 	cachedSecurityMetrics, err := s.getSecurityMetricsFromCache(ctx, securityIDs, date, metrics)
 	if err != nil {
@@ -204,8 +201,6 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 					Type:      metrics[i].Type,
 					Period:    metrics[i].Period,
 					Indicator: metrics[i].Indicator,
-					CreatedAt: metrics[i].CreatedAt,
-					UpdatedAt: metrics[i].UpdatedAt,
 				},
 				Value:  value,
 				ZValue: normalizedValue,

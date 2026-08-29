@@ -40,22 +40,6 @@ func setupInitialSchemas() migration.Migrate {
 				return err
 			}
 
-			if _, err := d.SQL.Exec(`CREATE TABLE metrics (
-										id INT PRIMARY KEY AUTO_INCREMENT,
-										name varchar(50) NOT NULL,
-										type INT NOT NULL,
-										period INT NOT NULL,
-										indicator INT NOT NULL,
-										created_at TIMESTAMP NOT NULL,
-										updated_at TIMESTAMP NOT NULL,
-										
-										CONSTRAINT uk_metrics_name UNIQUE (name),
-										CONSTRAINT uk_metrics_type_period UNIQUE (type, period),
-                                        INDEX idx_metrics_type (type)
-									);`); err != nil {
-				return err
-			}
-
 			if _, err := d.SQL.Exec(`CREATE TABLE market_holidays (
 										id INT PRIMARY KEY AUTO_INCREMENT,
 										date DATE NOT NULL,

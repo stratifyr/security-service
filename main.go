@@ -28,7 +28,7 @@ func main() {
 	marketDayService := services.NewMarketDayService(marketHolidayStore)
 	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore)
 	securityMetricService := services.NewSecurityMetricService(marketDayService, metricService, securityStatStore)
-	securityService := services.NewSecurityService(marketDayService, securityMetricService, metricStore, securityStatStore, securityStore)
+	securityService := services.NewSecurityService(marketDayService, securityMetricService, securityStatStore, securityStore)
 	marketDataJobService := services.NewMarketDataJobService(marketDataJobStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)
@@ -52,9 +52,6 @@ func main() {
 	app.GET("/industries", industryHandler.Index)
 
 	app.GET("/metrics", metricHandler.Index)
-	app.POST("/metrics", metricHandler.Create)
-	app.GET("/metrics/{id}", metricHandler.Read)
-	app.PATCH("/metrics/{id}", metricHandler.Patch)
 
 	app.GET("/market-holidays", marketHolidayHandler.Index)
 	app.POST("/market-holidays", marketHolidayHandler.Create)
