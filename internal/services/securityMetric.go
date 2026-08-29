@@ -1,143 +1,80 @@
 package services
 
 import (
-	"fmt"
 	"math"
 	"sort"
 	"time"
 
-	"github.com/vmihailenco/msgpack/v5"
 	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/stores"
 )
 
 type SecurityMetricService interface {
-	Get(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error)
+	Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error)
 }
 
 type SecurityMetric struct {
-	Metric *Metric
-	Value  float64
-	ZValue float64
+	SecurityID int
+	Date       time.Time
+	Metric     *Metric
+	Value      float64
+	ZValue     float64
 }
 
 type securityMetricService struct {
-	marketDayService  MarketDayService
-	metricService     MetricService
-	securityStatStore stores.SecurityStatStore
+	marketDayService    MarketDayService
+	metricService       MetricService
+	securityMetricStore stores.SecurityMetricStore
+	securityStatStore   stores.SecurityStatStore
 }
 
-func NewSecurityMetricService(marketDayService MarketDayService, metricService MetricService, securityStatStore stores.SecurityStatStore) *securityMetricService {
+func NewSecurityMetricService(marketDayService MarketDayService, metricService MetricService, securityStatStore stores.SecurityStatStore, securityMetricStore stores.SecurityMetricStore) *securityMetricService {
 	return &securityMetricService{
-		marketDayService:  marketDayService,
-		metricService:     metricService,
-		securityStatStore: securityStatStore,
+		marketDayService:    marketDayService,
+		metricService:       metricService,
+		securityMetricStore: securityMetricStore,
+		securityStatStore:   securityStatStore,
 	}
 }
 
-func (s *securityMetricService) Get(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
-	metrics := s.metricService.Index(ctx)
-
-	cachedSecurityMetrics, err := s.getSecurityMetricsFromCache(ctx, securityIDs, date, metrics)
+func (s *securityMetricService) Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
+	securityMetrics, err := s.securityMetricStore.Index(ctx, securityIDs, date)
 	if err != nil {
-		ctx.Logger.Warnf("failed to get security metrics from cache: %v", map[string]any{
+		ctx.Logger.Warnf("failed to get security metrics from store: %v", map[string]any{
 			"error":       err,
 			"securityIds": securityIDs,
 			"date":        date,
 		})
 	}
 
-	if len(cachedSecurityMetrics) == len(securityIDs) {
-		return cachedSecurityMetrics, nil
+	missingSecurityIDs := findMissingSecurityIDs(securityIDs, securityMetrics)
+
+	if len(missingSecurityIDs) == 0 {
+		return s.buildResponse(ctx, securityMetrics), nil
 	}
 
-	var cacheMisses []int
-
-	for _, securityID := range securityIDs {
-		if _, ok := cachedSecurityMetrics[securityID]; !ok {
-			cacheMisses = append(cacheMisses, securityID)
-		}
-	}
-
-	securityMetrics, err := s.computeSecurityMetrics(ctx, cacheMisses, date, metrics)
+	computedSecurityMetrics, err := s.computeSecurityMetrics(ctx, missingSecurityIDs, date)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = s.setSecurityMetricsToCache(ctx, securityMetrics, date); err != nil {
-		ctx.Logger.Warnf("failed to set security metrics in cache: %v", map[string]any{
+	if err = s.securityMetricStore.Create(ctx, computedSecurityMetrics, date); err != nil {
+		ctx.Logger.Warnf("failed to save security metrics in store: %v", map[string]any{
 			"error":       err,
-			"securityIds": cacheMisses,
+			"securityIds": missingSecurityIDs,
 			"date":        date,
 		})
 	}
 
-	mergeMaps(securityMetrics, cachedSecurityMetrics)
+	securityMetrics = append(securityMetrics, computedSecurityMetrics...)
 
-	return securityMetrics, nil
+	return s.buildResponse(ctx, securityMetrics), nil
 }
 
-type metricValues struct {
-	ID     int
-	Value  float64
-	ZValue float64
-}
+func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*stores.SecurityMetric, error) {
+	metrics := s.metricService.Index(ctx)
 
-func (s *securityMetricService) getSecurityMetricsFromCache(ctx *gofr.Context, securityIDs []int, date time.Time, metrics []*Metric) (map[int][]*SecurityMetric, error) {
-	metricsMap := make(map[int]*Metric)
-	for _, m := range metrics {
-		metricsMap[m.ID] = m
-	}
-
-	var keys = make([]string, len(securityIDs))
-
-	for i, securityID := range securityIDs {
-		keys[i] = fmt.Sprintf("security_metrics:security_id:%d:date:%s", securityID, date.Format(time.DateOnly))
-	}
-
-	vals, err := ctx.Redis.MGet(ctx, keys...).Result()
-	if err != nil {
-		return nil, err
-	}
-
-	securityMetrics := make(map[int][]*SecurityMetric)
-
-	for i, val := range vals {
-		if val == nil {
-			ctx.Logger.Warnf("cache miss: %s", keys[i])
-			continue
-		}
-
-		var metricVals []metricValues
-		if err = msgpack.Unmarshal([]byte(val.(string)), &metricVals); err != nil {
-			return nil, err
-		}
-
-		sm := make([]*SecurityMetric, 0)
-
-		for j := range metricVals {
-			mv := &metricVals[j]
-
-			metric, ok := metricsMap[mv.ID]
-			if !ok {
-				continue
-			}
-
-			sm = append(sm, &SecurityMetric{
-				Metric: metric,
-				Value:  mv.Value,
-				ZValue: mv.ZValue,
-			})
-		}
-
-		securityMetrics[securityIDs[i]] = sm
-	}
-
-	return securityMetrics, nil
-}
-
-func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securityIDs []int, date time.Time, metrics []*Metric) (map[int][]*SecurityMetric, error) {
 	maxPeriod := 0
 	for i := range metrics {
 		if metrics[i].Period > maxPeriod {
@@ -173,7 +110,7 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 		securityStatsMap[stat.SecurityID] = append(securityStatsMap[stat.SecurityID], stat)
 	}
 
-	var securityMetrics = make(map[int][]*SecurityMetric)
+	var securityMetrics = make([]*stores.SecurityMetric, 0)
 
 	for _, securityID := range securityIDs {
 		stats := securityStatsMap[securityID]
@@ -181,8 +118,6 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 		sort.Slice(stats, func(i, j int) bool {
 			return stats[i].Date.After(stats[j].Date)
 		})
-
-		var sm = make([]*SecurityMetric, 0)
 
 		for i := range metrics {
 			n := metrics[i].Period
@@ -194,54 +129,46 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securi
 
 			value, normalizedValue := s.computeMetricValue(metrics[i], stats[:n])
 
-			sm = append(sm, &SecurityMetric{
-				Metric: &Metric{
-					ID:        metrics[i].ID,
-					Name:      metrics[i].Name,
-					Type:      metrics[i].Type,
-					Period:    metrics[i].Period,
-					Indicator: metrics[i].Indicator,
-				},
-				Value:  value,
-				ZValue: normalizedValue,
+			securityMetrics = append(securityMetrics, &stores.SecurityMetric{
+				SecurityID: securityID,
+				MetricID:   metrics[i].ID,
+				Date:       date,
+				Value:      value,
+				ZValue:     normalizedValue,
 			})
 		}
-
-		securityMetrics[securityID] = sm
 	}
 
 	return securityMetrics, nil
 }
 
-func (s *securityMetricService) setSecurityMetricsToCache(ctx *gofr.Context, securityMetrics map[int][]*SecurityMetric, date time.Time) error {
-	pipe := ctx.Redis.Pipeline()
+func (s *securityMetricService) buildResponse(ctx *gofr.Context, models []*stores.SecurityMetric) []*SecurityMetric {
+	metrics := s.metricService.Index(ctx)
 
-	for securityID, metrics := range securityMetrics {
-		key := fmt.Sprintf("security_metrics:security_id:%d:date:%s", securityID, date.Format(time.DateOnly))
+	var metricsMap = make(map[int]*Metric)
 
-		metricValue := make([]*metricValues, len(metrics))
-
-		for i, metric := range metrics {
-			metricValue[i] = &metricValues{
-				ID:     metric.Metric.ID,
-				Value:  metric.Value,
-				ZValue: metric.ZValue,
-			}
-		}
-
-		bytes, err := msgpack.Marshal(metricValue)
-		if err != nil {
-			return err
-		}
-
-		pipe.SetEx(ctx, key, bytes, 5*time.Hour)
+	for _, metric := range metrics {
+		metricsMap[metric.ID] = metric
 	}
 
-	if _, err := pipe.Exec(ctx); err != nil {
-		return err
+	var securityMetrics []*SecurityMetric
+
+	for i := range models {
+		metric, ok := metricsMap[models[i].MetricID]
+		if !ok {
+			continue
+		}
+
+		securityMetrics = append(securityMetrics, &SecurityMetric{
+			SecurityID: models[i].SecurityID,
+			Date:       models[i].Date,
+			Metric:     metric,
+			Value:      models[i].Value,
+			ZValue:     models[i].ZValue,
+		})
 	}
 
-	return nil
+	return securityMetrics
 }
 
 func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats []*stores.SecurityStat) (float64, float64) {
@@ -368,8 +295,19 @@ func (s *securityMetricService) computeVMA(lastNStats []*stores.SecurityStat) fl
 	return sumVolume / float64(n)
 }
 
-func mergeMaps[K comparable, V any](dst, src map[K]V) {
-	for k, v := range src {
-		dst[k] = v
+func findMissingSecurityIDs(requestedIDs []int, storedMetrics []*stores.SecurityMetric) []int {
+	found := make(map[int]struct{}, len(storedMetrics))
+
+	for _, metric := range storedMetrics {
+		found[metric.SecurityID] = struct{}{}
 	}
+
+	missing := make([]int, 0)
+	for _, securityID := range requestedIDs {
+		if _, ok := found[securityID]; !ok {
+			missing = append(missing, securityID)
+		}
+	}
+
+	return missing
 }

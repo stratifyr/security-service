@@ -111,7 +111,7 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter) ([]*Securi
 
 	g.Go(func() error {
 		var err error
-		securityMetrics, err = s.securityMetricService.Get(ctx, securityIDs, prevMarketDay)
+		securityMetrics, err = s.getSecurityMetricsMap(ctx, securityIDs, prevMarketDay)
 		return err
 	})
 
@@ -144,7 +144,7 @@ func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 		return nil, err
 	}
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, []int{security.ID}, prevMarketDay)
+	securityMetrics, err := s.getSecurityMetricsMap(ctx, []int{security.ID}, prevMarketDay)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 		return nil, err
 	}
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, []int{security.ID}, prevMarketDay)
+	securityMetrics, err := s.getSecurityMetricsMap(ctx, []int{security.ID}, prevMarketDay)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 		return nil, err
 	}
 
-	securityMetrics, err := s.securityMetricService.Get(ctx, []int{security.ID}, prevMarketDay)
+	securityMetrics, err := s.getSecurityMetricsMap(ctx, []int{security.ID}, prevMarketDay)
 	if err != nil {
 		return nil, err
 	}
@@ -282,6 +282,25 @@ func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date
 	}
 
 	return securityStatsMap, nil
+}
+
+func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
+	securityMetrics, err := s.securityMetricService.Index(ctx, securityIDs, date)
+	if err != nil {
+		return nil, err
+	}
+
+	securityMetricsMap := make(map[int][]*SecurityMetric, len(securityIDs))
+
+	for _, securityID := range securityIDs {
+		securityMetricsMap[securityID] = make([]*SecurityMetric, 0)
+	}
+
+	for _, sm := range securityMetrics {
+		securityMetricsMap[sm.SecurityID] = append(securityMetricsMap[sm.SecurityID], sm)
+	}
+
+	return securityMetricsMap, nil
 }
 
 func (s *securityService) buildResp(model *stores.Security, securityStats map[int]*stores.SecurityStat, securityMetrics map[int][]*SecurityMetric) *Security {

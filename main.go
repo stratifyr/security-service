@@ -20,6 +20,7 @@ func main() {
 	securityStore := stores.NewSecurityStore()
 	marketHolidayStore := stores.NewMarketHolidayStore()
 	securityStatStore := stores.NewSecurityStatStore()
+	securityMetricStore := stores.NewSecurityMetricStore()
 	marketDataJobStore := stores.NewMarketDataJobStore()
 
 	industryService := services.NewIndustryService(industryStore)
@@ -27,7 +28,7 @@ func main() {
 	marketHolidayService := services.NewMarketHolidayService(marketHolidayStore)
 	marketDayService := services.NewMarketDayService(marketHolidayStore)
 	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore)
-	securityMetricService := services.NewSecurityMetricService(marketDayService, metricService, securityStatStore)
+	securityMetricService := services.NewSecurityMetricService(marketDayService, metricService, securityStatStore, securityMetricStore)
 	securityService := services.NewSecurityService(marketDayService, securityMetricService, securityStatStore, securityStore)
 	marketDataJobService := services.NewMarketDataJobService(marketDataJobStore)
 
