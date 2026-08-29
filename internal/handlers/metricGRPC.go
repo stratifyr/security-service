@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"time"
-
 	"github.com/stratifyr/security-service-proto/go/pb"
 	"gofr.dev/pkg/gofr"
 
@@ -24,10 +22,7 @@ func (h *metricGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	metrics, err := h.svc.Index(ctx)
-	if err != nil {
-		return nil, err
-	}
+	metrics := h.svc.Index(ctx)
 
 	return h.buildResponse(metrics)
 }
@@ -45,8 +40,6 @@ func (h *metricGRPCHandler) buildResponse(metrics []*services.Metric) (*pb.GetMe
 			Type:      metrics[i].Type.String(),
 			Period:    int32(metrics[i].Period),
 			Indicator: metrics[i].Indicator.String(),
-			CreatedAt: metrics[i].CreatedAt.Format(time.RFC3339),
-			UpdatedAt: metrics[i].UpdatedAt.Format(time.RFC3339),
 		}
 	}
 

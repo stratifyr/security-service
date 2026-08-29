@@ -57,17 +57,15 @@ type SecurityUpdate struct {
 type securityService struct {
 	marketDayService      MarketDayService
 	securityMetricService SecurityMetricService
-	metricsStore          stores.MetricStore
 	securityStatStore     stores.SecurityStatStore
 	store                 stores.SecurityStore
 }
 
-func NewSecurityService(marketDayService MarketDayService, securityMetricService SecurityMetricService, metricStore stores.MetricStore,
+func NewSecurityService(marketDayService MarketDayService, securityMetricService SecurityMetricService,
 	securityStatStore stores.SecurityStatStore, store stores.SecurityStore) *securityService {
 	return &securityService{
 		marketDayService:      marketDayService,
 		securityMetricService: securityMetricService,
-		metricsStore:          metricStore,
 		securityStatStore:     securityStatStore,
 		store:                 store,
 	}

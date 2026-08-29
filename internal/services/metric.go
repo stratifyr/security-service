@@ -1,7 +1,7 @@
 package services
 
 import (
-	"time"
+	"fmt"
 
 	"gofr.dev/pkg/gofr"
 
@@ -9,10 +9,7 @@ import (
 )
 
 type MetricService interface {
-	Index(ctx *gofr.Context) ([]*Metric, error)
-	Read(ctx *gofr.Context, id int) (*Metric, error)
-	Create(ctx *gofr.Context, payload *MetricCreate) (*Metric, error)
-	Patch(ctx *gofr.Context, id int, payload *MetricUpdate) (*Metric, error)
+	Index(ctx *gofr.Context) []*Metric
 }
 
 type Metric struct {
@@ -21,29 +18,6 @@ type Metric struct {
 	Type      stores.MetricType
 	Period    int
 	Indicator stores.MetricIndicator
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-type MetricCreate struct {
-	UserID int
-	Name   string
-	Type   string
-	Period int
-}
-
-type MetricUpdate struct {
-	UserID int
-	Name   string
-}
-
-var MetricTypeIndicator = map[stores.MetricType]stores.MetricIndicator{
-	stores.SMA: stores.Trend,
-	stores.EMA: stores.Trend,
-	stores.RSI: stores.Momentum,
-	stores.ROC: stores.Momentum,
-	stores.ATR: stores.Volatility,
-	stores.VMA: stores.Volume,
 }
 
 type metricService struct {
@@ -54,11 +28,8 @@ func NewMetricService(store stores.MetricStore) *metricService {
 	return &metricService{store: store}
 }
 
-func (s *metricService) Index(ctx *gofr.Context) ([]*Metric, error) {
-	metrics, err := s.store.Index(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (s *metricService) Index(ctx *gofr.Context) []*Metric {
+	metrics := s.store.Index(ctx)
 
 	var resp = make([]*Metric, len(metrics))
 
@@ -66,76 +37,16 @@ func (s *metricService) Index(ctx *gofr.Context) ([]*Metric, error) {
 		resp[i] = s.buildResp(metrics[i])
 	}
 
-	return resp, nil
-}
-
-func (s *metricService) Read(ctx *gofr.Context, id int) (*Metric, error) {
-	metric, err := s.store.Retrieve(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildResp(metric), nil
-}
-
-func (s *metricService) Create(ctx *gofr.Context, payload *MetricCreate) (*Metric, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
-	metricType, err := stores.MetricTypeFromString(payload.Type)
-	if err != nil {
-		return nil, err
-	}
-
-	model := &stores.Metric{
-		Name:      payload.Name,
-		Type:      metricType,
-		Period:    payload.Period,
-		Indicator: MetricTypeIndicator[metricType],
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-	}
-
-	metric, err := s.store.Create(ctx, model)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildResp(metric), nil
-}
-
-func (s *metricService) Patch(ctx *gofr.Context, id int, payload *MetricUpdate) (*Metric, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
-	metric, err := s.store.Retrieve(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if payload.Name != "" {
-		metric.Name = payload.Name
-	}
-
-	metric, err = s.store.Update(ctx, id, metric)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildResp(metric), nil
+	return resp
 }
 
 func (s *metricService) buildResp(model *stores.Metric) *Metric {
 	resp := &Metric{
 		ID:        model.ID,
-		Name:      model.Name,
+		Name:      fmt.Sprintf("%s_%d", model.Type, model.Period),
 		Type:      model.Type,
 		Period:    model.Period,
 		Indicator: model.Indicator,
-		CreatedAt: model.CreatedAt,
-		UpdatedAt: model.UpdatedAt,
 	}
 
 	return resp

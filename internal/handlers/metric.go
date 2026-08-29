@@ -1,11 +1,7 @@
 package handlers
 
 import (
-	"strconv"
-	"time"
-
 	"gofr.dev/pkg/gofr"
-	"gofr.dev/pkg/gofr/http"
 	"gofr.dev/pkg/gofr/http/response"
 
 	"github.com/stratifyr/security-service/internal/services"
@@ -17,20 +13,6 @@ type Metric struct {
 	Type      string `json:"type"`
 	Period    int    `json:"period"`
 	Indicator string `json:"indicator"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
-}
-
-type MetricCreate struct {
-	UserID int    `json:"userId"`
-	Name   string `json:"name"`
-	Type   string `json:"type"`
-	Period int    `json:"period"`
-}
-
-type MetricUpdate struct {
-	UserID int    `json:"userId"`
-	Name   string `json:"name"`
 }
 
 type metricHandler struct {
@@ -42,10 +24,7 @@ func NewMetricHandler(svc services.MetricService) *metricHandler {
 }
 
 func (h *metricHandler) Index(ctx *gofr.Context) (interface{}, error) {
-	metrics, err := h.svc.Index(ctx)
-	if err != nil {
-		return nil, err
-	}
+	metrics := h.svc.Index(ctx)
 
 	var resp = make([]*Metric, len(metrics))
 
@@ -58,73 +37,6 @@ func (h *metricHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *metricHandler) Read(ctx *gofr.Context) (interface{}, error) {
-	id, err := strconv.Atoi(ctx.PathParam("id"))
-	if err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
-	}
-
-	metric, err := h.svc.Read(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Raw{Data: map[string]any{
-		"data": h.buildResp(metric),
-	}}, nil
-}
-
-func (h *metricHandler) Create(ctx *gofr.Context) (interface{}, error) {
-	var payload MetricCreate
-
-	if err := ctx.Bind(&payload); err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"request-body"}}
-	}
-
-	model := &services.MetricCreate{
-		UserID: payload.UserID,
-		Name:   payload.Name,
-		Type:   payload.Type,
-		Period: payload.Period,
-	}
-
-	metric, err := h.svc.Create(ctx, model)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Raw{Data: map[string]any{
-		"data": h.buildResp(metric),
-	}}, nil
-}
-
-func (h *metricHandler) Patch(ctx *gofr.Context) (interface{}, error) {
-	id, err := strconv.Atoi(ctx.PathParam("id"))
-	if err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
-	}
-
-	var payload MetricUpdate
-
-	if err := ctx.Bind(&payload); err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"request-body"}}
-	}
-
-	model := &services.MetricUpdate{
-		UserID: payload.UserID,
-		Name:   payload.Name,
-	}
-
-	metric, err := h.svc.Patch(ctx, id, model)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Raw{Data: map[string]any{
-		"data": h.buildResp(metric),
-	}}, nil
-}
-
 func (h *metricHandler) buildResp(model *services.Metric) *Metric {
 	resp := &Metric{
 		ID:        model.ID,
@@ -132,8 +44,6 @@ func (h *metricHandler) buildResp(model *services.Metric) *Metric {
 		Type:      model.Type.String(),
 		Period:    model.Period,
 		Indicator: model.Indicator.String(),
-		CreatedAt: model.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: model.UpdatedAt.Format(time.RFC3339),
 	}
 
 	return resp
