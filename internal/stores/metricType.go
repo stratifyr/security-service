@@ -3,7 +3,6 @@ package stores
 const (
 	SMA MetricType = iota
 	EMA
-	RSI
 	ROC
 	ATR
 	VMA
@@ -15,7 +14,6 @@ func (m MetricType) String() string {
 	var conversionMap = map[MetricType]string{
 		SMA: "SMA",
 		EMA: "EMA",
-		RSI: "RSI",
 		ROC: "ROC",
 		ATR: "ATR",
 		VMA: "VMA",

@@ -183,9 +183,6 @@ func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats
 		smaSeed := s.computeSMA(securityStats)
 		value := s.computeEMA(k, smaSeed, securityStats)
 		return value, (dayStat.Close - value) / value
-	case stores.RSI:
-		value := s.computeRSI(securityStats)
-		return value, value / 100
 	case stores.ROC:
 		value := s.computeROC(securityStats)
 		return value, value / 100
@@ -226,34 +223,6 @@ func (s *securityMetricService) computeEMA(k, seeder float64, lastNStats []*stor
 	}
 
 	return ema
-}
-
-func (s *securityMetricService) computeRSI(lastNStats []*stores.SecurityStat) float64 {
-	var (
-		totalProfit float64
-		totalLoss   float64
-		n           = len(lastNStats)
-	)
-
-	for i := 1; i < n; i++ {
-		deltaP := lastNStats[i-1].Close - lastNStats[i].Close
-
-		if deltaP > 0 {
-			totalProfit += deltaP
-
-			continue
-		}
-
-		totalLoss += -deltaP
-	}
-
-	if totalLoss == 0 {
-		return 100
-	}
-
-	rs := totalProfit / totalLoss
-
-	return 100 - (100 / (1 + rs))
 }
 
 func (s *securityMetricService) computeROC(lastNStats []*stores.SecurityStat) float64 {
