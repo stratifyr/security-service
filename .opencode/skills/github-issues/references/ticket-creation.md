@@ -14,7 +14,7 @@ Shared by workflows A and B. Workflow C (`workflows/implement-issue.md`) does **
 > What is wrong, with `path/to/file.go:<line>` references and short code snippets.
 >
 > ## Fix
-> - [ ] Concrete checklist items
+> - [ ] Checklist items describing the **intent** of the desired outcome, not the exact implementation
 ```
 
 Body goes to GitHub verbatim via stdin:
@@ -32,6 +32,7 @@ EOF
 
 - **Never create duplicates.** Every draft must state (silently, at minimum) that no open issue already covers it. Overlapping-but-not-identical findings default to extending the existing ticket, not filing a new one — unless the user explicitly wants a separate ticket.
 - **No `[P0]`/`[P1]` in titles.** Priority lives in labels only.
+- **Fix lists describe intent, not implementation.** Write checklist items as the desired outcome, so the implementer decides the concrete code/approach. Avoid prescribing method names, function signatures, or specific files unless the file location is essential to understanding the problem (e.g. keep `path/to/file.go:<line>` evidence in `## Problem`, but keep `## Fix` free of exact implementations).
 - **Labels:** type = `bug` or `enhancement` or `feature`; priority = `P0`, `P1`, `P2`, `P3`.
   Create missing labels once before the first issue (idempotent):
   ```bash
