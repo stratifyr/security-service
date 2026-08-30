@@ -134,6 +134,8 @@ func (s *securityStatStore) Create(ctx *gofr.Context, ss *SecurityStat) (*Securi
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
+	invalidateCache(ctx, ss)
+
 	return s.Retrieve(ctx, int(id))
 }
 
@@ -145,6 +147,8 @@ func (s *securityStatStore) Update(ctx *gofr.Context, id int, ss *SecurityStat) 
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
+
+	invalidateCache(ctx, ss)
 
 	return s.Retrieve(ctx, id)
 }
@@ -176,4 +180,11 @@ func (f *SecurityStatFilter) buildWhereClause() (clause string, values []interfa
 	}
 
 	return clause, values
+}
+
+func (s *SecurityStat) cacheInvalidations() []string {
+	return []string{
+		SecuritiesClientCachePattern,
+		fmt.Sprintf(SecurityMetricsServerCachePatternBySecurity, s.SecurityID),
+	}
 }

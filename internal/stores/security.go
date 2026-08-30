@@ -12,8 +12,6 @@ import (
 	"gofr.dev/pkg/gofr/http"
 )
 
-const SecuritiesCacheKey = "security-service:client-cache:securities:date:%s"
-
 type SecurityStore interface {
 	Index(ctx *gofr.Context, f *SecurityFilter, limit, offset int) ([]*Security, error)
 	Retrieve(ctx *gofr.Context, id int) (*Security, error)
@@ -103,12 +101,6 @@ func (s *securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, error) {
 	query := "INSERT INTO securities (isin, symbol, industry, name, image, ltp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 
-	// todo: make this even driven based on changes in DB logs
-	cacheKey := fmt.Sprintf(SecuritiesCacheKey, time.Now().Format(time.DateOnly))
-	if err := ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
-		return nil, datasource.ErrorDB{Err: err}
-	}
-
 	result, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.CreatedAt, st.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
@@ -119,16 +111,12 @@ func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, erro
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
+	invalidateCache(ctx, st)
+
 	return s.Retrieve(ctx, int(id))
 }
 
 func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Security, error) {
-	// todo: make this even driven based on changes in DB logs
-	cacheKey := fmt.Sprintf(SecuritiesCacheKey, time.Now().Format(time.DateOnly))
-	if err := ctx.Redis.Del(ctx, cacheKey).Err(); err != nil {
-		return nil, datasource.ErrorDB{Err: err}
-	}
-
 	query := `UPDATE securities SET isin = ?, symbol = ?, industry = ?, name = ?, image = ?, ltp = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
@@ -136,6 +124,8 @@ func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Securi
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
+
+	invalidateCache(ctx, st)
 
 	return s.Retrieve(ctx, id)
 }
@@ -151,4 +141,10 @@ func (f *SecurityFilter) buildWhereClause() (clause string, values []interface{}
 	}
 
 	return clause, values
+}
+
+func (s *Security) cacheInvalidations() []string {
+	return []string{
+		SecuritiesClientCachePattern,
+	}
 }
