@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Secrets guard (READ FIRST)
+
+- `configs/*.local.env` contains deploy secrets (DB/Redis creds) and is
+  gated by `.opencode/opencode.json` (`read: **/*.local.env: deny`).
+  NEVER read or print it — including via shell commands (`cat`, `sed`,
+  `head`, copy, redirect). Use the file `read` tool only on allowed files.
+  `*.local.env` is gitignored; only committed templates `.env` and
+  `.test.env` are safe to read.
+- Never commit secrets, tokens, or a `.local.env` copy.
+
 ## Overview
 
 Security/master-data microservice for Stratifyr: securities, industries, metrics,

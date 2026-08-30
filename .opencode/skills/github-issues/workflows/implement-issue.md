@@ -15,7 +15,7 @@ Applied when the user asks to *work on* an existing issue (e.g. "lets work on #1
 11. **Build — Mark the todo `completed`**, then repeat for the next todos.
 12. **PR — Final verification:** Run `go build ./... && go vet ./...` and summarize the commit series.
 13. **PR — Propose a PR title and confirm the push:** The title must be imperative, matching the issue and commit style. Pushing the branch is required for the PR, so ask explicitly (e.g. "push `15-refactor-metric-cache` and open the PR?") and wait.
-14. **PR — Push and open the PR:** On approval, push the branch (`git push -u origin <branch>`) and create the PR per `references/branch-and-pr.md` (body `closes <issue_link>`); return the PR URL.
+14. **PR — Push and open the PR:** On approval, push the branch (`git push -u origin <branch>`) and create the PR per `references/branch-and-pr.md` (body: `closes <issue_link>` plus Summary and Changes sections); return the PR URL.
 15. **PR — Ask before closing anything else.** Do not merge the PR, delete the branch, add labels, or tag reviewers unless the user asks.
 
 ## Rules

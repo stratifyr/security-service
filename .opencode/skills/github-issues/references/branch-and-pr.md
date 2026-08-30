@@ -14,9 +14,18 @@ Created from latest `development` before any code changes:
 ## PR
 
 - **Title:** imperative, matching the issue and commit style.
-- **Body:** `closes <issue_link>` (full URL or `closes #<n>` on the same repo) so GitHub auto-links and closes the issue on merge.
+- **Body:** `closes <issue_link>` (full URL or `closes #<n>` on the same repo) so GitHub auto-links and closes the issue on merge, followed by a **Summary** paragraph and a bulleted **Changes** list describing what the PR does:
+  ```markdown
+  closes https://github.com/<slug>/issues/<n>
+
+  ## Summary
+  <one or two sentences: why the change is needed and what it does>
+
+  ## Changes
+  - <one bullet per meaningful change; mention any dead code removed or key renames>
+  ```
 - **Push then create:** pushing requires an explicit go-ahead; then run:
   ```bash
-  gh pr create --repo <slug> --title "<confirmed title>" --body "closes https://github.com/<slug>/issues/<n>"
+  gh pr create --repo <slug> --title "<confirmed title>" --body "<body per above>"
   ```
 - Return the PR URL. Do not merge the PR, delete the branch, add labels, or tag reviewers unless the user asks.
