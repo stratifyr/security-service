@@ -8,11 +8,6 @@ import (
 	"gofr.dev/pkg/gofr"
 )
 
-const (
-	SecurityMetricCacheKey     = "security_metrics:security_id:%d:date:%s"
-	SecurityMetricCacheTimeout = 5 * time.Hour
-)
-
 type SecurityMetricStore interface {
 	Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error)
 	Create(ctx *gofr.Context, securityMetrics []*SecurityMetric, date time.Time) error
@@ -42,7 +37,7 @@ func (s *securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date t
 	keys := make([]string, len(securityIDs))
 
 	for i, securityID := range securityIDs {
-		keys[i] = fmt.Sprintf(SecurityMetricCacheKey, securityID, date.Format(time.DateOnly))
+		keys[i] = fmt.Sprintf(SecurityMetricsServerCacheKey, securityID, date.Format(time.DateOnly))
 	}
 
 	vals, err := ctx.Redis.MGet(ctx, keys...).Result()
@@ -91,14 +86,14 @@ func (s *securityMetricStore) Create(ctx *gofr.Context, securityMetrics []*Secur
 	pipe := ctx.Redis.Pipeline()
 
 	for securityID, metrics := range grouped {
-		key := fmt.Sprintf(SecurityMetricCacheKey, securityID, date.Format(time.DateOnly))
+		key := fmt.Sprintf(SecurityMetricsServerCacheKey, securityID, date.Format(time.DateOnly))
 
 		bytes, err := msgpack.Marshal(metrics)
 		if err != nil {
 			return err
 		}
 
-		pipe.SetEx(ctx, key, bytes, SecurityMetricCacheTimeout)
+		pipe.SetEx(ctx, key, bytes, 5*time.Hour)
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
