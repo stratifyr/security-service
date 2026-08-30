@@ -3,10 +3,10 @@ module github.com/stratifyr/security-service
 go 1.26.0
 
 require (
-	github.com/redis/go-redis/v9 v9.21.0
 	github.com/stratifyr/security-service-proto v0.0.0-20260816145909-ddc61aa6e6ae
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	gofr.dev v1.59.0
+	golang.org/x/sync v0.22.0
 )
 
 require (
@@ -60,6 +60,7 @@ require (
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.21.0 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.21.0 // indirect
+	github.com/redis/go-redis/v9 v9.21.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/segmentio/kafka-go v0.4.51 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
@@ -90,7 +91,6 @@ require (
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
