@@ -24,7 +24,9 @@ Created from latest `development` before any code changes:
   ## Changes
   - <one bullet per meaningful change; mention any dead code removed or key renames>
   ```
-- **Draft first, then push then create:** Always present the full drafted PR (title + the complete body verbatim, following the template above) to the user and get explicit approval **before** pushing or creating. Pushing requires an explicit go-ahead; then run:
+- **Draft first, then push then create:** Always present the full drafted PR (title + the complete body verbatim, following the template above) to the user and get explicit approval **before** pushing or creating. The draft must be shown in a readable block
+
+  Ask: "Push branch and open PR with this title/body?" Wait for explicit go-ahead before running `gh pr create`.
   ```bash
   gh pr create --repo <slug> --title "<confirmed title>" --body "<body per above>"
   ```
