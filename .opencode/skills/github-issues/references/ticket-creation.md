@@ -1,7 +1,5 @@
 # Ticket format and creation rules (workflows A and B)
 
-Shared by workflows A and B. Workflow C (`workflows/implement-issue.md`) does **not** create a ticket — it commits code and opens a PR, so none of this applies to it.
-
 ## Format
 
 ```markdown
@@ -15,17 +13,6 @@ Shared by workflows A and B. Workflow C (`workflows/implement-issue.md`) does **
 >
 > ## Fix
 > - [ ] Checklist items describing the **intent** of the desired outcome, not the exact implementation
-```
-
-Body goes to GitHub verbatim via stdin:
-
-```bash
-gh issue create --repo <slug> --title "<title>" --label <type>,<priority> --body-file - <<'EOF'
-## Problem
-...
-## Fix
-- [ ] ...
-EOF
 ```
 
 ## Rules

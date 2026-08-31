@@ -1,6 +1,6 @@
 # Workflow C — Implement an issue
 
-Applied when the user asks to *work on* an existing issue (e.g. "lets work on #15", "implement issue #N"). Complements workflow B: B files the ticket, C does the fix. Prerequisites are in `SKILL.md`; branch/PR conventions live in `references/branch-and-pr.md`.
+Applied when the user asks to *work on* an existing issue (e.g. "lets work on #15", "implement issue #N"). Complements workflow B: B files the ticket, C does the fix. Branch/PR conventions: `references/branch-and-pr.md`.
 
 1. **Plan — Read the issue:** Run `gh issue view <n> --repo <slug>` — capture every list item / checkbox in its "Fix" section; those become the todos.
 2. **Plan — Research and verify every claim:** Explore the referenced files; confirm the issue's statements are accurate (dead code really is unreferenced, structs really are triplicated, etc.). Use `go build ./... && go vet ./...` at the start as a clean baseline.
@@ -18,8 +18,4 @@ Applied when the user asks to *work on* an existing issue (e.g. "lets work on #1
 14. **PR — Push and open the PR:** On approval, push the branch (`git push -u origin <branch>`) and create the PR per `references/branch-and-pr.md`; return the PR URL.
 15. **PR — Ask before closing anything else.** Do not merge the PR, delete the branch, add labels, or tag reviewers unless the user asks.
 
-## Rules
-
-- **Per-todo approval + per-todo commit.** One commit per todo, each gated on the user's confirmation of both the change and the commit message. A blanket "go ahead" concedes the plan, not the per-commit checkpoints.
-- **PR needs an explicit push go-ahead.** Commits are local until the PR phase; never `git push` while committing todos.
-- **Skip nothing implicitly.** If the issue lists a step the user wants dropped (e.g. "skip the cmd folder"), record that as cancelled in the todo list and stay out of that area.
+Key rules: **Per-todo approval + per-todo commit** — one commit per todo, each gated on user confirmation. A blanket "go ahead" concedes the plan, not per-commit checkpoints. **PR needs an explicit push go-ahead** — commits stay local until the PR phase. **Skip nothing implicitly** — if the user wants a step dropped, record it as cancelled in the todo list.

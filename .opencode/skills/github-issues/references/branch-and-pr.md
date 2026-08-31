@@ -1,7 +1,5 @@
 # Branch and PR conventions (workflow C)
 
-Shared conventions for branch creation and the closing PR. Used by workflow C (`workflows/implement-issue.md`); workflows A and B create no branches or PRs.
-
 ## Branch
 
 Created from latest `development` before any code changes:

@@ -1,6 +1,6 @@
 ---
 name: github-issues
-description: Use when the user wants GitHub tickets/issues created from codebase findings ("check for improvements", "audit the repo", "create github tickets", "plan a TODO list", "improve <flow/component>", "file this as an issue", or when a bug/flaw is discovered mid-task), OR when the user wants to work on / close an existing issue ("work on issue", "implement issue #15", "fix issue #N", "lets work on <url>"). Covers three workflows a) full repo audit producing prioritized tickets one by one, b) single ticket for one specific finding, c) implementing a single open issue with per-todo commits and a closing PR.
+description: Create or implement GitHub issues — audit sweeps, single tickets, or working on existing issues.
 ---
 
 # GitHub Issues workflow
@@ -15,13 +15,13 @@ Issue-related work end to end. Three workflows share the prerequisites below; pi
 
 ## Prerequisites (all workflows)
 
-1. Run `gh auth status`. If not authenticated, ask the user to run `gh auth login` before proceeding.
+1. Run `gh auth status`. If not authenticated, ask the user to run `gh auth login` before proceeding. If the command fails or `gh` is missing, stop and tell the user.
 2. Resolve the repo slug from `git remote -v` (e.g. `stratifyr/security-service`) instead of assuming it.
 3. **Load existing issues before drafting anything** (workflows A/B, to avoid duplicates; workflow C instead reads the specific issue with `gh issue view <n>`):
    ```bash
-   gh issue list --repo <slug> --state open --limit 100 --json number,title,labels
+   gh issue list --repo <slug> --state open --limit 500 --json number,title,labels
    ```
-   Keep this list in mind for the whole session so nothing gets filed twice.
+   Keep this list in mind for the whole session so nothing gets filed twice. If `gh issue view <n>` returns an error (issue doesn't exist or is inaccessible), tell the user immediately.
 
 ## Shared references
 

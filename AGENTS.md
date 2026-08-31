@@ -35,12 +35,13 @@ refer to https://gofr.dev/AGENTS.md
   repo, never here. gRPC methods delegate to `*GRPC` handlers via
   `internal/handlers/grpc.go`.
 - Computed metric values are cached in Redis as msgpack
-  (`internal/services/securityMetric.go`); stores invalidate related keys on
-  Create/Update — preserve invalidation when touching store writes.
+  (`internal/stores/securityMetric.go`); `securityStore` and `securityStatStore`
+  invalidate related keys on Create/Update — preserve invalidation when touching
+  those store writes.
 
 ## Conventions
 
-- Service errors: `&ErrResp{Code, Message}` (`internal/services/error.go`,
+- Service errors: `&Error{httpCode, message}` (`internal/services/error.go`,
   implements `StatusCode()`); stores wrap DB errors in `datasource.ErrorDB`.
 - Schema changes: add a `migration.Migrate` entry keyed by Unix timestamp to
   `migrations/000_all.go` (see `1742025361.go`); migrations auto-run on startup
