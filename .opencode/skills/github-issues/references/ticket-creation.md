@@ -23,10 +23,13 @@
 - **Labels:** type = `bug` or `enhancement` or `feature`; priority = `P0`, `P1`, `P2`, `P3`.
   Create missing labels once before the first issue (idempotent):
   ```bash
-  gh label create "P0" --color b60205 --description "Critical: security or crash bugs" || true
-  gh label create "P1" --color d93f0b --description "High: reliability / API correctness" || true
+  gh label create "bug" --color d73a4a --description "Something isn't working" || true
+  gh label create "enhancement" --color a2eeef --description "New feature or request" || true
+  gh label create "feature" --color b0f262 --description "New capability" || true
+  gh label create "P0" --color e23a24 --description "Critical: security or crash bugs" || true
+  gh label create "P1" --color e27a42 --description "High: reliability / API correctness" || true
   gh label create "P2" --color fbca04 --description "Medium: dedup / maintainability" || true
-  gh label create "P3" --color 0e8a16 --description "Low: polish / hygiene" || true
+  gh label create "P3" --color c8d402 --description "Low: polish / hygiene" || true
   ```
   Map findings: security/crash/data-loss → `bug,P0`; broken endpoints/reliability/data-integrity → `bug,P1`; refactors/dedup → `enhancement`; hygiene/polish → lower priority.
 - **ONE heredoc per shell command.** Never chain two `--body-file - <<'EOF'` commands in a single Bash call — both heredocs collapse into the first command's stdin and produce merged/empty bodies. Multiple creations = multiple sequential Bash calls, each with exactly one heredoc.
