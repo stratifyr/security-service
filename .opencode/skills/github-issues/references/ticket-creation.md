@@ -8,11 +8,11 @@
 **Labels:** <type>,<priority>
 
 **Body:**
-> ## Problem
-> What is wrong, with `path/to/file.go:<line>` references and short code snippets.
->
-> ## Fix
-> - [ ] Checklist items describing the **intent** of the desired outcome, not the exact implementation
+## Problem
+What is wrong, with `path/to/file.go:<line>` references and short code snippets.
+
+## Fix
+ - [ ] Checklist items describing the **intent** of the desired outcome, not the exact implementation
 ```
 
 ## Rules
