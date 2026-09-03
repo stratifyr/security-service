@@ -161,7 +161,7 @@ func (s *securityStatStore) Update(ctx *gofr.Context, id int, ss *SecurityStat) 
 
 func (f *SecurityStatFilter) buildWhereClause() (clause string, values []any) {
 	if len(f.SecurityIDs) > 0 {
-		var placeHolders []string
+		placeHolders := make([]string, 0, len(f.SecurityIDs))
 
 		for i := range f.SecurityIDs {
 			placeHolders = append(placeHolders, "?")
