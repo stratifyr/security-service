@@ -171,7 +171,7 @@ func (s *securityMetricService) buildResponse(ctx *gofr.Context, models []*store
 	return securityMetrics
 }
 
-func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats []*stores.SecurityStat) (float64, float64) {
+func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats []*stores.SecurityStat) (value, zValue float64) {
 	dayStat := securityStats[0]
 
 	switch metric.Type {

@@ -54,7 +54,7 @@ func (s *securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date t
 		}
 
 		var metricVals []*securityMetricCacheValue
-		if err = msgpack.Unmarshal([]byte(val.(string)), &metricVals); err != nil {
+		if err := msgpack.Unmarshal([]byte(val.(string)), &metricVals); err != nil {
 			return nil, err
 		}
 
