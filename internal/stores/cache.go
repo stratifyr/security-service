@@ -19,8 +19,10 @@ type cacheInvalidator interface {
 }
 
 func invalidateCache(ctx *gofr.Context, invalidator cacheInvalidator) {
-	var keys []string
-	var patterns []string
+	var (
+		keys     []string
+		patterns []string
+	)
 
 	for _, invalidation := range invalidator.cacheInvalidations() {
 		if strings.ContainsAny(invalidation, "*?[") {
@@ -58,7 +60,7 @@ func getMatchingKeys(ctx *gofr.Context, patterns ...string) ([]string, error) {
 	var keys []string
 
 	for _, pattern := range patterns {
-		iter := ctx.Redis.Scan(ctx, 0, pattern, 500).Iterator()
+		iter := ctx.Redis.Scan(ctx, 0, pattern, 500).Iterator() //nolint:mnd // Redis scan count
 
 		for iter.Next(ctx) {
 			keys = append(keys, iter.Val())

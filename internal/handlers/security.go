@@ -72,7 +72,7 @@ func NewSecurityHandler(svc services.SecurityService) *securityHandler {
 	return &securityHandler{svc: svc}
 }
 
-func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
+func (h *securityHandler) Index(ctx *gofr.Context) (any, error) {
 	var (
 		filter services.SecurityFilter
 		err    error
@@ -104,7 +104,7 @@ func (h *securityHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *securityHandler) Read(ctx *gofr.Context) (interface{}, error) {
+func (h *securityHandler) Read(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -120,7 +120,7 @@ func (h *securityHandler) Read(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *securityHandler) Create(ctx *gofr.Context) (interface{}, error) {
+func (h *securityHandler) Create(ctx *gofr.Context) (any, error) {
 	var payload SecurityCreate
 
 	if err := ctx.Bind(&payload); err != nil {
@@ -147,7 +147,7 @@ func (h *securityHandler) Create(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *securityHandler) Patch(ctx *gofr.Context) (interface{}, error) {
+func (h *securityHandler) Patch(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -178,7 +178,7 @@ func (h *securityHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *securityHandler) buildResp(model *services.Security) *Security {
+func (*securityHandler) buildResp(model *services.Security) *Security {
 	resp := &Security{
 		ID:            model.ID,
 		ISIN:          model.ISIN,

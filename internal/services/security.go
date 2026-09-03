@@ -105,13 +105,17 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter) ([]*Securi
 
 	g.Go(func() error {
 		var err error
+
 		securityStats, err = s.getStatsMap(ctx, securityIDs, prevMarketDay)
+
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		securityMetrics, err = s.getSecurityMetricsMap(ctx, securityIDs, prevMarketDay)
+
 		return err
 	})
 
@@ -196,6 +200,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 	return s.buildResp(security, securityStats, securityMetrics), nil
 }
 
+//nolint:gocyclo // patch logic requires multiple validations
 func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
 	if payload.UserID != 1 {
 		return nil, ErrForbidden
@@ -303,7 +308,8 @@ func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs [
 	return securityMetricsMap, nil
 }
 
-func (s *securityService) buildResp(model *stores.Security, securityStats map[int]*stores.SecurityStat, securityMetrics map[int][]*SecurityMetric) *Security {
+func (s *securityService) buildResp(model *stores.Security, securityStats map[int]*stores.SecurityStat,
+	securityMetrics map[int][]*SecurityMetric) *Security {
 	resp := &Security{
 		ID:              model.ID,
 		ISIN:            model.ISIN,
@@ -324,7 +330,7 @@ func (s *securityService) buildResp(model *stores.Security, securityStats map[in
 	return resp
 }
 
-func (s *securityService) bindSecurityStat(resp *Security, securityStats map[int]*stores.SecurityStat) {
+func (*securityService) bindSecurityStat(resp *Security, securityStats map[int]*stores.SecurityStat) {
 	securityStat, ok := securityStats[resp.ID]
 	if !ok {
 		return
@@ -342,11 +348,9 @@ func (s *securityService) bindSecurityStat(resp *Security, securityStats map[int
 	}
 
 	resp.PreviousClose = securityStat.Close
-
-	return
 }
 
-func (s *securityService) bindSecurityMetricsDetails(resp *Security, securityMetricsMap map[int][]*SecurityMetric) {
+func (*securityService) bindSecurityMetricsDetails(resp *Security, securityMetricsMap map[int][]*SecurityMetric) {
 	if resp.SecurityStat == nil {
 		return
 	}
@@ -365,6 +369,4 @@ func (s *securityService) bindSecurityMetricsDetails(resp *Security, securityMet
 			ZValue: securityMetrics[i].ZValue,
 		}
 	}
-
-	return
 }

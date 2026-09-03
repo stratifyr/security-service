@@ -47,7 +47,7 @@ func (h *securityStatGRPCHandler) Create(ctx *gofr.Context) (any, error) {
 	}, nil
 }
 
-func (h *securityStatGRPCHandler) buildResponse(model *services.SecurityStat) *pb.SecurityStat {
+func (*securityStatGRPCHandler) buildResponse(model *services.SecurityStat) *pb.SecurityStat {
 	return &pb.SecurityStat{
 		Id:         int32(model.ID),
 		SecurityId: int32(model.SecurityID),

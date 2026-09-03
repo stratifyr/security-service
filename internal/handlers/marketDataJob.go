@@ -41,7 +41,8 @@ func NewMarketDataJobHandler(svc services.MarketDataJobService) *marketDataJobHa
 	return &marketDataJobHandler{svc: svc}
 }
 
-func (h *marketDataJobHandler) Index(ctx *gofr.Context) (interface{}, error) {
+//nolint:gocyclo // handler logic is inherently complex
+func (h *marketDataJobHandler) Index(ctx *gofr.Context) (any, error) {
 	var (
 		filter services.MarketDataJobFilter
 		err    error
@@ -97,7 +98,7 @@ func (h *marketDataJobHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *marketDataJobHandler) Read(ctx *gofr.Context) (interface{}, error) {
+func (h *marketDataJobHandler) Read(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -113,7 +114,7 @@ func (h *marketDataJobHandler) Read(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *marketDataJobHandler) Create(ctx *gofr.Context) (interface{}, error) {
+func (h *marketDataJobHandler) Create(ctx *gofr.Context) (any, error) {
 	var payload MarketDataJobCreate
 
 	if err := ctx.Bind(&payload); err != nil {
@@ -135,7 +136,7 @@ func (h *marketDataJobHandler) Create(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *marketDataJobHandler) Patch(ctx *gofr.Context) (interface{}, error) {
+func (h *marketDataJobHandler) Patch(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -163,7 +164,7 @@ func (h *marketDataJobHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *marketDataJobHandler) buildResp(model *services.MarketDataJob) *MarketDataJob {
+func (*marketDataJobHandler) buildResp(model *services.MarketDataJob) *MarketDataJob {
 	resp := &MarketDataJob{
 		ID:        model.ID,
 		Type:      model.Type.String(),

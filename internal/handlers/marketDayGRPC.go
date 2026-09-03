@@ -3,9 +3,8 @@ package handlers
 import (
 	"time"
 
-	"gofr.dev/pkg/gofr"
-
 	"github.com/stratifyr/security-service-proto/go/pb"
+	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/services"
 )

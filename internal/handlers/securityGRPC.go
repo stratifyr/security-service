@@ -79,7 +79,7 @@ func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 	}, nil
 }
 
-func (h *securityGRPCHandler) buildResponse(securitiy *services.Security) *pb.Security {
+func (*securityGRPCHandler) buildResponse(securitiy *services.Security) *pb.Security {
 	var resp = &pb.Security{
 		Id:            int32(securitiy.ID),
 		Isin:          securitiy.ISIN,

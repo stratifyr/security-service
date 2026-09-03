@@ -1,0 +1,165 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - asciicheck
+    - bodyclose
+    - canonicalheader
+    - copyloopvar
+    - dogsled
+    - dupl
+    - err113
+    - errcheck
+    - errorlint
+    - exhaustive
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - lll
+    - mirror
+    - misspell
+    - mnd
+    - nakedret
+    - nestif
+    - noctx
+    - nolintlint
+    - prealloc
+    - revive
+    - rowserrcheck
+    - staticcheck
+    - testifylint
+    - thelper
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - whitespace
+    - wsl_v5
+
+  settings:
+    dupl:
+      threshold: 200
+    exhaustive:
+      default-signifies-exhaustive: false
+    funlen:
+      lines: 100
+      statements: 50
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 10
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+    mnd:
+      checks:
+        - argument
+        - case
+        - condition
+        - return
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: empty-block
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - sayRepetitiveInsteadOfStutters
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+        - name: bare-return
+        - name: bool-literal-in-expr
+        - name: comment-spacings
+        - name: early-return
+        - name: defer
+        - name: deep-exit
+        - name: unused-receiver
+        - name: use-any
+    usestdlibvars:
+      time-layout: true
+  exclusions:
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - goconst
+          - mnd
+        path: _test\.go
+      - linters:
+          - goconst
+        path: internal/handlers/
+      - linters:
+          - goconst
+        path: internal/stores/
+      - linters:
+          - gosec
+        text: "G101"
+        path: _test\.go
+      - linters:
+          - gosec
+        text: "G115" # integer overflow conversion int -> int32
+        path: internal/handlers/
+      - linters:
+          - revive
+        text: "exported (.+) should have comment"
+      - linters:
+          - revive
+        text: "unexported-return"
+    paths:
+      - cmd
+formatters:
+  enable:
+    - gci
+    - gofmt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - localmodule
+    goimports:
+      local-prefixes:
+        - github.com/stratifyr/security-service

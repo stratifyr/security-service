@@ -29,7 +29,8 @@ type securityMetricService struct {
 	securityStatStore   stores.SecurityStatStore
 }
 
-func NewSecurityMetricService(marketDayService MarketDayService, metricService MetricService, securityStatStore stores.SecurityStatStore, securityMetricStore stores.SecurityMetricStore) *securityMetricService {
+func NewSecurityMetricService(marketDayService MarketDayService, metricService MetricService,
+	securityStatStore stores.SecurityStatStore, securityMetricStore stores.SecurityMetricStore) *securityMetricService {
 	return &securityMetricService{
 		marketDayService:    marketDayService,
 		metricService:       metricService,
@@ -72,7 +73,8 @@ func (s *securityMetricService) Index(ctx *gofr.Context, securityIDs []int, date
 	return s.buildResponse(ctx, securityMetrics), nil
 }
 
-func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*stores.SecurityMetric, error) {
+func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context,
+	securityIDs []int, date time.Time) ([]*stores.SecurityMetric, error) {
 	metrics := s.metricService.Index(ctx)
 
 	maxPeriod := 0
@@ -171,7 +173,7 @@ func (s *securityMetricService) buildResponse(ctx *gofr.Context, models []*store
 	return securityMetrics
 }
 
-func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats []*stores.SecurityStat) (float64, float64) {
+func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats []*stores.SecurityStat) (val, zVal float64) {
 	dayStat := securityStats[0]
 
 	switch metric.Type {
@@ -182,10 +184,11 @@ func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats
 		k := 2.0 / float64(len(securityStats)+1)
 		smaSeed := s.computeSMA(securityStats)
 		value := s.computeEMA(k, smaSeed, securityStats)
+
 		return value, (dayStat.Close - value) / value
 	case stores.ROC:
 		value := s.computeROC(securityStats)
-		return value, value / 100
+		return value, value / 100 //nolint:mnd // percentage divisor
 	case stores.ATR:
 		value := s.computeATR(securityStats)
 		return value, -value / dayStat.Close
@@ -197,7 +200,7 @@ func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats
 	}
 }
 
-func (s *securityMetricService) computeSMA(lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeSMA(lastNStats []*stores.SecurityStat) float64 {
 	var (
 		sumPrice float64
 		n        = len(lastNStats)
@@ -210,7 +213,7 @@ func (s *securityMetricService) computeSMA(lastNStats []*stores.SecurityStat) fl
 	return sumPrice / float64(n)
 }
 
-func (s *securityMetricService) computeEMA(k, seeder float64, lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeEMA(k, seeder float64, lastNStats []*stores.SecurityStat) float64 {
 	n := len(lastNStats)
 	if n == 0 {
 		return 0
@@ -225,15 +228,15 @@ func (s *securityMetricService) computeEMA(k, seeder float64, lastNStats []*stor
 	return ema
 }
 
-func (s *securityMetricService) computeROC(lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeROC(lastNStats []*stores.SecurityStat) float64 {
 	n := len(lastNStats)
 	currentPrice := lastNStats[0].Close
 	nDaysPriorPrice := lastNStats[n-1].Close
 
-	return ((currentPrice - nDaysPriorPrice) / nDaysPriorPrice) * 100
+	return ((currentPrice - nDaysPriorPrice) / nDaysPriorPrice) * 100 //nolint:mnd // percentage multiplier
 }
 
-func (s *securityMetricService) computeATR(lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeATR(lastNStats []*stores.SecurityStat) float64 {
 	var (
 		totalTR float64
 		n       = len(lastNStats)
@@ -251,7 +254,7 @@ func (s *securityMetricService) computeATR(lastNStats []*stores.SecurityStat) fl
 	return totalTR / float64(n)
 }
 
-func (s *securityMetricService) computeVMA(lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeVMA(lastNStats []*stores.SecurityStat) float64 {
 	var (
 		sumVolume float64
 		n         = len(lastNStats)
@@ -272,6 +275,7 @@ func findMissingSecurityIDs(requestedIDs []int, storedMetrics []*stores.Security
 	}
 
 	missing := make([]int, 0)
+
 	for _, securityID := range requestedIDs {
 		if _, ok := found[securityID]; !ok {
 			missing = append(missing, securityID)

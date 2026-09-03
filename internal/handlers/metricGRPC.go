@@ -24,10 +24,10 @@ func (h *metricGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 
 	metrics := h.svc.Index(ctx)
 
-	return h.buildResponse(metrics)
+	return h.buildResponse(metrics), nil
 }
 
-func (h *metricGRPCHandler) buildResponse(metrics []*services.Metric) (*pb.GetMetricsResponse, error) {
+func (*metricGRPCHandler) buildResponse(metrics []*services.Metric) *pb.GetMetricsResponse {
 	resp := &pb.GetMetricsResponse{
 		Metrics: make([]*pb.Metric, len(metrics)),
 		Total:   int32(len(metrics)),
@@ -43,5 +43,5 @@ func (h *metricGRPCHandler) buildResponse(metrics []*services.Metric) (*pb.GetMe
 		}
 	}
 
-	return resp, nil
+	return resp
 }

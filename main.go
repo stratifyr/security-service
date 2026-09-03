@@ -10,6 +10,7 @@ import (
 	"github.com/stratifyr/security-service/migrations"
 )
 
+//nolint:funlen // app setup requires many statements
 func main() {
 	app := gofr.New()
 

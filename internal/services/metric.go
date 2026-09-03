@@ -40,7 +40,7 @@ func (s *metricService) Index(ctx *gofr.Context) []*Metric {
 	return resp
 }
 
-func (s *metricService) buildResp(model *stores.Metric) *Metric {
+func (*metricService) buildResp(model *stores.Metric) *Metric {
 	resp := &Metric{
 		ID:        model.ID,
 		Name:      fmt.Sprintf("%s_%d", model.Type, model.Period),

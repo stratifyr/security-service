@@ -20,7 +20,7 @@ func NewMarketDayHandler(svc services.MarketDayService) *marketDayHandler {
 	return &marketDayHandler{svc: svc}
 }
 
-func (h *marketDayHandler) Index(ctx *gofr.Context) (interface{}, error) {
+func (h *marketDayHandler) Index(ctx *gofr.Context) (any, error) {
 	var (
 		filter services.MarketDayFilter
 		err    error
@@ -35,7 +35,7 @@ func (h *marketDayHandler) Index(ctx *gofr.Context) (interface{}, error) {
 
 	if ctx.Param("dateBetween") != "" {
 		dates := strings.Split(ctx.Param("dateBetween"), ",")
-		if len(dates) != 2 {
+		if len(dates) != 2 { //nolint:mnd // expected 2 date parts
 			return nil, http.ErrorInvalidParam{Params: []string{"dateBetween"}}
 		}
 

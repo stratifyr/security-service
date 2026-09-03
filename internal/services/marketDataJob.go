@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/stratifyr/security-service/internal/stores"
 	"gofr.dev/pkg/gofr"
+
+	"github.com/stratifyr/security-service/internal/stores"
 )
 
 type MarketDataJobService interface {
@@ -148,7 +149,7 @@ func (s *marketDataJobService) Patch(ctx *gofr.Context, id int, payload *MarketD
 	return s.buildResp(marketDataJob), nil
 }
 
-func (s *marketDataJobService) buildResp(model *stores.MarketDataJob) *MarketDataJob {
+func (*marketDataJobService) buildResp(model *stores.MarketDataJob) *MarketDataJob {
 	resp := &MarketDataJob{
 		ID:        model.ID,
 		Type:      model.Type,

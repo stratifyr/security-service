@@ -4,9 +4,8 @@ import (
 	"slices"
 	"time"
 
-	"gofr.dev/pkg/gofr/http"
-
 	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/http"
 
 	"github.com/stratifyr/security-service/internal/stores"
 )
@@ -35,6 +34,7 @@ func NewMarketDayService(marketHolidayStore stores.MarketHolidayStore) *marketDa
 	return &marketDayService{marketHolidayStore: marketHolidayStore}
 }
 
+//nolint:gocyclo // filter logic requires branching
 func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error) {
 	var (
 		startDate time.Time
@@ -52,7 +52,7 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 	case f.DateBetween != nil:
 		startDate = f.DateBetween.StartDate
 		endDate = f.DateBetween.EndDate
-		n = int(endDate.Sub(startDate).Hours()/24) + 1
+		n = int(endDate.Sub(startDate).Hours()/24) + 1 //nolint:mnd // hours in a day
 	default:
 		return nil, 0, http.ErrorMissingParam{Params: []string{"lastNDays", "dateBetween"}}
 	}
@@ -62,7 +62,7 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 	}
 
 	if startDate.IsZero() {
-		lookBackDays := max(n*2, 14) // to get N market days, N*2 window should be fine
+		lookBackDays := max(n*2, 14) //nolint:mnd // lookback multiplier
 		startDate = endDate.Add(-time.Duration(lookBackDays) * 24 * time.Hour)
 	}
 

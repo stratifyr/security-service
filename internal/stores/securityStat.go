@@ -2,6 +2,7 @@ package stores
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -48,7 +49,7 @@ func NewSecurityStatStore() *securityStatStore {
 	return &securityStatStore{}
 }
 
-func (s *securityStatStore) Index(ctx *gofr.Context, filter *SecurityStatFilter, limit, offset int) ([]*SecurityStat, error) {
+func (*securityStatStore) Index(ctx *gofr.Context, filter *SecurityStatFilter, limit, offset int) ([]*SecurityStat, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, security_id, date, open, close, high, low, volume, created_at, updated_at
@@ -88,7 +89,7 @@ func (s *securityStatStore) Index(ctx *gofr.Context, filter *SecurityStatFilter,
 	return securityStats, nil
 }
 
-func (s *securityStatStore) Count(ctx *gofr.Context, filter *SecurityStatFilter) (int, error) {
+func (*securityStatStore) Count(ctx *gofr.Context, filter *SecurityStatFilter) (int, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT COUNT(*) FROM security_stats %s`
@@ -103,15 +104,16 @@ func (s *securityStatStore) Count(ctx *gofr.Context, filter *SecurityStatFilter)
 	return count, nil
 }
 
-func (s *securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, error) {
+func (*securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, error) {
 	var ss SecurityStat
 
 	query := `SELECT id, security_id, date, open, close, high, low, volume, created_at, updated_at
               FROM security_stats WHERE id = ?`
 
-	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&ss.ID, &ss.SecurityID, &ss.Date, &ss.Open, &ss.Close, &ss.High, &ss.Low, &ss.Volume, &ss.CreatedAt, &ss.UpdatedAt)
+	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&ss.ID, &ss.SecurityID, &ss.Date, &ss.Open,
+		&ss.Close, &ss.High, &ss.Low, &ss.Volume, &ss.CreatedAt, &ss.UpdatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "security-stats", Value: strconv.Itoa(id)}
 		}
 
@@ -122,9 +124,11 @@ func (s *securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, 
 }
 
 func (s *securityStatStore) Create(ctx *gofr.Context, ss *SecurityStat) (*SecurityStat, error) {
-	query := "INSERT INTO security_stats (security_id, date, open, close, high, low, volume, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	query := `INSERT INTO security_stats (security_id, date, open, close, high, low, volume, created_at, updated_at)
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := ctx.SQL.ExecContext(ctx, query, ss.SecurityID, ss.Date, ss.Open, ss.Close, ss.High, ss.Low, ss.Volume, ss.CreatedAt, ss.UpdatedAt)
+	result, err := ctx.SQL.ExecContext(ctx, query, ss.SecurityID, ss.Date, ss.Open,
+		ss.Close, ss.High, ss.Low, ss.Volume, ss.CreatedAt, ss.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -140,10 +144,12 @@ func (s *securityStatStore) Create(ctx *gofr.Context, ss *SecurityStat) (*Securi
 }
 
 func (s *securityStatStore) Update(ctx *gofr.Context, id int, ss *SecurityStat) (*SecurityStat, error) {
-	query := `UPDATE security_stats SET security_id = ?, date = ?, open = ?, close = ?, high = ?, low = ?, volume = ?, created_at = ?, updated_at = ?
+	query := `UPDATE security_stats SET security_id = ?, date = ?, open = ?, close = ?, 
+                          high = ?, low = ?, volume = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
-	_, err := ctx.SQL.ExecContext(ctx, query, ss.SecurityID, ss.Date, ss.Open, ss.Close, ss.High, ss.Low, ss.Volume, ss.CreatedAt, ss.UpdatedAt, id)
+	_, err := ctx.SQL.ExecContext(ctx, query, ss.SecurityID, ss.Date, ss.Open, ss.Close,
+		ss.High, ss.Low, ss.Volume, ss.CreatedAt, ss.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -153,9 +159,9 @@ func (s *securityStatStore) Update(ctx *gofr.Context, id int, ss *SecurityStat) 
 	return s.Retrieve(ctx, id)
 }
 
-func (f *SecurityStatFilter) buildWhereClause() (clause string, values []interface{}) {
+func (f *SecurityStatFilter) buildWhereClause() (clause string, values []any) {
 	if len(f.SecurityIDs) > 0 {
-		var placeHolders []string
+		placeHolders := make([]string, 0, len(f.SecurityIDs))
 
 		for i := range f.SecurityIDs {
 			placeHolders = append(placeHolders, "?")
@@ -167,11 +173,13 @@ func (f *SecurityStatFilter) buildWhereClause() (clause string, values []interfa
 
 	if f.Date != (time.Time{}) {
 		clause += " AND date = ?"
+
 		values = append(values, f.Date.Format(time.DateOnly))
 	}
 
 	if f.DateBetween != nil {
 		clause += " AND date BETWEEN ? AND ?"
+
 		values = append(values, f.DateBetween.Start.Format(time.DateOnly), f.DateBetween.End.Format(time.DateOnly))
 	}
 

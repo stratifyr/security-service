@@ -22,7 +22,7 @@ refer to https://gofr.dev/AGENTS.md
 ## Commands
 
 - Run dev server: `go run .` — loads `configs/.env` (HTTP :8000, gRPC :9000)
-- Verify changes: `go build ./... && go vet ./...` (no tests or lint config exist)
+- Verify changes: `go build ./... && go vet ./... && golangci-lint run ./...`
 
 ## Architecture
 

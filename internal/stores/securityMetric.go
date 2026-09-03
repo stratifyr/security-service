@@ -33,7 +33,7 @@ func NewSecurityMetricStore() *securityMetricStore {
 	return &securityMetricStore{}
 }
 
-func (s *securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
+func (*securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
 	keys := make([]string, len(securityIDs))
 
 	for i, securityID := range securityIDs {
@@ -54,7 +54,7 @@ func (s *securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date t
 		}
 
 		var metricVals []*securityMetricCacheValue
-		if err = msgpack.Unmarshal([]byte(val.(string)), &metricVals); err != nil {
+		if err := msgpack.Unmarshal([]byte(val.(string)), &metricVals); err != nil {
 			return nil, err
 		}
 
@@ -72,7 +72,7 @@ func (s *securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date t
 	return securityMetrics, nil
 }
 
-func (s *securityMetricStore) Create(ctx *gofr.Context, securityMetrics []*SecurityMetric, date time.Time) error {
+func (*securityMetricStore) Create(ctx *gofr.Context, securityMetrics []*SecurityMetric, date time.Time) error {
 	grouped := make(map[int][]*securityMetricCacheValue)
 
 	for _, metric := range securityMetrics {
@@ -93,7 +93,7 @@ func (s *securityMetricStore) Create(ctx *gofr.Context, securityMetrics []*Secur
 			return err
 		}
 
-		pipe.SetEx(ctx, key, bytes, 5*time.Hour)
+		pipe.SetEx(ctx, key, bytes, 5*time.Hour) //nolint:mnd // cache TTL
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
