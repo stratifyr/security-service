@@ -47,7 +47,7 @@ func NewIndustryStore() IndustryStore {
 	return &industryStore{}
 }
 
-func (s *industryStore) Index(ctx *gofr.Context) []Industry {
+func (*industryStore) Index(_ *gofr.Context) []Industry {
 	return []Industry{
 		AutomobileAndAutoComponents,
 		CapitalGoods,

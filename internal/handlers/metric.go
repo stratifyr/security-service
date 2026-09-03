@@ -23,7 +23,7 @@ func NewMetricHandler(svc services.MetricService) *metricHandler {
 	return &metricHandler{svc: svc}
 }
 
-func (h *metricHandler) Index(ctx *gofr.Context) (interface{}, error) {
+func (h *metricHandler) Index(ctx *gofr.Context) (any, error) {
 	metrics := h.svc.Index(ctx)
 
 	var resp = make([]*Metric, len(metrics))
@@ -37,7 +37,7 @@ func (h *metricHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *metricHandler) buildResp(model *services.Metric) *Metric {
+func (*metricHandler) buildResp(model *services.Metric) *Metric {
 	resp := &Metric{
 		ID:        model.ID,
 		Name:      model.Name,

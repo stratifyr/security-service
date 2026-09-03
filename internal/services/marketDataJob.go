@@ -149,7 +149,7 @@ func (s *marketDataJobService) Patch(ctx *gofr.Context, id int, payload *MarketD
 	return s.buildResp(marketDataJob), nil
 }
 
-func (s *marketDataJobService) buildResp(model *stores.MarketDataJob) *MarketDataJob {
+func (*marketDataJobService) buildResp(model *stores.MarketDataJob) *MarketDataJob {
 	resp := &MarketDataJob{
 		ID:        model.ID,
 		Type:      model.Type,

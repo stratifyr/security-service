@@ -41,7 +41,7 @@ func NewMarketDataJobStore() *marketDataJobStore {
 	return &marketDataJobStore{}
 }
 
-func (s *marketDataJobStore) Index(ctx *gofr.Context, filter *MarketDataJobFilter, limit, offset int) ([]*MarketDataJob, error) {
+func (*marketDataJobStore) Index(ctx *gofr.Context, filter *MarketDataJobFilter, limit, offset int) ([]*MarketDataJob, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, type, status, logs, created_at, updated_at
@@ -80,7 +80,7 @@ func (s *marketDataJobStore) Index(ctx *gofr.Context, filter *MarketDataJobFilte
 	return marketDataJobs, nil
 }
 
-func (s *marketDataJobStore) Count(ctx *gofr.Context, filter *MarketDataJobFilter) (int, error) {
+func (*marketDataJobStore) Count(ctx *gofr.Context, filter *MarketDataJobFilter) (int, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT COUNT(*) FROM market_data_jobs %s`
@@ -95,7 +95,7 @@ func (s *marketDataJobStore) Count(ctx *gofr.Context, filter *MarketDataJobFilte
 	return count, nil
 }
 
-func (s *marketDataJobStore) Retrieve(ctx *gofr.Context, id int) (*MarketDataJob, error) {
+func (*marketDataJobStore) Retrieve(ctx *gofr.Context, id int) (*MarketDataJob, error) {
 	var mdj MarketDataJob
 
 	query := `SELECT id, type, status, logs, created_at, updated_at
@@ -141,7 +141,7 @@ func (s *marketDataJobStore) Update(ctx *gofr.Context, id int, mdj *MarketDataJo
 	return s.Retrieve(ctx, id)
 }
 
-func (f *MarketDataJobFilter) buildWhereClause() (clause string, values []interface{}) {
+func (f *MarketDataJobFilter) buildWhereClause() (clause string, values []any) {
 	if f.Status != "" {
 		clause += " AND status = ?"
 

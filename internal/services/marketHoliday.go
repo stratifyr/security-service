@@ -157,7 +157,7 @@ func (s *marketHolidayService) Delete(ctx *gofr.Context, id, userID int) error {
 	return nil
 }
 
-func (s *marketHolidayService) buildResp(model *stores.MarketHoliday) *MarketHoliday {
+func (*marketHolidayService) buildResp(model *stores.MarketHoliday) *MarketHoliday {
 	resp := &MarketHoliday{
 		ID:          model.ID,
 		Date:        model.Date,

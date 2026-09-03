@@ -15,7 +15,7 @@ func NewIndustryHandler(svc services.IndustryService) *industryHandler {
 	return &industryHandler{svc: svc}
 }
 
-func (h *industryHandler) Index(ctx *gofr.Context) (interface{}, error) {
+func (h *industryHandler) Index(ctx *gofr.Context) (any, error) {
 	industries := h.svc.Index(ctx)
 
 	return response.Raw{Data: map[string]any{

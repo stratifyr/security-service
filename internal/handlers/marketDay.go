@@ -20,7 +20,7 @@ func NewMarketDayHandler(svc services.MarketDayService) *marketDayHandler {
 	return &marketDayHandler{svc: svc}
 }
 
-func (h *marketDayHandler) Index(ctx *gofr.Context) (interface{}, error) {
+func (h *marketDayHandler) Index(ctx *gofr.Context) (any, error) {
 	var (
 		filter services.MarketDayFilter
 		err    error

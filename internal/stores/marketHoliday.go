@@ -44,7 +44,7 @@ func NewMarketHolidayStore() *marketHolidayStore {
 	return &marketHolidayStore{}
 }
 
-func (s *marketHolidayStore) Index(ctx *gofr.Context, filter *MarketHolidayFilter, limit, offset int) ([]*MarketHoliday, error) {
+func (*marketHolidayStore) Index(ctx *gofr.Context, filter *MarketHolidayFilter, limit, offset int) ([]*MarketHoliday, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, date, description, created_at, updated_at
@@ -83,7 +83,7 @@ func (s *marketHolidayStore) Index(ctx *gofr.Context, filter *MarketHolidayFilte
 	return marketHolidays, nil
 }
 
-func (s *marketHolidayStore) Count(ctx *gofr.Context, filter *MarketHolidayFilter) (int, error) {
+func (*marketHolidayStore) Count(ctx *gofr.Context, filter *MarketHolidayFilter) (int, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT COUNT(*) FROM market_holidays %s`
@@ -98,7 +98,7 @@ func (s *marketHolidayStore) Count(ctx *gofr.Context, filter *MarketHolidayFilte
 	return count, nil
 }
 
-func (s *marketHolidayStore) Retrieve(ctx *gofr.Context, id int) (*MarketHoliday, error) {
+func (*marketHolidayStore) Retrieve(ctx *gofr.Context, id int) (*MarketHoliday, error) {
 	var mh MarketHoliday
 
 	query := `SELECT id, date, description, created_at, updated_at
@@ -144,7 +144,7 @@ func (s *marketHolidayStore) Update(ctx *gofr.Context, id int, mh *MarketHoliday
 	return s.Retrieve(ctx, id)
 }
 
-func (s *marketHolidayStore) Delete(ctx *gofr.Context, id int) error {
+func (*marketHolidayStore) Delete(ctx *gofr.Context, id int) error {
 	_, err := ctx.SQL.ExecContext(ctx, `DELETE FROM market_holidays WHERE id = ?`, id)
 	if err != nil {
 		return datasource.ErrorDB{Err: err}
@@ -153,7 +153,7 @@ func (s *marketHolidayStore) Delete(ctx *gofr.Context, id int) error {
 	return nil
 }
 
-func (f *MarketHolidayFilter) buildWhereClause() (clause string, values []interface{}) {
+func (f *MarketHolidayFilter) buildWhereClause() (clause string, values []any) {
 	if f.Date != (time.Time{}) {
 		clause += " AND date = ?"
 

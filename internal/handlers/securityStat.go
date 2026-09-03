@@ -110,7 +110,7 @@ func (h *securityStatHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *securityStatHandler) Read(ctx *gofr.Context) (interface{}, error) {
+func (h *securityStatHandler) Read(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -126,7 +126,7 @@ func (h *securityStatHandler) Read(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *securityStatHandler) Create(ctx *gofr.Context) (interface{}, error) {
+func (h *securityStatHandler) Create(ctx *gofr.Context) (any, error) {
 	var payload SecurityStatCreate
 
 	if err := ctx.Bind(&payload); err != nil {
@@ -159,7 +159,7 @@ func (h *securityStatHandler) Create(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *securityStatHandler) Patch(ctx *gofr.Context) (interface{}, error) {
+func (h *securityStatHandler) Patch(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -190,7 +190,7 @@ func (h *securityStatHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *securityStatHandler) buildResp(model *services.SecurityStat) *SecurityStat {
+func (*securityStatHandler) buildResp(model *services.SecurityStat) *SecurityStat {
 	resp := &SecurityStat{
 		ID:         model.ID,
 		SecurityID: model.SecurityID,

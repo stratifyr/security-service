@@ -197,7 +197,7 @@ func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats
 	}
 }
 
-func (s *securityMetricService) computeSMA(lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeSMA(lastNStats []*stores.SecurityStat) float64 {
 	var (
 		sumPrice float64
 		n        = len(lastNStats)
@@ -210,7 +210,7 @@ func (s *securityMetricService) computeSMA(lastNStats []*stores.SecurityStat) fl
 	return sumPrice / float64(n)
 }
 
-func (s *securityMetricService) computeEMA(k, seeder float64, lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeEMA(k, seeder float64, lastNStats []*stores.SecurityStat) float64 {
 	n := len(lastNStats)
 	if n == 0 {
 		return 0
@@ -225,7 +225,7 @@ func (s *securityMetricService) computeEMA(k, seeder float64, lastNStats []*stor
 	return ema
 }
 
-func (s *securityMetricService) computeROC(lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeROC(lastNStats []*stores.SecurityStat) float64 {
 	n := len(lastNStats)
 	currentPrice := lastNStats[0].Close
 	nDaysPriorPrice := lastNStats[n-1].Close
@@ -233,7 +233,7 @@ func (s *securityMetricService) computeROC(lastNStats []*stores.SecurityStat) fl
 	return ((currentPrice - nDaysPriorPrice) / nDaysPriorPrice) * 100
 }
 
-func (s *securityMetricService) computeATR(lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeATR(lastNStats []*stores.SecurityStat) float64 {
 	var (
 		totalTR float64
 		n       = len(lastNStats)
@@ -251,7 +251,7 @@ func (s *securityMetricService) computeATR(lastNStats []*stores.SecurityStat) fl
 	return totalTR / float64(n)
 }
 
-func (s *securityMetricService) computeVMA(lastNStats []*stores.SecurityStat) float64 {
+func (*securityMetricService) computeVMA(lastNStats []*stores.SecurityStat) float64 {
 	var (
 		sumVolume float64
 		n         = len(lastNStats)

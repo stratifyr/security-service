@@ -42,7 +42,7 @@ func NewSecurityStore() *securityStore {
 	return &securityStore{}
 }
 
-func (s *securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, offset int) ([]*Security, error) {
+func (*securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, offset int) ([]*Security, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, isin, symbol, industry, name, image, ltp, created_at, updated_at
@@ -81,7 +81,7 @@ func (s *securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, 
 	return securities, nil
 }
 
-func (s *securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
+func (*securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 	var st Security
 
 	query := `SELECT id, isin, symbol, industry, name, image, ltp, created_at, updated_at
@@ -131,7 +131,7 @@ func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Securi
 	return s.Retrieve(ctx, id)
 }
 
-func (f *SecurityFilter) buildWhereClause() (clause string, values []interface{}) {
+func (f *SecurityFilter) buildWhereClause() (clause string, values []any) {
 	if f.Symbol != "" {
 		clause += " AND symbol = ?"
 		values = append(values, f.Symbol)
@@ -144,7 +144,7 @@ func (f *SecurityFilter) buildWhereClause() (clause string, values []interface{}
 	return clause, values
 }
 
-func (s *Security) cacheInvalidations() []string {
+func (*Security) cacheInvalidations() []string {
 	return []string{
 		SecuritiesClientCachePattern,
 	}

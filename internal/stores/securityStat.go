@@ -49,7 +49,7 @@ func NewSecurityStatStore() *securityStatStore {
 	return &securityStatStore{}
 }
 
-func (s *securityStatStore) Index(ctx *gofr.Context, filter *SecurityStatFilter, limit, offset int) ([]*SecurityStat, error) {
+func (*securityStatStore) Index(ctx *gofr.Context, filter *SecurityStatFilter, limit, offset int) ([]*SecurityStat, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, security_id, date, open, close, high, low, volume, created_at, updated_at
@@ -89,7 +89,7 @@ func (s *securityStatStore) Index(ctx *gofr.Context, filter *SecurityStatFilter,
 	return securityStats, nil
 }
 
-func (s *securityStatStore) Count(ctx *gofr.Context, filter *SecurityStatFilter) (int, error) {
+func (*securityStatStore) Count(ctx *gofr.Context, filter *SecurityStatFilter) (int, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT COUNT(*) FROM security_stats %s`
@@ -104,7 +104,7 @@ func (s *securityStatStore) Count(ctx *gofr.Context, filter *SecurityStatFilter)
 	return count, nil
 }
 
-func (s *securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, error) {
+func (*securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, error) {
 	var ss SecurityStat
 
 	query := `SELECT id, security_id, date, open, close, high, low, volume, created_at, updated_at
@@ -154,7 +154,7 @@ func (s *securityStatStore) Update(ctx *gofr.Context, id int, ss *SecurityStat) 
 	return s.Retrieve(ctx, id)
 }
 
-func (f *SecurityStatFilter) buildWhereClause() (clause string, values []interface{}) {
+func (f *SecurityStatFilter) buildWhereClause() (clause string, values []any) {
 	if len(f.SecurityIDs) > 0 {
 		var placeHolders []string
 

@@ -27,7 +27,7 @@ func (h *metricGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 	return h.buildResponse(metrics)
 }
 
-func (h *metricGRPCHandler) buildResponse(metrics []*services.Metric) (*pb.GetMetricsResponse, error) {
+func (*metricGRPCHandler) buildResponse(metrics []*services.Metric) (*pb.GetMetricsResponse, error) {
 	resp := &pb.GetMetricsResponse{
 		Metrics: make([]*pb.Metric, len(metrics)),
 		Total:   int32(len(metrics)),

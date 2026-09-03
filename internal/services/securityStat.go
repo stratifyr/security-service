@@ -197,7 +197,7 @@ func (s *securityStatService) Patch(ctx *gofr.Context, id int, payload *Security
 	return s.buildResp(securityStat), nil
 }
 
-func (s *securityStatService) buildResp(model *stores.SecurityStat) *SecurityStat {
+func (*securityStatService) buildResp(model *stores.SecurityStat) *SecurityStat {
 	resp := &SecurityStat{
 		ID:         model.ID,
 		SecurityID: model.SecurityID,

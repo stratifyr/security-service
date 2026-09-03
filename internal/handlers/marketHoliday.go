@@ -112,7 +112,7 @@ func (h *marketHolidayHandler) Index(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *marketHolidayHandler) Read(ctx *gofr.Context) (interface{}, error) {
+func (h *marketHolidayHandler) Read(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -128,7 +128,7 @@ func (h *marketHolidayHandler) Read(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *marketHolidayHandler) Create(ctx *gofr.Context) (interface{}, error) {
+func (h *marketHolidayHandler) Create(ctx *gofr.Context) (any, error) {
 	var payload MarketHolidayCreate
 
 	if err := ctx.Bind(&payload); err != nil {
@@ -156,7 +156,7 @@ func (h *marketHolidayHandler) Create(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *marketHolidayHandler) Patch(ctx *gofr.Context) (interface{}, error) {
+func (h *marketHolidayHandler) Patch(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -193,7 +193,7 @@ func (h *marketHolidayHandler) Patch(ctx *gofr.Context) (interface{}, error) {
 	}}, nil
 }
 
-func (h *marketHolidayHandler) Delete(ctx *gofr.Context) (interface{}, error) {
+func (h *marketHolidayHandler) Delete(ctx *gofr.Context) (any, error) {
 	id, err := strconv.Atoi(ctx.PathParam("id"))
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
@@ -212,7 +212,7 @@ func (h *marketHolidayHandler) Delete(ctx *gofr.Context) (interface{}, error) {
 	return nil, nil
 }
 
-func (h *marketHolidayHandler) buildResp(model *services.MarketHoliday) *MarketHoliday {
+func (*marketHolidayHandler) buildResp(model *services.MarketHoliday) *MarketHoliday {
 	resp := &MarketHoliday{
 		ID:          model.ID,
 		Date:        model.Date.Format(time.DateOnly),

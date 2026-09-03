@@ -324,7 +324,7 @@ func (s *securityService) buildResp(model *stores.Security, securityStats map[in
 	return resp
 }
 
-func (s *securityService) bindSecurityStat(resp *Security, securityStats map[int]*stores.SecurityStat) {
+func (*securityService) bindSecurityStat(resp *Security, securityStats map[int]*stores.SecurityStat) {
 	securityStat, ok := securityStats[resp.ID]
 	if !ok {
 		return
@@ -344,7 +344,7 @@ func (s *securityService) bindSecurityStat(resp *Security, securityStats map[int
 	resp.PreviousClose = securityStat.Close
 }
 
-func (s *securityService) bindSecurityMetricsDetails(resp *Security, securityMetricsMap map[int][]*SecurityMetric) {
+func (*securityService) bindSecurityMetricsDetails(resp *Security, securityMetricsMap map[int][]*SecurityMetric) {
 	if resp.SecurityStat == nil {
 		return
 	}

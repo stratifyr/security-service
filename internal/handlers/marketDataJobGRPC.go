@@ -77,7 +77,7 @@ func (h *marketDataJobGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 	}, nil
 }
 
-func (h *marketDataJobGRPCHandler) buildResponse(model *services.MarketDataJob) *pb.MarketDataJob {
+func (*marketDataJobGRPCHandler) buildResponse(model *services.MarketDataJob) *pb.MarketDataJob {
 	var logs []byte
 
 	if model.Logs != nil {

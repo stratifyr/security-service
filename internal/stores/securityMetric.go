@@ -33,7 +33,7 @@ func NewSecurityMetricStore() *securityMetricStore {
 	return &securityMetricStore{}
 }
 
-func (s *securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
+func (*securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
 	keys := make([]string, len(securityIDs))
 
 	for i, securityID := range securityIDs {
@@ -72,7 +72,7 @@ func (s *securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date t
 	return securityMetrics, nil
 }
 
-func (s *securityMetricStore) Create(ctx *gofr.Context, securityMetrics []*SecurityMetric, date time.Time) error {
+func (*securityMetricStore) Create(ctx *gofr.Context, securityMetrics []*SecurityMetric, date time.Time) error {
 	grouped := make(map[int][]*securityMetricCacheValue)
 
 	for _, metric := range securityMetrics {
