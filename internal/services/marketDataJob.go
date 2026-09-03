@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/stratifyr/security-service/internal/stores"
 	"gofr.dev/pkg/gofr"
+
+	"github.com/stratifyr/security-service/internal/stores"
 )
 
 type MarketDataJobService interface {

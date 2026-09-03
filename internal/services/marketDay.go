@@ -4,9 +4,8 @@ import (
 	"slices"
 	"time"
 
-	"gofr.dev/pkg/gofr/http"
-
 	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/http"
 
 	"github.com/stratifyr/security-service/internal/stores"
 )
