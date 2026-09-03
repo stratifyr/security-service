@@ -342,8 +342,6 @@ func (s *securityService) bindSecurityStat(resp *Security, securityStats map[int
 	}
 
 	resp.PreviousClose = securityStat.Close
-
-	return
 }
 
 func (s *securityService) bindSecurityMetricsDetails(resp *Security, securityMetricsMap map[int][]*SecurityMetric) {
@@ -365,6 +363,4 @@ func (s *securityService) bindSecurityMetricsDetails(resp *Security, securityMet
 			ZValue: securityMetrics[i].ZValue,
 		}
 	}
-
-	return
 }
