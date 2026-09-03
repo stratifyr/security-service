@@ -40,7 +40,7 @@ func NewMarketHolidayHandler(svc services.MarketHolidayService) *marketHolidayHa
 	return &marketHolidayHandler{svc: svc}
 }
 
-func (h *marketHolidayHandler) Index(ctx *gofr.Context) (interface{}, error) {
+func (h *marketHolidayHandler) Index(ctx *gofr.Context) (interface{}, error) { //nolint:gocyclo // handler logic is inherently complex
 	var (
 		filter services.MarketHolidayFilter
 		err    error

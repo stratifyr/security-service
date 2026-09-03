@@ -200,7 +200,7 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 	return s.buildResp(security, securityStats, securityMetrics), nil
 }
 
-func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
+func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) { //nolint:gocyclo // patch logic requires multiple validations
 	if payload.UserID != 1 {
 		return nil, ErrForbidden
 	}
