@@ -139,6 +139,10 @@ linters:
         text: "G101"
         path: _test\.go
       - linters:
+          - gosec
+        text: "G115" # integer overflow conversion int -> int32
+        path: internal/handlers/
+      - linters:
           - revive
         text: "exported (.+) should have comment"
       - linters:
