@@ -34,7 +34,8 @@ func NewMarketDayService(marketHolidayStore stores.MarketHolidayStore) *marketDa
 	return &marketDayService{marketHolidayStore: marketHolidayStore}
 }
 
-func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error) { //nolint:gocyclo // filter logic requires branching
+//nolint:gocyclo // filter logic requires branching
+func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error) {
 	var (
 		startDate time.Time
 		endDate   time.Time

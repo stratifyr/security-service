@@ -41,7 +41,8 @@ func NewMarketDataJobHandler(svc services.MarketDataJobService) *marketDataJobHa
 	return &marketDataJobHandler{svc: svc}
 }
 
-func (h *marketDataJobHandler) Index(ctx *gofr.Context) (interface{}, error) { //nolint:gocyclo // handler logic is inherently complex
+//nolint:gocyclo // handler logic is inherently complex
+func (h *marketDataJobHandler) Index(ctx *gofr.Context) (any, error) {
 	var (
 		filter services.MarketDataJobFilter
 		err    error

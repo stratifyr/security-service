@@ -53,7 +53,8 @@ func NewSecurityStatHandler(svc services.SecurityStatService) *securityStatHandl
 	return &securityStatHandler{svc: svc}
 }
 
-func (h *securityStatHandler) Index(ctx *gofr.Context) (interface{}, error) { //nolint:gocyclo // handler logic is inherently complex
+//nolint:gocyclo // handler logic is inherently complex
+func (h *securityStatHandler) Index(ctx *gofr.Context) (any, error) {
 	var (
 		filter services.SecurityStatFilter
 		err    error
