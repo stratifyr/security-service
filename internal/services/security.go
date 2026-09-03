@@ -105,13 +105,17 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter) ([]*Securi
 
 	g.Go(func() error {
 		var err error
+
 		securityStats, err = s.getStatsMap(ctx, securityIDs, prevMarketDay)
+
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		securityMetrics, err = s.getSecurityMetricsMap(ctx, securityIDs, prevMarketDay)
+
 		return err
 	})
 

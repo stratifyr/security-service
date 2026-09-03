@@ -173,11 +173,13 @@ func (f *SecurityStatFilter) buildWhereClause() (clause string, values []any) {
 
 	if f.Date != (time.Time{}) {
 		clause += " AND date = ?"
+
 		values = append(values, f.Date.Format(time.DateOnly))
 	}
 
 	if f.DateBetween != nil {
 		clause += " AND date BETWEEN ? AND ?"
+
 		values = append(values, f.DateBetween.Start.Format(time.DateOnly), f.DateBetween.End.Format(time.DateOnly))
 	}
 

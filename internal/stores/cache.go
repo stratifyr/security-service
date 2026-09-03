@@ -19,8 +19,10 @@ type cacheInvalidator interface {
 }
 
 func invalidateCache(ctx *gofr.Context, invalidator cacheInvalidator) {
-	var keys []string
-	var patterns []string
+	var (
+		keys     []string
+		patterns []string
+	)
 
 	for _, invalidation := range invalidator.cacheInvalidations() {
 		if strings.ContainsAny(invalidation, "*?[") {

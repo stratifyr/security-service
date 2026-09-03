@@ -184,6 +184,7 @@ func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats
 		k := 2.0 / float64(len(securityStats)+1)
 		smaSeed := s.computeSMA(securityStats)
 		value := s.computeEMA(k, smaSeed, securityStats)
+
 		return value, (dayStat.Close - value) / value
 	case stores.ROC:
 		value := s.computeROC(securityStats)
@@ -274,6 +275,7 @@ func findMissingSecurityIDs(requestedIDs []int, storedMetrics []*stores.Security
 	}
 
 	missing := make([]int, 0)
+
 	for _, securityID := range requestedIDs {
 		if _, ok := found[securityID]; !ok {
 			missing = append(missing, securityID)

@@ -135,6 +135,7 @@ func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Securi
 func (f *SecurityFilter) buildWhereClause() (clause string, values []any) {
 	if f.Symbol != "" {
 		clause += " AND symbol = ?"
+
 		values = append(values, f.Symbol)
 	}
 
