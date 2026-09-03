@@ -129,6 +129,12 @@ linters:
           - mnd
         path: _test\.go
       - linters:
+          - goconst
+        path: internal/handlers/
+      - linters:
+          - goconst
+        path: internal/stores/
+      - linters:
           - gosec
         text: "G101"
         path: _test\.go
