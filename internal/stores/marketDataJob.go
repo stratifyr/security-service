@@ -3,6 +3,7 @@ package stores
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -102,7 +103,7 @@ func (s *marketDataJobStore) Retrieve(ctx *gofr.Context, id int) (*MarketDataJob
 
 	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&mdj.ID, &mdj.Type, &mdj.Status, &mdj.Logs, &mdj.CreatedAt, &mdj.UpdatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "market-data-jobs", Value: strconv.Itoa(id)}
 		}
 

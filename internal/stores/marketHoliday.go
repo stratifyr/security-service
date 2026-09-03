@@ -2,6 +2,7 @@ package stores
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -105,7 +106,7 @@ func (s *marketHolidayStore) Retrieve(ctx *gofr.Context, id int) (*MarketHoliday
 
 	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&mh.ID, &mh.Date, &mh.Description, &mh.CreatedAt, &mh.UpdatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "market-holidays", Value: strconv.Itoa(id)}
 		}
 

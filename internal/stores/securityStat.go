@@ -2,6 +2,7 @@ package stores
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -111,7 +112,7 @@ func (s *securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, 
 
 	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&ss.ID, &ss.SecurityID, &ss.Date, &ss.Open, &ss.Close, &ss.High, &ss.Low, &ss.Volume, &ss.CreatedAt, &ss.UpdatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "security-stats", Value: strconv.Itoa(id)}
 		}
 
