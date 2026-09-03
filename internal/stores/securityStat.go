@@ -110,7 +110,8 @@ func (*securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, er
 	query := `SELECT id, security_id, date, open, close, high, low, volume, created_at, updated_at
               FROM security_stats WHERE id = ?`
 
-	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&ss.ID, &ss.SecurityID, &ss.Date, &ss.Open, &ss.Close, &ss.High, &ss.Low, &ss.Volume, &ss.CreatedAt, &ss.UpdatedAt)
+	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&ss.ID, &ss.SecurityID, &ss.Date, &ss.Open,
+		&ss.Close, &ss.High, &ss.Low, &ss.Volume, &ss.CreatedAt, &ss.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "security-stats", Value: strconv.Itoa(id)}
@@ -123,9 +124,11 @@ func (*securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, er
 }
 
 func (s *securityStatStore) Create(ctx *gofr.Context, ss *SecurityStat) (*SecurityStat, error) {
-	query := "INSERT INTO security_stats (security_id, date, open, close, high, low, volume, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	query := `INSERT INTO security_stats (security_id, date, open, close, high, low, volume, created_at, updated_at)
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := ctx.SQL.ExecContext(ctx, query, ss.SecurityID, ss.Date, ss.Open, ss.Close, ss.High, ss.Low, ss.Volume, ss.CreatedAt, ss.UpdatedAt)
+	result, err := ctx.SQL.ExecContext(ctx, query, ss.SecurityID, ss.Date, ss.Open,
+		ss.Close, ss.High, ss.Low, ss.Volume, ss.CreatedAt, ss.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -141,10 +144,12 @@ func (s *securityStatStore) Create(ctx *gofr.Context, ss *SecurityStat) (*Securi
 }
 
 func (s *securityStatStore) Update(ctx *gofr.Context, id int, ss *SecurityStat) (*SecurityStat, error) {
-	query := `UPDATE security_stats SET security_id = ?, date = ?, open = ?, close = ?, high = ?, low = ?, volume = ?, created_at = ?, updated_at = ?
+	query := `UPDATE security_stats SET security_id = ?, date = ?, open = ?, close = ?, 
+                          high = ?, low = ?, volume = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
-	_, err := ctx.SQL.ExecContext(ctx, query, ss.SecurityID, ss.Date, ss.Open, ss.Close, ss.High, ss.Low, ss.Volume, ss.CreatedAt, ss.UpdatedAt, id)
+	_, err := ctx.SQL.ExecContext(ctx, query, ss.SecurityID, ss.Date, ss.Open, ss.Close,
+		ss.High, ss.Low, ss.Volume, ss.CreatedAt, ss.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}

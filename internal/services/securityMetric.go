@@ -29,7 +29,8 @@ type securityMetricService struct {
 	securityStatStore   stores.SecurityStatStore
 }
 
-func NewSecurityMetricService(marketDayService MarketDayService, metricService MetricService, securityStatStore stores.SecurityStatStore, securityMetricStore stores.SecurityMetricStore) *securityMetricService {
+func NewSecurityMetricService(marketDayService MarketDayService, metricService MetricService,
+	securityStatStore stores.SecurityStatStore, securityMetricStore stores.SecurityMetricStore) *securityMetricService {
 	return &securityMetricService{
 		marketDayService:    marketDayService,
 		metricService:       metricService,
@@ -72,7 +73,8 @@ func (s *securityMetricService) Index(ctx *gofr.Context, securityIDs []int, date
 	return s.buildResponse(ctx, securityMetrics), nil
 }
 
-func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*stores.SecurityMetric, error) {
+func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context,
+	securityIDs []int, date time.Time) ([]*stores.SecurityMetric, error) {
 	metrics := s.metricService.Index(ctx)
 
 	maxPeriod := 0

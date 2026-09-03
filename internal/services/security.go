@@ -303,7 +303,8 @@ func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs [
 	return securityMetricsMap, nil
 }
 
-func (s *securityService) buildResp(model *stores.Security, securityStats map[int]*stores.SecurityStat, securityMetrics map[int][]*SecurityMetric) *Security {
+func (s *securityService) buildResp(model *stores.Security, securityStats map[int]*stores.SecurityStat,
+	securityMetrics map[int][]*SecurityMetric) *Security {
 	resp := &Security{
 		ID:              model.ID,
 		ISIN:            model.ISIN,

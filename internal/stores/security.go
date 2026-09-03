@@ -87,7 +87,8 @@ func (*securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 	query := `SELECT id, isin, symbol, industry, name, image, ltp, created_at, updated_at
               FROM securities WHERE id = ?`
 
-	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry, &st.Name, &st.Image, &st.LTP, &st.CreatedAt, &st.UpdatedAt)
+	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry,
+		&st.Name, &st.Image, &st.LTP, &st.CreatedAt, &st.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "securities", Value: strconv.Itoa(id)}
