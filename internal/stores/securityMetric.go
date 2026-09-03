@@ -93,7 +93,7 @@ func (*securityMetricStore) Create(ctx *gofr.Context, securityMetrics []*Securit
 			return err
 		}
 
-		pipe.SetEx(ctx, key, bytes, 5*time.Hour)
+		pipe.SetEx(ctx, key, bytes, 5*time.Hour) //nolint:mnd // cache TTL
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {

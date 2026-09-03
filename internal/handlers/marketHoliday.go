@@ -55,7 +55,7 @@ func (h *marketHolidayHandler) Index(ctx *gofr.Context) (interface{}, error) {
 
 	if ctx.Param("dateBetween") != "" {
 		dates := strings.Split(ctx.Param("dateBetween"), ",")
-		if len(dates) != 2 {
+		if len(dates) != 2 { //nolint:mnd // expected 2 date parts
 			return nil, http.ErrorInvalidParam{Params: []string{"dateBetween"}}
 		}
 

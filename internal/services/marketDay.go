@@ -51,7 +51,7 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 	case f.DateBetween != nil:
 		startDate = f.DateBetween.StartDate
 		endDate = f.DateBetween.EndDate
-		n = int(endDate.Sub(startDate).Hours()/24) + 1
+		n = int(endDate.Sub(startDate).Hours()/24) + 1 //nolint:mnd // hours in a day
 	default:
 		return nil, 0, http.ErrorMissingParam{Params: []string{"lastNDays", "dateBetween"}}
 	}
@@ -61,7 +61,7 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 	}
 
 	if startDate.IsZero() {
-		lookBackDays := max(n*2, 14) // to get N market days, N*2 window should be fine
+		lookBackDays := max(n*2, 14) //nolint:mnd // lookback multiplier
 		startDate = endDate.Add(-time.Duration(lookBackDays) * 24 * time.Hour)
 	}
 

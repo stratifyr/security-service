@@ -173,7 +173,7 @@ func (s *securityMetricService) buildResponse(ctx *gofr.Context, models []*store
 	return securityMetrics
 }
 
-func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats []*stores.SecurityStat) (value, zValue float64) {
+func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats []*stores.SecurityStat) (val, zVal float64) {
 	dayStat := securityStats[0]
 
 	switch metric.Type {
@@ -187,7 +187,7 @@ func (s *securityMetricService) computeMetricValue(metric *Metric, securityStats
 		return value, (dayStat.Close - value) / value
 	case stores.ROC:
 		value := s.computeROC(securityStats)
-		return value, value / 100
+		return value, value / 100 //nolint:mnd // percentage divisor
 	case stores.ATR:
 		value := s.computeATR(securityStats)
 		return value, -value / dayStat.Close
@@ -232,7 +232,7 @@ func (*securityMetricService) computeROC(lastNStats []*stores.SecurityStat) floa
 	currentPrice := lastNStats[0].Close
 	nDaysPriorPrice := lastNStats[n-1].Close
 
-	return ((currentPrice - nDaysPriorPrice) / nDaysPriorPrice) * 100
+	return ((currentPrice - nDaysPriorPrice) / nDaysPriorPrice) * 100 //nolint:mnd // percentage multiplier
 }
 
 func (*securityMetricService) computeATR(lastNStats []*stores.SecurityStat) float64 {
