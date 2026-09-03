@@ -131,6 +131,10 @@ func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCre
 			StartDate time.Time
 			EndDate   time.Time
 		}{StartDate: payload.Date, EndDate: payload.Date}})
+	if err != nil {
+		return nil, err
+	}
+
 	if count != 1 || marketDays[0].Format(time.DateOnly) != payload.Date.Format(time.DateOnly) {
 		return nil, ErrMarketHolidayStat
 	}
