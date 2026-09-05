@@ -36,7 +36,6 @@ type Security struct {
 }
 
 type SecurityCreate struct {
-	UserID   int
 	ISIN     string
 	Symbol   string
 	Industry string
@@ -46,7 +45,6 @@ type SecurityCreate struct {
 }
 
 type SecurityUpdate struct {
-	UserID   int
 	Symbol   string
 	Industry string
 	Name     string
@@ -157,10 +155,6 @@ func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
 }
 
 func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
 	industry, err := stores.IndustryFromString(payload.Industry)
 	if err != nil {
 		return nil, err
@@ -202,10 +196,6 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 
 //nolint:gocyclo // patch logic requires multiple validations
 func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
 	security, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err

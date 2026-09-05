@@ -21,13 +21,11 @@ type MarketHoliday struct {
 }
 
 type MarketHolidayCreate struct {
-	UserID      int    `json:"userId"`
 	Date        string `json:"date"`
 	Description string `json:"description"`
 }
 
 type MarketHolidayUpdate struct {
-	UserID      int    `json:"userId"`
 	Date        string `json:"date"`
 	Description string `json:"description"`
 }
@@ -142,7 +140,6 @@ func (h *marketHolidayHandler) Create(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.MarketHolidayCreate{
-		UserID:      payload.UserID,
 		Date:        date,
 		Description: payload.Description,
 	}
@@ -179,7 +176,6 @@ func (h *marketHolidayHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.MarketHolidayUpdate{
-		UserID:      payload.UserID,
 		Date:        date,
 		Description: payload.Description,
 	}
@@ -200,12 +196,7 @@ func (h *marketHolidayHandler) Delete(ctx *gofr.Context) (any, error) {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
 	}
 
-	userID, err := strconv.Atoi(ctx.Param("userId"))
-	if err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
-	}
-
-	err = h.svc.Delete(ctx, id, userID)
+	err = h.svc.Delete(ctx, id)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"gofr.dev/pkg/gofr"
 
 	"github.com/stratifyr/security-service/internal/handlers"
+	"github.com/stratifyr/security-service/internal/middlewares"
 	"github.com/stratifyr/security-service/internal/services"
 	"github.com/stratifyr/security-service/internal/stores"
 	"github.com/stratifyr/security-service/migrations"
@@ -50,6 +51,8 @@ func main() {
 		metricGRPCHandler, securityGRPCHandler, securityStatGRPCHandler, marketDataJobGRPCHandler)
 
 	gofrWrapper.RegisterSecurityServiceServerWithGofr(app, securityServiceGRPCHandler)
+
+	app.UseMiddleware(middlewares.RBAC)
 
 	app.GET("/industries", industryHandler.Index)
 

@@ -23,12 +23,10 @@ type MarketDataJob struct {
 }
 
 type MarketDataJobCreate struct {
-	UserID int    `json:"userId"`
-	Type   string `json:"type"`
+	Type string `json:"type"`
 }
 
 type MarketDataJobUpdate struct {
-	UserID int              `json:"userId"`
 	Status string           `json:"status"`
 	Logs   *json.RawMessage `json:"logs"`
 }
@@ -47,11 +45,6 @@ func (h *marketDataJobHandler) Index(ctx *gofr.Context) (any, error) {
 		filter services.MarketDataJobFilter
 		err    error
 	)
-
-	filter.UserID, err = strconv.Atoi(ctx.Param("userId"))
-	if err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
-	}
 
 	if ctx.Param("status") != "" {
 		filter.Status = ctx.Param("status")
@@ -122,8 +115,7 @@ func (h *marketDataJobHandler) Create(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.MarketDataJobCreate{
-		UserID: payload.UserID,
-		Type:   payload.Type,
+		Type: payload.Type,
 	}
 
 	marketDataJob, err := h.svc.Create(ctx, model)
@@ -149,7 +141,6 @@ func (h *marketDataJobHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.MarketDataJobUpdate{
-		UserID: payload.UserID,
 		Status: payload.Status,
 		Logs:   payload.Logs,
 	}
@@ -170,12 +161,7 @@ func (h *marketDataJobHandler) Delete(ctx *gofr.Context) (any, error) {
 		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
 	}
 
-	userID, err := strconv.Atoi(ctx.Param("userId"))
-	if err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
-	}
-
-	err = h.svc.Delete(ctx, id, userID)
+	err = h.svc.Delete(ctx, id)
 	if err != nil {
 		return nil, err
 	}

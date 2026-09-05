@@ -13,7 +13,7 @@ type MarketHolidayService interface {
 	Read(ctx *gofr.Context, id int) (*MarketHoliday, error)
 	Create(ctx *gofr.Context, payload *MarketHolidayCreate) (*MarketHoliday, error)
 	Patch(ctx *gofr.Context, id int, payload *MarketHolidayUpdate) (*MarketHoliday, error)
-	Delete(ctx *gofr.Context, id, userID int) error
+	Delete(ctx *gofr.Context, id int) error
 }
 
 type MarketHolidayFilter struct {
@@ -33,13 +33,11 @@ type MarketHoliday struct {
 }
 
 type MarketHolidayCreate struct {
-	UserID      int
 	Date        time.Time
 	Description string
 }
 
 type MarketHolidayUpdate struct {
-	UserID      int
 	Date        time.Time
 	Description string
 }
@@ -94,10 +92,6 @@ func (s *marketHolidayService) Read(ctx *gofr.Context, id int) (*MarketHoliday, 
 }
 
 func (s *marketHolidayService) Create(ctx *gofr.Context, payload *MarketHolidayCreate) (*MarketHoliday, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
 	model := &stores.MarketHoliday{
 		Date:        payload.Date,
 		Description: payload.Description,
@@ -114,10 +108,6 @@ func (s *marketHolidayService) Create(ctx *gofr.Context, payload *MarketHolidayC
 }
 
 func (s *marketHolidayService) Patch(ctx *gofr.Context, id int, payload *MarketHolidayUpdate) (*MarketHoliday, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
 	marketHoliday, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
@@ -139,11 +129,7 @@ func (s *marketHolidayService) Patch(ctx *gofr.Context, id int, payload *MarketH
 	return s.buildResp(marketHoliday), nil
 }
 
-func (s *marketHolidayService) Delete(ctx *gofr.Context, id, userID int) error {
-	if userID != 1 {
-		return ErrForbidden
-	}
-
+func (s *marketHolidayService) Delete(ctx *gofr.Context, id int) error {
 	_, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return err

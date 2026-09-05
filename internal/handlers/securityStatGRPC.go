@@ -27,7 +27,6 @@ func (h *securityStatGRPCHandler) Create(ctx *gofr.Context) (any, error) {
 	date, _ := time.Parse(time.DateOnly, payload.Date)
 
 	model := &services.SecurityStatCreate{
-		UserID:     1,
 		SecurityID: int(payload.SecurityId),
 		Date:       date,
 		Open:       payload.Open,

@@ -26,7 +26,6 @@ type SecurityStat struct {
 }
 
 type SecurityStatCreate struct {
-	UserID     int     `json:"userId"`
 	SecurityID int     `json:"securityId"`
 	Date       string  `json:"date"`
 	Open       float64 `json:"open"`
@@ -37,7 +36,6 @@ type SecurityStatCreate struct {
 }
 
 type SecurityStatUpdate struct {
-	UserID int     `json:"userId"`
 	Open   float64 `json:"open"`
 	Close  float64 `json:"close"`
 	High   float64 `json:"high"`
@@ -140,7 +138,6 @@ func (h *securityStatHandler) Create(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityStatCreate{
-		UserID:     payload.UserID,
 		SecurityID: payload.SecurityID,
 		Date:       date,
 		Open:       payload.Open,
@@ -173,7 +170,6 @@ func (h *securityStatHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityStatUpdate{
-		UserID: payload.UserID,
 		Open:   payload.Open,
 		Close:  payload.Close,
 		High:   payload.High,

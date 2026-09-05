@@ -61,7 +61,6 @@ func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityUpdate{
-		UserID:   1,
 		Symbol:   payload.Symbol,
 		Industry: payload.Industry,
 		Name:     payload.Name,
