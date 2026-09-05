@@ -26,7 +26,6 @@ func (h *marketDataJobGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 	}
 
 	filter := &services.MarketDataJobFilter{
-		UserID: 1,
 		Status: payload.Status,
 	}
 
@@ -62,7 +61,6 @@ func (h *marketDataJobGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.MarketDataJobUpdate{
-		UserID: 1,
 		Status: payload.Status,
 		Logs:   logs,
 	}

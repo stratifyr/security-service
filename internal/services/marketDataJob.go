@@ -15,11 +15,10 @@ type MarketDataJobService interface {
 	Read(ctx *gofr.Context, id int) (*MarketDataJob, error)
 	Create(ctx *gofr.Context, payload *MarketDataJobCreate) (*MarketDataJob, error)
 	Patch(ctx *gofr.Context, id int, payload *MarketDataJobUpdate) (*MarketDataJob, error)
-	Delete(ctx *gofr.Context, id, userID int) error
+	Delete(ctx *gofr.Context, id int) error
 }
 
 type MarketDataJobFilter struct {
-	UserID int
 	Status string
 }
 
@@ -33,12 +32,10 @@ type MarketDataJob struct {
 }
 
 type MarketDataJobCreate struct {
-	UserID int
-	Type   string
+	Type string
 }
 
 type MarketDataJobUpdate struct {
-	UserID int
 	Status string
 	Logs   *json.RawMessage
 }
@@ -54,10 +51,6 @@ func NewMarketDataJobService(store stores.MarketDataJobStore) *marketDataJobServ
 func (s *marketDataJobService) Index(ctx *gofr.Context, f *MarketDataJobFilter, page, perPage int) ([]*MarketDataJob, int, error) {
 	limit := perPage
 	offset := limit * (page - 1)
-
-	if f.UserID != 1 {
-		return nil, 0, ErrForbidden
-	}
 
 	filter := &stores.MarketDataJobFilter{
 		Status: f.Status,
@@ -104,10 +97,6 @@ func (s *marketDataJobService) Read(ctx *gofr.Context, id int) (*MarketDataJob, 
 }
 
 func (s *marketDataJobService) Create(ctx *gofr.Context, payload *MarketDataJobCreate) (*MarketDataJob, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
 	jobType, err := stores.MarketDataJobTypeFromString(payload.Type)
 	if err != nil {
 		return nil, err
@@ -130,10 +119,6 @@ func (s *marketDataJobService) Create(ctx *gofr.Context, payload *MarketDataJobC
 }
 
 func (s *marketDataJobService) Patch(ctx *gofr.Context, id int, payload *MarketDataJobUpdate) (*MarketDataJob, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
 	marketDataJob, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
@@ -159,11 +144,7 @@ func (s *marketDataJobService) Patch(ctx *gofr.Context, id int, payload *MarketD
 	return s.buildResp(marketDataJob), nil
 }
 
-func (s *marketDataJobService) Delete(ctx *gofr.Context, id, userID int) error {
-	if userID != 1 {
-		return ErrForbidden
-	}
-
+func (s *marketDataJobService) Delete(ctx *gofr.Context, id int) error {
 	_, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return err

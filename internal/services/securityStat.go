@@ -34,7 +34,6 @@ type SecurityStat struct {
 }
 
 type SecurityStatCreate struct {
-	UserID     int
 	SecurityID int
 	Date       time.Time
 	Open       float64
@@ -45,7 +44,6 @@ type SecurityStatCreate struct {
 }
 
 type SecurityStatUpdate struct {
-	UserID int
 	Open   float64
 	Close  float64
 	High   float64
@@ -112,17 +110,13 @@ func (s *securityStatService) Read(ctx *gofr.Context, id int) (*SecurityStat, er
 }
 
 func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCreate) (*SecurityStat, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
 	securityStats, err := s.store.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{payload.SecurityID}, Date: payload.Date}, 1, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(securityStats) > 0 {
-		return s.Patch(ctx, securityStats[0].ID, &SecurityStatUpdate{UserID: payload.UserID, Open: payload.Open,
+		return s.Patch(ctx, securityStats[0].ID, &SecurityStatUpdate{Open: payload.Open,
 			Close: payload.Close, High: payload.High, Low: payload.Low, Volume: payload.Volume})
 	}
 
@@ -160,10 +154,6 @@ func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCre
 }
 
 func (s *securityStatService) Patch(ctx *gofr.Context, id int, payload *SecurityStatUpdate) (*SecurityStat, error) {
-	if payload.UserID != 1 {
-		return nil, ErrForbidden
-	}
-
 	securityStat, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err

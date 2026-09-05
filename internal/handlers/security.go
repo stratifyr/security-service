@@ -46,7 +46,6 @@ type MarketDataMetric struct {
 }
 
 type SecurityCreate struct {
-	UserID   int     `json:"userId"`
 	ISIN     string  `json:"isin"`
 	Symbol   string  `json:"symbol"`
 	Industry string  `json:"industry"`
@@ -56,7 +55,6 @@ type SecurityCreate struct {
 }
 
 type SecurityUpdate struct {
-	UserID   int     `json:"userId"`
 	Symbol   string  `json:"symbol"`
 	Industry string  `json:"industry"`
 	Name     string  `json:"name"`
@@ -128,7 +126,6 @@ func (h *securityHandler) Create(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityCreate{
-		UserID:   payload.UserID,
 		ISIN:     payload.ISIN,
 		Symbol:   payload.Symbol,
 		Industry: payload.Industry,
@@ -160,7 +157,6 @@ func (h *securityHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityUpdate{
-		UserID:   payload.UserID,
 		Symbol:   payload.Symbol,
 		Industry: payload.Industry,
 		Name:     payload.Name,
