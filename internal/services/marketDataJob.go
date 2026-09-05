@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"slices"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -14,6 +15,7 @@ type MarketDataJobService interface {
 	Read(ctx *gofr.Context, id int) (*MarketDataJob, error)
 	Create(ctx *gofr.Context, payload *MarketDataJobCreate) (*MarketDataJob, error)
 	Patch(ctx *gofr.Context, id int, payload *MarketDataJobUpdate) (*MarketDataJob, error)
+	Delete(ctx *gofr.Context, id, userID int) error
 }
 
 type MarketDataJobFilter struct {
@@ -65,6 +67,14 @@ func (s *marketDataJobService) Index(ctx *gofr.Context, f *MarketDataJobFilter, 
 	if err != nil {
 		return nil, 0, err
 	}
+
+	slices.SortFunc(marketDataJobs, func(a, b *stores.MarketDataJob) int {
+		if a.CreatedAt.After(b.CreatedAt) {
+			return -1
+		}
+
+		return 1
+	})
 
 	count, err := s.store.Count(ctx, filter)
 	if err != nil {
@@ -147,6 +157,24 @@ func (s *marketDataJobService) Patch(ctx *gofr.Context, id int, payload *MarketD
 	}
 
 	return s.buildResp(marketDataJob), nil
+}
+
+func (s *marketDataJobService) Delete(ctx *gofr.Context, id, userID int) error {
+	if userID != 1 {
+		return ErrForbidden
+	}
+
+	_, err := s.store.Retrieve(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	err = s.store.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (*marketDataJobService) buildResp(model *stores.MarketDataJob) *MarketDataJob {

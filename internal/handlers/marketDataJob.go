@@ -164,6 +164,25 @@ func (h *marketDataJobHandler) Patch(ctx *gofr.Context) (any, error) {
 	}}, nil
 }
 
+func (h *marketDataJobHandler) Delete(ctx *gofr.Context) (any, error) {
+	id, err := strconv.Atoi(ctx.PathParam("id"))
+	if err != nil {
+		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
+	}
+
+	userID, err := strconv.Atoi(ctx.Param("userId"))
+	if err != nil {
+		return nil, http.ErrorInvalidParam{Params: []string{"userId"}}
+	}
+
+	err = h.svc.Delete(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 func (*marketDataJobHandler) buildResp(model *services.MarketDataJob) *MarketDataJob {
 	resp := &MarketDataJob{
 		ID:        model.ID,

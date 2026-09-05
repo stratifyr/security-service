@@ -77,6 +77,7 @@ func main() {
 	app.POST("/market-data-jobs", marketDataJobHandler.Create)
 	app.GET("/market-data-jobs/{id}", marketDataJobHandler.Read)
 	app.PATCH("/market-data-jobs/{id}", marketDataJobHandler.Patch)
+	app.DELETE("/market-data-jobs/{id}", marketDataJobHandler.Delete)
 
 	app.Run()
 }

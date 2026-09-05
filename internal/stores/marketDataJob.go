@@ -20,6 +20,7 @@ type MarketDataJobStore interface {
 	Retrieve(ctx *gofr.Context, id int) (*MarketDataJob, error)
 	Create(ctx *gofr.Context, marketHoliday *MarketDataJob) (*MarketDataJob, error)
 	Update(ctx *gofr.Context, id int, marketHoliday *MarketDataJob) (*MarketDataJob, error)
+	Delete(ctx *gofr.Context, id int) error
 }
 
 type MarketDataJobFilter struct {
@@ -139,6 +140,15 @@ func (s *marketDataJobStore) Update(ctx *gofr.Context, id int, mdj *MarketDataJo
 	}
 
 	return s.Retrieve(ctx, id)
+}
+
+func (*marketDataJobStore) Delete(ctx *gofr.Context, id int) error {
+	_, err := ctx.SQL.ExecContext(ctx, `DELETE FROM market_data_jobs WHERE id = ?`, id)
+	if err != nil {
+		return datasource.ErrorDB{Err: err}
+	}
+
+	return nil
 }
 
 func (f *MarketDataJobFilter) buildWhereClause() (clause string, values []any) {
