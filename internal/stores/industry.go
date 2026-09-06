@@ -31,7 +31,7 @@ const (
 	Services
 	Telecommunication
 	Textiles
-	Index
+	MarketIndex
 	Bond
 	Gold
 	Silver
@@ -70,7 +70,7 @@ func (*industryStore) Index(_ *gofr.Context) []Industry {
 		Services,
 		Telecommunication,
 		Textiles,
-		Index,
+		MarketIndex,
 		Bond,
 		Gold,
 		Silver,
@@ -102,7 +102,7 @@ func (ex Industry) String() string {
 		Services:                         "Services",
 		Telecommunication:                "Telecommunication",
 		Textiles:                         "Textiles",
-		Index:                            "Index",
+		MarketIndex:                      "Index",
 		Bond:                             "Bond",
 		Gold:                             "Gold",
 		Silver:                           "Silver",
@@ -136,7 +136,7 @@ func IndustryFromString(str string) (Industry, error) {
 		"Services":                          Services,
 		"Telecommunication":                 Telecommunication,
 		"Textiles":                          Textiles,
-		"Index":                             Index,
+		"Index":                             MarketIndex,
 		"Bond":                              Bond,
 		"Gold":                              Gold,
 		"Silver":                            Silver,
