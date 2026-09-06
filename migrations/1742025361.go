@@ -40,6 +40,27 @@ func setupInitialSchemas() migration.Migrate {
 				return err
 			}
 
+			if _, err := d.SQL.Exec(`CREATE TABLE indices (
+										id INT PRIMARY KEY AUTO_INCREMENT,
+										name VARCHAR(100) NOT NULL UNIQUE,
+										created_at TIMESTAMP NOT NULL,
+										updated_at TIMESTAMP NOT NULL
+									);`); err != nil {
+				return err
+			}
+
+			if _, err := d.SQL.Exec(`CREATE TABLE index_constituents (
+                                        id INT PRIMARY KEY AUTO_INCREMENT,
+										index_id INT NOT NULL,
+										security_id INT NOT NULL,
+										
+                                        CONSTRAINT fk_index_constituents_index_id FOREIGN KEY (index_id) REFERENCES indices(id) ON DELETE CASCADE,
+                                        CONSTRAINT fk_index_constituents_security_id FOREIGN KEY (security_id) REFERENCES securities(id),
+                                        CONSTRAINT uk_index_constituents_index_security UNIQUE (index_id, security_id)
+									);`); err != nil {
+				return err
+			}
+
 			if _, err := d.SQL.Exec(`CREATE TABLE market_holidays (
 										id INT PRIMARY KEY AUTO_INCREMENT,
 										date DATE NOT NULL,

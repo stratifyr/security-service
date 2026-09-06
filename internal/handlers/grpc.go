@@ -6,13 +6,14 @@ import (
 )
 
 func NewSecurityServiceGoFrGRPCHandler(marketDayGRPCHandler *marketDayGRPCHandler, metricGRPCHandler *metricGRPCHandler,
-	securityGRPCHandler *securityGRPCHandler, securityStatGRPCHandler *securityStatGRPCHandler,
+	securityGRPCHandler *securityGRPCHandler, securityStatGRPCHandler *securityStatGRPCHandler, indexGRPCHandler *indexGRPCHandler,
 	marketDataJobGRPCHandler *marketDataJobGRPCHandler) *SecurityServiceGoFrGRPCHandler {
 	return &SecurityServiceGoFrGRPCHandler{
 		marketDayGRPCHandler:     marketDayGRPCHandler,
 		metricGRPCHandler:        metricGRPCHandler,
 		securityGRPCHandler:      securityGRPCHandler,
 		securityStatGRPCHandler:  securityStatGRPCHandler,
+		indexGRPCHandler:         indexGRPCHandler,
 		marketDataJobGRPCHandler: marketDataJobGRPCHandler,
 	}
 }
@@ -22,6 +23,7 @@ type SecurityServiceGoFrGRPCHandler struct {
 	metricGRPCHandler        *metricGRPCHandler
 	securityGRPCHandler      *securityGRPCHandler
 	securityStatGRPCHandler  *securityStatGRPCHandler
+	indexGRPCHandler         *indexGRPCHandler
 	marketDataJobGRPCHandler *marketDataJobGRPCHandler
 
 	pb.UnimplementedSecurityServiceServer
@@ -45,6 +47,14 @@ func (h *SecurityServiceGoFrGRPCHandler) CreateOrUpdateSecurityStat(ctx *gofr.Co
 
 func (h *SecurityServiceGoFrGRPCHandler) GetMetrics(ctx *gofr.Context) (any, error) {
 	return h.metricGRPCHandler.Index(ctx)
+}
+
+func (h *SecurityServiceGoFrGRPCHandler) GetIndices(ctx *gofr.Context) (any, error) {
+	return h.indexGRPCHandler.List(ctx)
+}
+
+func (h *SecurityServiceGoFrGRPCHandler) UpsertIndex(ctx *gofr.Context) (any, error) {
+	return h.indexGRPCHandler.Upsert(ctx)
 }
 
 func (h *SecurityServiceGoFrGRPCHandler) GetMarketDataJobs(ctx *gofr.Context) (any, error) {

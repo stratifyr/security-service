@@ -3,7 +3,8 @@ module github.com/stratifyr/security-service
 go 1.26.0
 
 require (
-	github.com/stratifyr/security-service-proto v0.0.0-20260816145909-ddc61aa6e6ae
+	github.com/gorilla/mux v1.8.1
+	github.com/stratifyr/security-service-proto v0.0.0-20260906170255-f4dd2c6f6e01
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	gofr.dev v1.59.0
 	golang.org/x/sync v0.22.0
@@ -38,7 +39,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.19 // indirect
 	github.com/googleapis/gax-go/v2 v2.23.0 // indirect
-	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/graphql-go/graphql v0.8.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3 // indirect

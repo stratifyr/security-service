@@ -129,6 +129,10 @@ linters:
           - mnd
         path: _test\.go
       - linters:
+          - dupl
+          - lll
+        path: migrations/
+      - linters:
           - goconst
         path: internal/handlers/
       - linters:

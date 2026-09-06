@@ -24,6 +24,8 @@ func main() {
 	securityStatStore := stores.NewSecurityStatStore()
 	securityMetricStore := stores.NewSecurityMetricStore()
 	marketDataJobStore := stores.NewMarketDataJobStore()
+	indexConstituentStore := stores.NewIndexConstituentStore()
+	indexStore := stores.NewIndexStore(indexConstituentStore)
 
 	industryService := services.NewIndustryService(industryStore)
 	metricService := services.NewMetricService(metricStore)
@@ -33,6 +35,7 @@ func main() {
 	securityMetricService := services.NewSecurityMetricService(marketDayService, metricService, securityStatStore, securityMetricStore)
 	securityService := services.NewSecurityService(marketDayService, securityMetricService, securityStatStore, securityStore)
 	marketDataJobService := services.NewMarketDataJobService(marketDataJobStore)
+	indexService := services.NewIndexService(securityService, indexStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)
 	metricHandler := handlers.NewMetricHandler(metricService)
@@ -41,14 +44,16 @@ func main() {
 	securityHandler := handlers.NewSecurityHandler(securityService)
 	securityStatHandler := handlers.NewSecurityStatHandler(securityStatService)
 	marketDataJobHandler := handlers.NewMarketDataJobHandler(marketDataJobService)
+	indexHandler := handlers.NewIndexHandler(indexService)
 
 	marketDayGRPCHandler := handlers.NewMarketDayGRPCHandler(marketDayService)
 	metricGRPCHandler := handlers.NewMetricGRPCHandler(metricService)
 	securityGRPCHandler := handlers.NewSecurityGRPCHandler(securityService)
 	securityStatGRPCHandler := handlers.NewSecurityStatGRPCHandler(securityStatService)
 	marketDataJobGRPCHandler := handlers.NewMarketDataJobGRPCHandler(marketDataJobService)
+	indexGRPCHandler := handlers.NewIndexGRPCHandler(indexService)
 	securityServiceGRPCHandler := handlers.NewSecurityServiceGoFrGRPCHandler(marketDayGRPCHandler,
-		metricGRPCHandler, securityGRPCHandler, securityStatGRPCHandler, marketDataJobGRPCHandler)
+		metricGRPCHandler, securityGRPCHandler, securityStatGRPCHandler, indexGRPCHandler, marketDataJobGRPCHandler)
 
 	gofrWrapper.RegisterSecurityServiceServerWithGofr(app, securityServiceGRPCHandler)
 
@@ -75,6 +80,8 @@ func main() {
 	app.POST("/security-stats", securityStatHandler.Create)
 	app.GET("/security-stats/{id}", securityStatHandler.Read)
 	app.PATCH("/security-stats/{id}", securityStatHandler.Patch)
+
+	app.GET("/indices", indexHandler.List)
 
 	app.GET("/market-data-jobs", marketDataJobHandler.Index)
 	app.POST("/market-data-jobs", marketDataJobHandler.Create)
