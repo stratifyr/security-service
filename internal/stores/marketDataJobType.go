@@ -8,6 +8,7 @@ const (
 	LoadLTP = iota
 	LoadSecurityStats
 	BackfillSecurityStats
+	LoadIndices
 )
 
 type MarketDataJobType int
@@ -17,6 +18,7 @@ func (m MarketDataJobType) String() string {
 		LoadLTP:               "LOAD_LTP",
 		LoadSecurityStats:     "LOAD_SECURITY_STATS",
 		BackfillSecurityStats: "BACKFILL_SECURITY_STATS",
+		LoadIndices:           "LOAD_INDICES",
 	}
 
 	return conversionMap[m]
@@ -27,6 +29,7 @@ func MarketDataJobTypeFromString(str string) (MarketDataJobType, error) {
 		"LOAD_LTP":                LoadLTP,
 		"LOAD_SECURITY_STATS":     LoadSecurityStats,
 		"BACKFILL_SECURITY_STATS": BackfillSecurityStats,
+		"LOAD_INDICES":            LoadIndices,
 	}
 
 	marketDataJobType, ok := conversionMap[str]
