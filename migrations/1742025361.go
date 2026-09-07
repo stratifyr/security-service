@@ -15,6 +15,8 @@ func setupInitialSchemas() migration.Migrate {
 										name VARCHAR(100) NOT NULL,
 										image VARCHAR(200) NOT NULL,
 										ltp DECIMAL(10,2) NOT NULL,
+										volume BIGINT NOT NULL,
+										free_float_shares BIGINT NOT NULL,
 										created_at TIMESTAMP NOT NULL,
 										updated_at TIMESTAMP NOT NULL
 									);`); err != nil {

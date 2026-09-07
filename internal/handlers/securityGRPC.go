@@ -61,11 +61,13 @@ func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityUpdate{
-		Symbol:   payload.Symbol,
-		Industry: payload.Industry,
-		Name:     payload.Name,
-		Image:    payload.Image,
-		LTP:      payload.Ltp,
+		Symbol:          payload.Symbol,
+		Industry:        payload.Industry,
+		Name:            payload.Name,
+		Image:           payload.Image,
+		LTP:             payload.Ltp,
+		Volume:          int(payload.Volume),
+		FreeFloatShares: int(payload.FreeFloatShares),
 	}
 
 	security, err := h.svc.Patch(ctx, int(payload.Id), model)
@@ -80,16 +82,18 @@ func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 
 func (*securityGRPCHandler) buildResponse(securitiy *services.Security) *pb.Security {
 	var resp = &pb.Security{
-		Id:            int32(securitiy.ID),
-		Isin:          securitiy.ISIN,
-		Symbol:        securitiy.Symbol,
-		Industry:      securitiy.Industry,
-		Name:          securitiy.Name,
-		Image:         securitiy.Image,
-		Ltp:           securitiy.LTP,
-		PreviousClose: securitiy.PreviousClose,
-		CreatedAt:     securitiy.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:     securitiy.UpdatedAt.Format(time.RFC3339),
+		Id:              int32(securitiy.ID),
+		Isin:            securitiy.ISIN,
+		Symbol:          securitiy.Symbol,
+		Industry:        securitiy.Industry,
+		Name:            securitiy.Name,
+		Image:           securitiy.Image,
+		Ltp:             securitiy.LTP,
+		Volume:          int64(securitiy.Volume),
+		FreeFloatShares: int64(securitiy.FreeFloatShares),
+		PreviousClose:   securitiy.PreviousClose,
+		CreatedAt:       securitiy.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:       securitiy.UpdatedAt.Format(time.RFC3339),
 	}
 
 	if securitiy.SecurityStat == nil {

@@ -18,16 +18,18 @@ type Index struct {
 }
 
 type IndexConstituent struct {
-	ID            int     `json:"id"`
-	IndexID       int     `json:"indexId"`
-	SecurityID    int     `json:"securityId"`
-	ISIN          string  `json:"isin"`
-	Symbol        string  `json:"symbol"`
-	Industry      string  `json:"industry"`
-	Name          string  `json:"name"`
-	Image         string  `json:"image"`
-	LTP           float64 `json:"ltp"`
-	PreviousClose float64 `json:"previousClose"`
+	ID              int     `json:"id"`
+	IndexID         int     `json:"indexId"`
+	SecurityID      int     `json:"securityId"`
+	ISIN            string  `json:"isin"`
+	Symbol          string  `json:"symbol"`
+	Industry        string  `json:"industry"`
+	Name            string  `json:"name"`
+	Image           string  `json:"image"`
+	LTP             float64 `json:"ltp"`
+	Volume          int     `json:"volume"`
+	FreeFloatShares int     `json:"freeFloatShares"`
+	PreviousClose   float64 `json:"previousClose"`
 }
 
 type indexHandler struct {
@@ -69,16 +71,18 @@ func (*indexHandler) buildResp(model *services.Index) *Index {
 
 	for i, c := range model.Constituents {
 		resp.Constituents[i] = &IndexConstituent{
-			ID:            c.ID,
-			IndexID:       c.IndexID,
-			SecurityID:    c.SecurityID,
-			ISIN:          c.ISIN,
-			Symbol:        c.Symbol,
-			Industry:      c.Industry,
-			Name:          c.Name,
-			Image:         c.Image,
-			LTP:           c.LTP,
-			PreviousClose: c.PreviousClose,
+			ID:              c.ID,
+			IndexID:         c.IndexID,
+			SecurityID:      c.SecurityID,
+			ISIN:            c.ISIN,
+			Symbol:          c.Symbol,
+			Industry:        c.Industry,
+			Name:            c.Name,
+			Image:           c.Image,
+			LTP:             c.LTP,
+			Volume:          c.Volume,
+			FreeFloatShares: c.FreeFloatShares,
+			PreviousClose:   c.PreviousClose,
 		}
 	}
 
