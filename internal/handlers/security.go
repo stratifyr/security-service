@@ -12,17 +12,19 @@ import (
 )
 
 type Security struct {
-	ID            int         `json:"id"`
-	ISIN          string      `json:"isin"`
-	Symbol        string      `json:"symbol"`
-	Industry      string      `json:"industry"`
-	Name          string      `json:"name"`
-	Image         string      `json:"image"`
-	LTP           float64     `json:"ltp"`
-	PreviousClose float64     `json:"previousClose"`
-	CreatedAt     string      `json:"createdAt"`
-	UpdatedAt     string      `json:"updatedAt"`
-	MarketData    *MarketData `json:"marketData"`
+	ID              int         `json:"id"`
+	ISIN            string      `json:"isin"`
+	Symbol          string      `json:"symbol"`
+	Industry        string      `json:"industry"`
+	Name            string      `json:"name"`
+	Image           string      `json:"image"`
+	LTP             float64     `json:"ltp"`
+	Volume          int         `json:"volume"`
+	FreeFloatShares int         `json:"freeFloatShares"`
+	PreviousClose   float64     `json:"previousClose"`
+	CreatedAt       string      `json:"createdAt"`
+	UpdatedAt       string      `json:"updatedAt"`
+	MarketData      *MarketData `json:"marketData"`
 }
 
 type MarketData struct {
@@ -46,20 +48,24 @@ type MarketDataMetric struct {
 }
 
 type SecurityCreate struct {
-	ISIN     string  `json:"isin"`
-	Symbol   string  `json:"symbol"`
-	Industry string  `json:"industry"`
-	Name     string  `json:"name"`
-	Image    string  `json:"image"`
-	LTP      float64 `json:"ltp"`
+	ISIN            string  `json:"isin"`
+	Symbol          string  `json:"symbol"`
+	Industry        string  `json:"industry"`
+	Name            string  `json:"name"`
+	Image           string  `json:"image"`
+	LTP             float64 `json:"ltp"`
+	Volume          int     `json:"volume"`
+	FreeFloatShares int     `json:"freeFloatShares"`
 }
 
 type SecurityUpdate struct {
-	Symbol   string  `json:"symbol"`
-	Industry string  `json:"industry"`
-	Name     string  `json:"name"`
-	Image    string  `json:"image"`
-	LTP      float64 `json:"ltp"`
+	Symbol          string  `json:"symbol"`
+	Industry        string  `json:"industry"`
+	Name            string  `json:"name"`
+	Image           string  `json:"image"`
+	LTP             float64 `json:"ltp"`
+	Volume          int     `json:"volume"`
+	FreeFloatShares int     `json:"freeFloatShares"`
 }
 
 type securityHandler struct {
@@ -126,12 +132,14 @@ func (h *securityHandler) Create(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityCreate{
-		ISIN:     payload.ISIN,
-		Symbol:   payload.Symbol,
-		Industry: payload.Industry,
-		Name:     payload.Name,
-		Image:    payload.Image,
-		LTP:      payload.LTP,
+		ISIN:            payload.ISIN,
+		Symbol:          payload.Symbol,
+		Industry:        payload.Industry,
+		Name:            payload.Name,
+		Image:           payload.Image,
+		LTP:             payload.LTP,
+		Volume:          payload.Volume,
+		FreeFloatShares: payload.FreeFloatShares,
 	}
 
 	security, err := h.svc.Create(ctx, model)
@@ -157,11 +165,13 @@ func (h *securityHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityUpdate{
-		Symbol:   payload.Symbol,
-		Industry: payload.Industry,
-		Name:     payload.Name,
-		Image:    payload.Image,
-		LTP:      payload.LTP,
+		Symbol:          payload.Symbol,
+		Industry:        payload.Industry,
+		Name:            payload.Name,
+		Image:           payload.Image,
+		LTP:             payload.LTP,
+		Volume:          payload.Volume,
+		FreeFloatShares: payload.FreeFloatShares,
 	}
 
 	security, err := h.svc.Patch(ctx, id, model)
@@ -176,17 +186,19 @@ func (h *securityHandler) Patch(ctx *gofr.Context) (any, error) {
 
 func (*securityHandler) buildResp(model *services.Security) *Security {
 	resp := &Security{
-		ID:            model.ID,
-		ISIN:          model.ISIN,
-		Symbol:        model.Symbol,
-		Industry:      model.Industry,
-		Name:          model.Name,
-		Image:         model.Image,
-		LTP:           model.LTP,
-		PreviousClose: model.PreviousClose,
-		CreatedAt:     model.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:     model.UpdatedAt.Format(time.RFC3339),
-		MarketData:    nil,
+		ID:              model.ID,
+		ISIN:            model.ISIN,
+		Symbol:          model.Symbol,
+		Industry:        model.Industry,
+		Name:            model.Name,
+		Image:           model.Image,
+		LTP:             model.LTP,
+		Volume:          model.Volume,
+		FreeFloatShares: model.FreeFloatShares,
+		PreviousClose:   model.PreviousClose,
+		CreatedAt:       model.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:       model.UpdatedAt.Format(time.RFC3339),
+		MarketData:      nil,
 	}
 
 	if model.SecurityStat == nil {

@@ -28,6 +28,8 @@ type Security struct {
 	Name            string
 	Image           string
 	LTP             float64
+	Volume          int
+	FreeFloatShares int
 	PreviousClose   float64
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
@@ -36,20 +38,24 @@ type Security struct {
 }
 
 type SecurityCreate struct {
-	ISIN     string
-	Symbol   string
-	Industry string
-	Name     string
-	Image    string
-	LTP      float64
+	ISIN            string
+	Symbol          string
+	Industry        string
+	Name            string
+	Image           string
+	LTP             float64
+	Volume          int
+	FreeFloatShares int
 }
 
 type SecurityUpdate struct {
-	Symbol   string
-	Industry string
-	Name     string
-	Image    string
-	LTP      float64
+	Symbol          string
+	Industry        string
+	Name            string
+	Image           string
+	LTP             float64
+	Volume          int
+	FreeFloatShares int
 }
 
 type securityService struct {
@@ -161,14 +167,16 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 	}
 
 	model := &stores.Security{
-		ISIN:      payload.ISIN,
-		Symbol:    payload.Symbol,
-		Industry:  industry,
-		Name:      payload.Name,
-		Image:     payload.Image,
-		LTP:       payload.LTP,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		ISIN:            payload.ISIN,
+		Symbol:          payload.Symbol,
+		Industry:        industry,
+		Name:            payload.Name,
+		Image:           payload.Image,
+		LTP:             payload.LTP,
+		Volume:          payload.Volume,
+		FreeFloatShares: payload.FreeFloatShares,
+		CreatedAt:       time.Now().UTC(),
+		UpdatedAt:       time.Now().UTC(),
 	}
 
 	security, err := s.store.Create(ctx, model)
@@ -222,6 +230,14 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 
 	if payload.LTP != 0 {
 		security.LTP = payload.LTP
+	}
+
+	if payload.Volume != 0 {
+		security.Volume = payload.Volume
+	}
+
+	if payload.FreeFloatShares != 0 {
+		security.FreeFloatShares = payload.FreeFloatShares
 	}
 
 	security, err = s.store.Update(ctx, id, security)
@@ -308,6 +324,8 @@ func (s *securityService) buildResp(model *stores.Security, securityStats map[in
 		Name:            model.Name,
 		Image:           model.Image,
 		LTP:             model.LTP,
+		Volume:          model.Volume,
+		FreeFloatShares: model.FreeFloatShares,
 		CreatedAt:       model.CreatedAt,
 		UpdatedAt:       model.CreatedAt,
 		SecurityStat:    nil,

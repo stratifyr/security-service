@@ -9,6 +9,8 @@ const (
 	LoadSecurityStats
 	BackfillSecurityStats
 	LoadIndices
+	LoadVolume
+	LoadFreeFloatShares
 )
 
 type MarketDataJobType int
@@ -19,6 +21,8 @@ func (m MarketDataJobType) String() string {
 		LoadSecurityStats:     "LOAD_SECURITY_STATS",
 		BackfillSecurityStats: "BACKFILL_SECURITY_STATS",
 		LoadIndices:           "LOAD_INDICES",
+		LoadVolume:            "LOAD_VOLUME",
+		LoadFreeFloatShares:   "LOAD_FREE_FLOAT_SHARES",
 	}
 
 	return conversionMap[m]
@@ -30,6 +34,8 @@ func MarketDataJobTypeFromString(str string) (MarketDataJobType, error) {
 		"LOAD_SECURITY_STATS":     LoadSecurityStats,
 		"BACKFILL_SECURITY_STATS": BackfillSecurityStats,
 		"LOAD_INDICES":            LoadIndices,
+		"LOAD_VOLUME":             LoadVolume,
+		"LOAD_FREE_FLOAT_SHARES":  LoadFreeFloatShares,
 	}
 
 	marketDataJobType, ok := conversionMap[str]

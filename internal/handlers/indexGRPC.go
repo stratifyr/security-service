@@ -78,16 +78,18 @@ func (*indexGRPCHandler) buildResponse(index *services.Index) *pb.Index {
 
 	for i, constituent := range index.Constituents {
 		resp.Constituents[i] = &pb.IndexConstituent{
-			Id:            int32(constituent.ID),
-			IndexId:       int32(constituent.IndexID),
-			SecurityId:    int32(constituent.SecurityID),
-			Isin:          constituent.ISIN,
-			Symbol:        constituent.Symbol,
-			Industry:      constituent.Industry,
-			Name:          constituent.Name,
-			Image:         constituent.Image,
-			Ltp:           constituent.LTP,
-			PreviousClose: constituent.PreviousClose,
+			Id:              int32(constituent.ID),
+			IndexId:         int32(constituent.IndexID),
+			SecurityId:      int32(constituent.SecurityID),
+			Isin:            constituent.ISIN,
+			Symbol:          constituent.Symbol,
+			Industry:        constituent.Industry,
+			Name:            constituent.Name,
+			Image:           constituent.Image,
+			Ltp:             constituent.LTP,
+			Volume:          int64(constituent.Volume),
+			FreeFloatShares: int64(constituent.FreeFloatShares),
+			PreviousClose:   constituent.PreviousClose,
 		}
 	}
 

@@ -22,16 +22,18 @@ type Index struct {
 }
 
 type IndexConstituent struct {
-	ID            int
-	IndexID       int
-	SecurityID    int
-	ISIN          string
-	Symbol        string
-	Industry      string
-	Name          string
-	Image         string
-	LTP           float64
-	PreviousClose float64
+	ID              int
+	IndexID         int
+	SecurityID      int
+	ISIN            string
+	Symbol          string
+	Industry        string
+	Name            string
+	Image           string
+	LTP             float64
+	Volume          int
+	FreeFloatShares int
+	PreviousClose   float64
 }
 
 type IndexUpsert struct {
@@ -178,16 +180,18 @@ func (*indexService) buildResp(model *stores.Index, securities []*Security) *Ind
 		}
 
 		resp.Constituents[i] = &IndexConstituent{
-			ID:            model.Constituents[i].ID,
-			IndexID:       model.Constituents[i].IndexID,
-			SecurityID:    model.Constituents[i].SecurityID,
-			ISIN:          security.ISIN,
-			Symbol:        security.Symbol,
-			Industry:      security.Industry,
-			Name:          security.Name,
-			Image:         security.Image,
-			LTP:           security.LTP,
-			PreviousClose: security.PreviousClose,
+			ID:              model.Constituents[i].ID,
+			IndexID:         model.Constituents[i].IndexID,
+			SecurityID:      model.Constituents[i].SecurityID,
+			ISIN:            security.ISIN,
+			Symbol:          security.Symbol,
+			Industry:        security.Industry,
+			Name:            security.Name,
+			Image:           security.Image,
+			LTP:             security.LTP,
+			Volume:          security.Volume,
+			FreeFloatShares: security.FreeFloatShares,
+			PreviousClose:   security.PreviousClose,
 		}
 	}
 

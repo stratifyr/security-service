@@ -25,15 +25,17 @@ type SecurityFilter struct {
 }
 
 type Security struct {
-	ID        int
-	ISIN      string
-	Symbol    string
-	Industry  Industry
-	Name      string
-	Image     string
-	LTP       float64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID              int
+	ISIN            string
+	Symbol          string
+	Industry        Industry
+	Name            string
+	Image           string
+	LTP             float64
+	Volume          int
+	FreeFloatShares int
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type securityStore struct{}
@@ -45,7 +47,7 @@ func NewSecurityStore() *securityStore {
 func (*securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, offset int) ([]*Security, error) {
 	whereClause, values := filter.buildWhereClause()
 
-	query := `SELECT id, isin, symbol, industry, name, image, ltp, created_at, updated_at
+	query := `SELECT id, isin, symbol, industry, name, image, ltp, volume, free_float_shares, created_at, updated_at
               FROM securities %s`
 
 	if limit > 0 {
@@ -66,7 +68,9 @@ func (*securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, of
 	for rows.Next() {
 		var st Security
 
-		err = rows.Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry, &st.Name, &st.Image, &st.LTP, &st.CreatedAt, &st.UpdatedAt)
+		err = rows.Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry, &st.Name,
+			&st.Image, &st.LTP, &st.Volume, &st.FreeFloatShares,
+			&st.CreatedAt, &st.UpdatedAt)
 		if err != nil {
 			return nil, datasource.ErrorDB{Err: err}
 		}
@@ -84,11 +88,11 @@ func (*securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, of
 func (*securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 	var st Security
 
-	query := `SELECT id, isin, symbol, industry, name, image, ltp, created_at, updated_at
+	query := `SELECT id, isin, symbol, industry, name, image, ltp, volume, free_float_shares, created_at, updated_at
               FROM securities WHERE id = ?`
 
 	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&st.ID, &st.ISIN, &st.Symbol, &st.Industry,
-		&st.Name, &st.Image, &st.LTP, &st.CreatedAt, &st.UpdatedAt)
+		&st.Name, &st.Image, &st.LTP, &st.Volume, &st.FreeFloatShares, &st.CreatedAt, &st.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "securities", Value: strconv.Itoa(id)}
@@ -101,9 +105,13 @@ func (*securityStore) Retrieve(ctx *gofr.Context, id int) (*Security, error) {
 }
 
 func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, error) {
-	query := "INSERT INTO securities (isin, symbol, industry, name, image, ltp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	query := `INSERT INTO securities (isin, symbol, industry, name, image, ltp, 
+                        volume, free_float_shares, created_at, updated_at)
+		      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.CreatedAt, st.UpdatedAt)
+	result, err := ctx.SQL.ExecContext(ctx, query,
+		st.ISIN, st.Symbol, st.Industry, st.Name, st.Image,
+		st.LTP, st.Volume, st.FreeFloatShares, st.CreatedAt, st.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -119,10 +127,13 @@ func (s *securityStore) Create(ctx *gofr.Context, st *Security) (*Security, erro
 }
 
 func (s *securityStore) Update(ctx *gofr.Context, id int, st *Security) (*Security, error) {
-	query := `UPDATE securities SET isin = ?, symbol = ?, industry = ?, name = ?, image = ?, ltp = ?, created_at = ?, updated_at = ?
-              WHERE id = ?`
+	query := `UPDATE securities SET isin = ?, symbol = ?, industry = ?, name = ?, image = ?,
+		      		ltp = ?, volume = ?, free_float_shares = ?, created_at = ?, updated_at = ?
+		      WHERE id = ?`
 
-	_, err := ctx.SQL.ExecContext(ctx, query, st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.CreatedAt, st.UpdatedAt, id)
+	_, err := ctx.SQL.ExecContext(ctx, query,
+		st.ISIN, st.Symbol, st.Industry, st.Name, st.Image, st.LTP, st.Volume,
+		st.FreeFloatShares, st.CreatedAt, st.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
