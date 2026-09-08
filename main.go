@@ -25,6 +25,7 @@ func main() {
 	securityMetricStore := stores.NewSecurityMetricStore()
 	marketDataJobStore := stores.NewMarketDataJobStore()
 	indexConstituentStore := stores.NewIndexConstituentStore()
+	indexStatStore := stores.NewIndexStatStore()
 	indexStore := stores.NewIndexStore(indexConstituentStore)
 
 	industryService := services.NewIndustryService(industryStore)
@@ -35,7 +36,8 @@ func main() {
 	securityMetricService := services.NewSecurityMetricService(marketDayService, metricService, securityStatStore, securityMetricStore)
 	securityService := services.NewSecurityService(marketDayService, securityMetricService, securityStatStore, securityStore)
 	marketDataJobService := services.NewMarketDataJobService(marketDataJobStore)
-	indexService := services.NewIndexService(securityService, indexStore)
+	indexStatService := services.NewIndexStatService(marketDayService, indexStatStore)
+	indexService := services.NewIndexService(marketDayService, securityService, indexStatStore, indexStore)
 
 	industryHandler := handlers.NewIndustryHandler(industryService)
 	metricHandler := handlers.NewMetricHandler(metricService)
@@ -51,9 +53,10 @@ func main() {
 	securityGRPCHandler := handlers.NewSecurityGRPCHandler(securityService)
 	securityStatGRPCHandler := handlers.NewSecurityStatGRPCHandler(securityStatService)
 	marketDataJobGRPCHandler := handlers.NewMarketDataJobGRPCHandler(marketDataJobService)
+	indexStatGRPCHandler := handlers.NewIndexStatGRPCHandler(indexStatService)
 	indexGRPCHandler := handlers.NewIndexGRPCHandler(indexService)
-	securityServiceGRPCHandler := handlers.NewSecurityServiceGoFrGRPCHandler(marketDayGRPCHandler,
-		metricGRPCHandler, securityGRPCHandler, securityStatGRPCHandler, indexGRPCHandler, marketDataJobGRPCHandler)
+	securityServiceGRPCHandler := handlers.NewSecurityServiceGoFrGRPCHandler(marketDayGRPCHandler, metricGRPCHandler,
+		securityGRPCHandler, securityStatGRPCHandler, indexGRPCHandler, indexStatGRPCHandler, marketDataJobGRPCHandler)
 
 	gofrWrapper.RegisterSecurityServiceServerWithGofr(app, securityServiceGRPCHandler)
 

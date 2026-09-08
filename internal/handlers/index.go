@@ -4,17 +4,29 @@ import (
 	"time"
 
 	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/http"
 	"gofr.dev/pkg/gofr/http/response"
 
 	"github.com/stratifyr/security-service/internal/services"
 )
 
 type Index struct {
-	ID           int                 `json:"id"`
-	Name         string              `json:"name"`
-	CreatedAt    string              `json:"createdAt"`
-	UpdatedAt    string              `json:"updatedAt"`
-	Constituents []*IndexConstituent `json:"constituents"`
+	ID            int                 `json:"id"`
+	Name          string              `json:"name"`
+	Value         float64             `json:"value"`
+	PreviousClose float64             `json:"previousClose"`
+	CreatedAt     string              `json:"createdAt"`
+	UpdatedAt     string              `json:"updatedAt"`
+	MarketData    *IndexMarketData    `json:"marketData"`
+	Constituents  []*IndexConstituent `json:"constituents"`
+}
+
+type IndexMarketData struct {
+	Date  string  `json:"date"`
+	Open  float64 `json:"open"`
+	Close float64 `json:"close"`
+	High  float64 `json:"high"`
+	Low   float64 `json:"low"`
 }
 
 type IndexConstituent struct {
@@ -41,7 +53,19 @@ func NewIndexHandler(svc services.IndexService) *indexHandler {
 }
 
 func (h *indexHandler) List(ctx *gofr.Context) (any, error) {
-	indices, err := h.svc.List(ctx)
+	var (
+		filter services.IndexFilter
+		err    error
+	)
+
+	if ctx.Param("date") != "" {
+		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
+		if err != nil {
+			return nil, http.ErrorInvalidParam{Params: []string{"date"}}
+		}
+	}
+
+	indices, err := h.svc.List(ctx, &filter)
 	if err != nil {
 		return nil, err
 	}
@@ -62,11 +86,14 @@ func (h *indexHandler) List(ctx *gofr.Context) (any, error) {
 
 func (*indexHandler) buildResp(model *services.Index) *Index {
 	resp := &Index{
-		ID:           model.ID,
-		Name:         model.Name,
-		CreatedAt:    model.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:    model.UpdatedAt.Format(time.RFC3339),
-		Constituents: make([]*IndexConstituent, len(model.Constituents)),
+		ID:            model.ID,
+		Name:          model.Name,
+		Value:         model.Value,
+		PreviousClose: model.PreviousClose,
+		CreatedAt:     model.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:     model.UpdatedAt.Format(time.RFC3339),
+		MarketData:    nil,
+		Constituents:  make([]*IndexConstituent, len(model.Constituents)),
 	}
 
 	for i, c := range model.Constituents {
@@ -84,6 +111,18 @@ func (*indexHandler) buildResp(model *services.Index) *Index {
 			FreeFloatShares: c.FreeFloatShares,
 			PreviousClose:   c.PreviousClose,
 		}
+	}
+
+	if model.IndexStat == nil {
+		return resp
+	}
+
+	resp.MarketData = &IndexMarketData{
+		Date:  model.IndexStat.Date.Format(time.DateOnly),
+		Open:  model.IndexStat.Open,
+		Close: model.IndexStat.Close,
+		High:  model.IndexStat.High,
+		Low:   model.IndexStat.Low,
 	}
 
 	return resp

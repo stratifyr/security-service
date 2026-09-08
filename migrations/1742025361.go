@@ -35,9 +35,9 @@ func setupInitialSchemas() migration.Migrate {
 										created_at TIMESTAMP NOT NULL,
 										updated_at TIMESTAMP NOT NULL,
                              
-                                        CONSTRAINT uk_security_prices_security_id_date UNIQUE (security_id, date),
-										CONSTRAINT fk_security_prices_security_id FOREIGN KEY (security_id) REFERENCES securities(id),
-                                        INDEX idx_security_prices_security_id_date (security_id, date)
+                                        CONSTRAINT uk_security_stats_security_id_date UNIQUE (security_id, date),
+										CONSTRAINT fk_security_stats_security_id FOREIGN KEY (security_id) REFERENCES securities(id),
+                                        INDEX idx_security_stats_security_id_date (security_id, date)
 									);`); err != nil {
 				return err
 			}
@@ -45,8 +45,27 @@ func setupInitialSchemas() migration.Migrate {
 			if _, err := d.SQL.Exec(`CREATE TABLE indices (
 										id INT PRIMARY KEY AUTO_INCREMENT,
 										name VARCHAR(100) NOT NULL UNIQUE,
+										value DECIMAL(10,2) NOT NULL,
 										created_at TIMESTAMP NOT NULL,
 										updated_at TIMESTAMP NOT NULL
+									);`); err != nil {
+				return err
+			}
+
+			if _, err := d.SQL.Exec(`CREATE TABLE index_stats (
+										id INT PRIMARY KEY AUTO_INCREMENT,
+										index_id INT NOT NULL,
+										date DATE NOT NULL,
+										open DECIMAL(10,2) NOT NULL,
+										close DECIMAL(10,2) NOT NULL,
+										high DECIMAL(10,2) NOT NULL,
+										low DECIMAL(10,2) NOT NULL,
+										created_at TIMESTAMP NOT NULL,
+										updated_at TIMESTAMP NOT NULL,
+                             
+                                        CONSTRAINT uk_index_stats_index_date UNIQUE (index_id, date),
+										CONSTRAINT fk_index_stats_index_id FOREIGN KEY (index_id) REFERENCES indices(id),
+                                        INDEX idx_index_stats_index_id_date (index_id, date)
 									);`); err != nil {
 				return err
 			}

@@ -130,6 +130,7 @@ linters:
         path: _test\.go
       - linters:
           - dupl
+          - funlen
           - lll
         path: migrations/
       - linters:
