@@ -172,7 +172,7 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 		index.UpdatedAt = time.Now()
 	}
 
-	if payload.SecurityIDs != nil {
+	if len(payload.SecurityIDs) > 0 {
 		index.Constituents = make([]*stores.IndexConstituent, len(payload.SecurityIDs))
 		index.UpdatedAt = time.Now()
 
