@@ -1,32 +1,59 @@
 package stores
 
 import (
+	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/http"
 )
 
+type MarketDataJobTypeStore interface {
+	List(ctx *gofr.Context) []MarketDataJobType
+}
+
 const (
-	LoadLTP = iota
+	LoadSecurities     = iota
+	LoadSecurityValues = iota
 	LoadSecurityStats
+	LoadSecurityShares
 	BackfillSecurityStats
 	LoadIndices
-	LoadVolume
-	LoadFreeFloatShares
-	LoadIndexValue
+	LoadIndexValues
 	LoadIndexStats
+	BackfillIndexStats
 )
 
 type MarketDataJobType int
 
+type marketDataJobTypeStore struct{}
+
+func NewMarketDataJobTypeStore() *marketDataJobTypeStore {
+	return &marketDataJobTypeStore{}
+}
+
+func (*marketDataJobTypeStore) List(_ *gofr.Context) []MarketDataJobType {
+	return []MarketDataJobType{
+		LoadSecurities,
+		LoadSecurityValues,
+		LoadSecurityStats,
+		LoadSecurityShares,
+		BackfillSecurityStats,
+		LoadIndices,
+		LoadIndexValues,
+		LoadIndexStats,
+		BackfillIndexStats,
+	}
+}
+
 func (m MarketDataJobType) String() string {
 	var conversionMap = map[MarketDataJobType]string{
-		LoadLTP:               "LOAD_LTP",
+		LoadSecurities:        "LOAD_SECURITIES",
+		LoadSecurityValues:    "LOAD_SECURITY_VALUES",
 		LoadSecurityStats:     "LOAD_SECURITY_STATS",
+		LoadSecurityShares:    "LOAD_SECURITY_SHARES",
 		BackfillSecurityStats: "BACKFILL_SECURITY_STATS",
 		LoadIndices:           "LOAD_INDICES",
-		LoadVolume:            "LOAD_VOLUME",
-		LoadFreeFloatShares:   "LOAD_FREE_FLOAT_SHARES",
-		LoadIndexValue:        "LOAD_INDEX_VALUE",
+		LoadIndexValues:       "LOAD_INDEX_VALUES",
 		LoadIndexStats:        "LOAD_INDEX_STATS",
+		BackfillIndexStats:    "BACKFILL_INDEX_STATS",
 	}
 
 	return conversionMap[m]
@@ -34,14 +61,15 @@ func (m MarketDataJobType) String() string {
 
 func MarketDataJobTypeFromString(str string) (MarketDataJobType, error) {
 	var conversionMap = map[string]MarketDataJobType{
-		"LOAD_LTP":                LoadLTP,
+		"LOAD_SECURITIES":         LoadSecurities,
+		"LOAD_SECURITY_VALUES":    LoadSecurityValues,
 		"LOAD_SECURITY_STATS":     LoadSecurityStats,
+		"LOAD_SECURITY_SHARES":    LoadSecurityShares,
 		"BACKFILL_SECURITY_STATS": BackfillSecurityStats,
 		"LOAD_INDICES":            LoadIndices,
-		"LOAD_VOLUME":             LoadVolume,
-		"LOAD_FREE_FLOAT_SHARES":  LoadFreeFloatShares,
-		"LOAD_INDEX_VALUE":        LoadIndexValue,
+		"LOAD_INDEX_VALUES":       LoadIndexValues,
 		"LOAD_INDEX_STATS":        LoadIndexStats,
+		"BACKFILL_INDEX_STATS":    BackfillIndexStats,
 	}
 
 	marketDataJobType, ok := conversionMap[str]

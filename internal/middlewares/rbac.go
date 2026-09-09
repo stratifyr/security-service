@@ -22,6 +22,8 @@ var restrictedAPIs = map[string]string{ //nolint:gochecknoglobals // static rout
 	"PATCH /market-holidays":  RoleAdmin,
 	"DELETE /market-holidays": RoleAdmin,
 
+	"GET /market-data-job-types": RoleAdmin,
+
 	"GET /market-data-jobs":         RoleAdmin,
 	"POST /market-data-jobs":        RoleAdmin,
 	"GET /market-data-jobs/{id}":    RoleAdmin,
