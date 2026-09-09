@@ -29,6 +29,7 @@ type IndexFilter struct {
 type Index struct {
 	ID           int
 	Name         string
+	Value        float64
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	Constituents []*IndexConstituent
@@ -45,7 +46,7 @@ func NewIndexStore(indexConstituentStore IndexConstituentStore) *indexStore {
 func (s *indexStore) List(ctx *gofr.Context, filter *IndexFilter, limit, offset int) ([]*Index, error) {
 	whereClause, values := filter.buildWhereClause()
 
-	query := `SELECT id, name, created_at, updated_at
+	query := `SELECT id, name, value, created_at, updated_at
               FROM indices %s`
 
 	if limit > 0 {
@@ -66,7 +67,7 @@ func (s *indexStore) List(ctx *gofr.Context, filter *IndexFilter, limit, offset 
 	for rows.Next() {
 		var i Index
 
-		err = rows.Scan(&i.ID, &i.Name, &i.CreatedAt, &i.UpdatedAt)
+		err = rows.Scan(&i.ID, &i.Name, &i.Value, &i.CreatedAt, &i.UpdatedAt)
 		if err != nil {
 			return nil, datasource.ErrorDB{Err: err}
 		}
@@ -91,10 +92,10 @@ func (s *indexStore) List(ctx *gofr.Context, filter *IndexFilter, limit, offset 
 func (s *indexStore) Retrieve(ctx *gofr.Context, id int) (*Index, error) {
 	var index Index
 
-	query := `SELECT id, name, created_at, updated_at
+	query := `SELECT id, name, value, created_at, updated_at
               FROM indices WHERE id = ?`
 
-	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&index.ID, &index.Name, &index.CreatedAt, &index.UpdatedAt)
+	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&index.ID, &index.Name, &index.Value, &index.CreatedAt, &index.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "indices", Value: strconv.Itoa(id)}
@@ -119,9 +120,9 @@ func (s *indexStore) Create(ctx *gofr.Context, index *Index) (*Index, error) {
 
 	defer s.rollback(ctx, txn)
 
-	query := "INSERT INTO indices (name, created_at, updated_at) VALUES (?, ?, ?)"
+	query := "INSERT INTO indices (name, value, created_at, updated_at) VALUES (?, ?, ?, ?)"
 
-	result, err := txn.ExecContext(ctx, query, index.Name, index.CreatedAt, index.UpdatedAt)
+	result, err := txn.ExecContext(ctx, query, index.Name, index.Value, index.CreatedAt, index.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -155,10 +156,10 @@ func (s *indexStore) Update(ctx *gofr.Context, id int, index *Index) (*Index, er
 
 	defer s.rollback(ctx, txn)
 
-	query := `UPDATE indices SET name = ?, created_at = ?, updated_at = ?
+	query := `UPDATE indices SET name = ?, value = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
-	_, err = txn.ExecContext(ctx, query, index.Name, index.CreatedAt, index.UpdatedAt, id)
+	_, err = txn.ExecContext(ctx, query, index.Name, index.Value, index.CreatedAt, index.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}

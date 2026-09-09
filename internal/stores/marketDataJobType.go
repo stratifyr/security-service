@@ -11,6 +11,8 @@ const (
 	LoadIndices
 	LoadVolume
 	LoadFreeFloatShares
+	LoadIndexValue
+	LoadIndexStats
 )
 
 type MarketDataJobType int
@@ -23,6 +25,8 @@ func (m MarketDataJobType) String() string {
 		LoadIndices:           "LOAD_INDICES",
 		LoadVolume:            "LOAD_VOLUME",
 		LoadFreeFloatShares:   "LOAD_FREE_FLOAT_SHARES",
+		LoadIndexValue:        "LOAD_INDEX_VALUE",
+		LoadIndexStats:        "LOAD_INDEX_STATS",
 	}
 
 	return conversionMap[m]
@@ -36,6 +40,8 @@ func MarketDataJobTypeFromString(str string) (MarketDataJobType, error) {
 		"LOAD_INDICES":            LoadIndices,
 		"LOAD_VOLUME":             LoadVolume,
 		"LOAD_FREE_FLOAT_SHARES":  LoadFreeFloatShares,
+		"LOAD_INDEX_VALUE":        LoadIndexValue,
+		"LOAD_INDEX_STATS":        LoadIndexStats,
 	}
 
 	marketDataJobType, ok := conversionMap[str]
