@@ -17,7 +17,7 @@ func NewMarketDayGRPCHandler(svc services.MarketDayService) *marketDayGRPCHandle
 	return &marketDayGRPCHandler{svc: svc}
 }
 
-func (h *marketDayGRPCHandler) Index(ctx *gofr.Context) (any, error) {
+func (h *marketDayGRPCHandler) List(ctx *gofr.Context) (any, error) {
 	var payload pb.GetMarketDaysRequest
 
 	if err := ctx.Bind(&payload); err != nil {
@@ -41,7 +41,7 @@ func (h *marketDayGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		}{StartDate: startDate, EndDate: endDate},
 	}
 
-	marketDays, _, err := h.svc.Index(ctx, filter)
+	marketDays, _, err := h.svc.List(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

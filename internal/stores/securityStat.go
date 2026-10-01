@@ -14,8 +14,7 @@ import (
 )
 
 type SecurityStatStore interface {
-	Index(ctx *gofr.Context, filter *SecurityStatFilter, limit, offset int) ([]*SecurityStat, error)
-	Count(ctx *gofr.Context, filter *SecurityStatFilter) (int, error)
+	List(ctx *gofr.Context, filter *SecurityStatFilter, limit, offset int) ([]*SecurityStat, error)
 	Retrieve(ctx *gofr.Context, id int) (*SecurityStat, error)
 	Create(ctx *gofr.Context, ss *SecurityStat) (*SecurityStat, error)
 	Update(ctx *gofr.Context, id int, ss *SecurityStat) (*SecurityStat, error)
@@ -49,7 +48,7 @@ func NewSecurityStatStore() *securityStatStore {
 	return &securityStatStore{}
 }
 
-func (*securityStatStore) Index(ctx *gofr.Context, filter *SecurityStatFilter, limit, offset int) ([]*SecurityStat, error) {
+func (*securityStatStore) List(ctx *gofr.Context, filter *SecurityStatFilter, limit, offset int) ([]*SecurityStat, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, security_id, date, open, close, high, low, volume, created_at, updated_at
@@ -87,21 +86,6 @@ func (*securityStatStore) Index(ctx *gofr.Context, filter *SecurityStatFilter, l
 	}
 
 	return securityStats, nil
-}
-
-func (*securityStatStore) Count(ctx *gofr.Context, filter *SecurityStatFilter) (int, error) {
-	whereClause, values := filter.buildWhereClause()
-
-	query := `SELECT COUNT(*) FROM security_stats %s`
-
-	var count int
-
-	err := ctx.SQL.QueryRowContext(ctx, fmt.Sprintf(query, whereClause), values...).Scan(&count)
-	if err != nil {
-		return 0, datasource.ErrorDB{Err: err}
-	}
-
-	return count, nil
 }
 
 func (*securityStatStore) Retrieve(ctx *gofr.Context, id int) (*SecurityStat, error) {

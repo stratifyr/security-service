@@ -11,8 +11,7 @@ import (
 )
 
 type MarketDataJobService interface {
-	Index(ctx *gofr.Context, f *MarketDataJobFilter, page, perPage int) ([]*MarketDataJob, int, error)
-	Read(ctx *gofr.Context, id int) (*MarketDataJob, error)
+	List(ctx *gofr.Context, f *MarketDataJobFilter, page, perPage int) ([]*MarketDataJob, int, error)
 	Create(ctx *gofr.Context, payload *MarketDataJobCreate) (*MarketDataJob, error)
 	Patch(ctx *gofr.Context, id int, payload *MarketDataJobUpdate) (*MarketDataJob, error)
 	Delete(ctx *gofr.Context, id int) error
@@ -48,7 +47,7 @@ func NewMarketDataJobService(store stores.MarketDataJobStore) *marketDataJobServ
 	return &marketDataJobService{store: store}
 }
 
-func (s *marketDataJobService) Index(ctx *gofr.Context, f *MarketDataJobFilter, page, perPage int) ([]*MarketDataJob, int, error) {
+func (s *marketDataJobService) List(ctx *gofr.Context, f *MarketDataJobFilter, page, perPage int) ([]*MarketDataJob, int, error) {
 	limit := perPage
 	offset := limit * (page - 1)
 
@@ -56,7 +55,7 @@ func (s *marketDataJobService) Index(ctx *gofr.Context, f *MarketDataJobFilter, 
 		Status: f.Status,
 	}
 
-	marketDataJobs, err := s.store.Index(ctx, filter, limit, offset)
+	marketDataJobs, err := s.store.List(ctx, filter, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -85,15 +84,6 @@ func (s *marketDataJobService) Index(ctx *gofr.Context, f *MarketDataJobFilter, 
 	}
 
 	return resp, count, nil
-}
-
-func (s *marketDataJobService) Read(ctx *gofr.Context, id int) (*MarketDataJob, error) {
-	marketDataJob, err := s.store.Retrieve(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildResp(marketDataJob), nil
 }
 
 func (s *marketDataJobService) Create(ctx *gofr.Context, payload *MarketDataJobCreate) (*MarketDataJob, error) {

@@ -9,7 +9,7 @@ import (
 )
 
 type MetricService interface {
-	Index(ctx *gofr.Context) []*Metric
+	List(ctx *gofr.Context) []*Metric
 }
 
 type Metric struct {
@@ -28,8 +28,8 @@ func NewMetricService(store stores.MetricStore) *metricService {
 	return &metricService{store: store}
 }
 
-func (s *metricService) Index(ctx *gofr.Context) []*Metric {
-	metrics := s.store.Index(ctx)
+func (s *metricService) List(ctx *gofr.Context) []*Metric {
+	metrics := s.store.List(ctx)
 
 	var resp = make([]*Metric, len(metrics))
 

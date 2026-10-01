@@ -9,8 +9,7 @@ import (
 )
 
 type MarketHolidayService interface {
-	Index(ctx *gofr.Context, f *MarketHolidayFilter, page, perPage int) ([]*MarketHoliday, int, error)
-	Read(ctx *gofr.Context, id int) (*MarketHoliday, error)
+	List(ctx *gofr.Context, f *MarketHolidayFilter, page, perPage int) ([]*MarketHoliday, int, error)
 	Create(ctx *gofr.Context, payload *MarketHolidayCreate) (*MarketHoliday, error)
 	Patch(ctx *gofr.Context, id int, payload *MarketHolidayUpdate) (*MarketHoliday, error)
 	Delete(ctx *gofr.Context, id int) error
@@ -50,7 +49,7 @@ func NewMarketHolidayService(store stores.MarketHolidayStore) *marketHolidayServ
 	return &marketHolidayService{store: store}
 }
 
-func (s *marketHolidayService) Index(ctx *gofr.Context, f *MarketHolidayFilter, page, perPage int) ([]*MarketHoliday, int, error) {
+func (s *marketHolidayService) List(ctx *gofr.Context, f *MarketHolidayFilter, page, perPage int) ([]*MarketHoliday, int, error) {
 	limit := perPage
 	offset := limit * (page - 1)
 
@@ -59,7 +58,7 @@ func (s *marketHolidayService) Index(ctx *gofr.Context, f *MarketHolidayFilter, 
 		DateBetween: f.DateBetween,
 	}
 
-	marketHolidays, err := s.store.Index(ctx, filter, limit, offset)
+	marketHolidays, err := s.store.List(ctx, filter, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -80,15 +79,6 @@ func (s *marketHolidayService) Index(ctx *gofr.Context, f *MarketHolidayFilter, 
 	}
 
 	return resp, count, nil
-}
-
-func (s *marketHolidayService) Read(ctx *gofr.Context, id int) (*MarketHoliday, error) {
-	marketHoliday, err := s.store.Retrieve(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildResp(marketHoliday), nil
 }
 
 func (s *marketHolidayService) Create(ctx *gofr.Context, payload *MarketHolidayCreate) (*MarketHoliday, error) {

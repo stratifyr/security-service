@@ -98,7 +98,7 @@ func (s *indexStatService) Upsert(ctx *gofr.Context, payload *IndexStatUpsert) (
 		return s.patch(ctx, indexStats[0].ID, payload)
 	}
 
-	marketDays, count, err := s.marketDayService.Index(ctx,
+	marketDays, count, err := s.marketDayService.List(ctx,
 		&MarketDayFilter{DateBetween: &struct {
 			StartDate time.Time
 			EndDate   time.Time

@@ -17,7 +17,6 @@ func main() {
 
 	app.Migrate(migrations.All())
 
-	industryStore := stores.NewIndustryStore()
 	metricStore := stores.NewMetricStore()
 	securityStore := stores.NewSecurityStore()
 	marketHolidayStore := stores.NewMarketHolidayStore()
@@ -29,7 +28,6 @@ func main() {
 	indexStatStore := stores.NewIndexStatStore()
 	indexStore := stores.NewIndexStore(indexConstituentStore)
 
-	industryService := services.NewIndustryService(industryStore)
 	metricService := services.NewMetricService(metricStore)
 	marketHolidayService := services.NewMarketHolidayService(marketHolidayStore)
 	marketDayService := services.NewMarketDayService(marketHolidayStore)
@@ -41,12 +39,9 @@ func main() {
 	indexStatService := services.NewIndexStatService(marketDayService, indexStatStore)
 	indexService := services.NewIndexService(marketDayService, securityService, indexStatStore, indexStore)
 
-	industryHandler := handlers.NewIndustryHandler(industryService)
 	metricHandler := handlers.NewMetricHandler(metricService)
 	marketHolidayHandler := handlers.NewMarketHolidayHandler(marketHolidayService)
-	marketDayHandler := handlers.NewMarketDayHandler(marketDayService)
 	securityHandler := handlers.NewSecurityHandler(securityService)
-	securityStatHandler := handlers.NewSecurityStatHandler(securityStatService)
 	marketDataJobTypeHandler := handlers.NewMarketDataJobTypeHandler(marketDataJobTypeService)
 	marketDataJobHandler := handlers.NewMarketDataJobHandler(marketDataJobService)
 	indexHandler := handlers.NewIndexHandler(indexService)
@@ -65,35 +60,18 @@ func main() {
 
 	app.UseMiddleware(middlewares.RBAC)
 
-	app.GET("/industries", industryHandler.Index)
+	app.GET("/securities", securityHandler.List)
+	app.GET("/indices", indexHandler.List)
+	app.GET("/metrics", metricHandler.List)
+	app.GET("/market-data-job-types", marketDataJobTypeHandler.List)
 
-	app.GET("/metrics", metricHandler.Index)
-
-	app.GET("/market-holidays", marketHolidayHandler.Index)
+	app.GET("/market-holidays", marketHolidayHandler.List)
 	app.POST("/market-holidays", marketHolidayHandler.Create)
-	app.GET("/market-holidays/{id}", marketHolidayHandler.Read)
 	app.PATCH("/market-holidays/{id}", marketHolidayHandler.Patch)
 	app.DELETE("/market-holidays/{id}", marketHolidayHandler.Delete)
 
-	app.GET("/market-days", marketDayHandler.Index)
-
-	app.GET("/securities", securityHandler.Index)
-	app.POST("/securities", securityHandler.Create)
-	app.GET("/securities/{id}", securityHandler.Read)
-	app.PATCH("/securities/{id}", securityHandler.Patch)
-
-	app.GET("/security-stats", securityStatHandler.Index)
-	app.POST("/security-stats", securityStatHandler.Create)
-	app.GET("/security-stats/{id}", securityStatHandler.Read)
-	app.PATCH("/security-stats/{id}", securityStatHandler.Patch)
-
-	app.GET("/indices", indexHandler.List)
-
-	app.GET("/market-data-job-types", marketDataJobTypeHandler.List)
-
-	app.GET("/market-data-jobs", marketDataJobHandler.Index)
+	app.GET("/market-data-jobs", marketDataJobHandler.List)
 	app.POST("/market-data-jobs", marketDataJobHandler.Create)
-	app.GET("/market-data-jobs/{id}", marketDataJobHandler.Read)
 	app.PATCH("/market-data-jobs/{id}", marketDataJobHandler.Patch)
 	app.DELETE("/market-data-jobs/{id}", marketDataJobHandler.Delete)
 

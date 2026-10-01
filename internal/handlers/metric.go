@@ -23,8 +23,8 @@ func NewMetricHandler(svc services.MetricService) *metricHandler {
 	return &metricHandler{svc: svc}
 }
 
-func (h *metricHandler) Index(ctx *gofr.Context) (any, error) {
-	metrics := h.svc.Index(ctx)
+func (h *metricHandler) List(ctx *gofr.Context) (any, error) {
+	metrics := h.svc.List(ctx)
 
 	var resp = make([]*Metric, len(metrics))
 

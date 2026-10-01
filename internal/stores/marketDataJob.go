@@ -15,7 +15,7 @@ import (
 )
 
 type MarketDataJobStore interface {
-	Index(ctx *gofr.Context, filter *MarketDataJobFilter, limit, offset int) ([]*MarketDataJob, error)
+	List(ctx *gofr.Context, filter *MarketDataJobFilter, limit, offset int) ([]*MarketDataJob, error)
 	Count(ctx *gofr.Context, filter *MarketDataJobFilter) (int, error)
 	Retrieve(ctx *gofr.Context, id int) (*MarketDataJob, error)
 	Create(ctx *gofr.Context, marketHoliday *MarketDataJob) (*MarketDataJob, error)
@@ -42,7 +42,7 @@ func NewMarketDataJobStore() *marketDataJobStore {
 	return &marketDataJobStore{}
 }
 
-func (*marketDataJobStore) Index(ctx *gofr.Context, filter *MarketDataJobFilter, limit, offset int) ([]*MarketDataJob, error) {
+func (*marketDataJobStore) List(ctx *gofr.Context, filter *MarketDataJobFilter, limit, offset int) ([]*MarketDataJob, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, type, status, logs, created_at, updated_at

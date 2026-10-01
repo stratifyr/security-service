@@ -95,7 +95,7 @@ func (s *indexService) List(ctx *gofr.Context, filter *IndexFilter) ([]*Index, e
 		return nil, err
 	}
 
-	securities, err := s.securityService.Index(ctx, &SecurityFilter{})
+	securities, err := s.securityService.List(ctx, &SecurityFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (s *indexService) Upsert(ctx *gofr.Context, payload *IndexUpsert) (*Index, 
 		return nil, err
 	}
 
-	securities, err := s.securityService.Index(ctx, &SecurityFilter{})
+	securities, err := s.securityService.List(ctx, &SecurityFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 		return nil, err
 	}
 
-	securities, err := s.securityService.Index(ctx, &SecurityFilter{})
+	securities, err := s.securityService.List(ctx, &SecurityFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 }
 
 func (s *indexService) getPrevMarketDay(ctx *gofr.Context, referenceDate time.Time) (time.Time, error) {
-	dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
+	dates, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
 		N         int
 		Reference time.Time
 	}{N: 2, Reference: referenceDate}})

@@ -11,7 +11,7 @@ import (
 )
 
 type MarketDayService interface {
-	Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error)
+	List(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error)
 }
 
 type MarketDayFilter struct {
@@ -35,7 +35,7 @@ func NewMarketDayService(marketHolidayStore stores.MarketHolidayStore) *marketDa
 }
 
 //nolint:gocyclo // filter logic requires branching
-func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error) {
+func (s *marketDayService) List(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error) {
 	var (
 		startDate time.Time
 		endDate   time.Time
@@ -66,7 +66,7 @@ func (s *marketDayService) Index(ctx *gofr.Context, f *MarketDayFilter) ([]time.
 		startDate = endDate.Add(-time.Duration(lookBackDays) * 24 * time.Hour)
 	}
 
-	marketHolidays, err := s.marketHolidayStore.Index(ctx, &stores.MarketHolidayFilter{
+	marketHolidays, err := s.marketHolidayStore.List(ctx, &stores.MarketHolidayFilter{
 		DateBetween: &struct {
 			StartDate time.Time
 			EndDate   time.Time

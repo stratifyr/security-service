@@ -17,7 +17,7 @@ func NewSecurityGRPCHandler(svc services.SecurityService) *securityGRPCHandler {
 	return &securityGRPCHandler{svc: svc}
 }
 
-func (h *securityGRPCHandler) Index(ctx *gofr.Context) (any, error) {
+func (h *securityGRPCHandler) List(ctx *gofr.Context) (any, error) {
 	var payload pb.GetSecuritiesRequest
 
 	if err := ctx.Bind(&payload); err != nil {
@@ -36,7 +36,7 @@ func (h *securityGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		}
 	}
 
-	securities, err := h.svc.Index(ctx, &filter)
+	securities, err := h.svc.List(ctx, &filter)
 	if err != nil {
 		return nil, err
 	}
@@ -53,14 +53,15 @@ func (h *securityGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 	}, nil
 }
 
-func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
-	var payload pb.UpdateSecurityRequest
+func (h *securityGRPCHandler) Upsert(ctx *gofr.Context) (any, error) {
+	var payload pb.UpsertSecurityRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
 	}
 
-	model := &services.SecurityUpdate{
+	model := &services.SecurityUpsert{
+		ISIN:            payload.Isin,
 		Symbol:          payload.Symbol,
 		Industry:        payload.Industry,
 		Name:            payload.Name,
@@ -70,12 +71,12 @@ func (h *securityGRPCHandler) Patch(ctx *gofr.Context) (any, error) {
 		FreeFloatShares: int(payload.FreeFloatShares),
 	}
 
-	security, err := h.svc.Patch(ctx, int(payload.Id), model)
+	security, err := h.svc.Upsert(ctx, model)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.UpdateSecurityResponse{
+	return &pb.UpsertSecurityResponse{
 		Security: h.buildResponse(security),
 	}, nil
 }

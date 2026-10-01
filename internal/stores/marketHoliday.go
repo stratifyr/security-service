@@ -14,7 +14,7 @@ import (
 )
 
 type MarketHolidayStore interface {
-	Index(ctx *gofr.Context, filter *MarketHolidayFilter, limit, offset int) ([]*MarketHoliday, error)
+	List(ctx *gofr.Context, filter *MarketHolidayFilter, limit, offset int) ([]*MarketHoliday, error)
 	Count(ctx *gofr.Context, filter *MarketHolidayFilter) (int, error)
 	Retrieve(ctx *gofr.Context, id int) (*MarketHoliday, error)
 	Create(ctx *gofr.Context, marketHoliday *MarketHoliday) (*MarketHoliday, error)
@@ -44,7 +44,7 @@ func NewMarketHolidayStore() *marketHolidayStore {
 	return &marketHolidayStore{}
 }
 
-func (*marketHolidayStore) Index(ctx *gofr.Context, filter *MarketHolidayFilter, limit, offset int) ([]*MarketHoliday, error) {
+func (*marketHolidayStore) List(ctx *gofr.Context, filter *MarketHolidayFilter, limit, offset int) ([]*MarketHoliday, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, date, description, created_at, updated_at
@@ -129,6 +129,8 @@ func (s *marketHolidayStore) Create(ctx *gofr.Context, mh *MarketHoliday) (*Mark
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
+	invalidateCache(ctx, mh)
+
 	return s.Retrieve(ctx, int(id))
 }
 
@@ -141,6 +143,8 @@ func (s *marketHolidayStore) Update(ctx *gofr.Context, id int, mh *MarketHoliday
 		return nil, datasource.ErrorDB{Err: err}
 	}
 
+	invalidateCache(ctx, mh)
+
 	return s.Retrieve(ctx, id)
 }
 
@@ -149,6 +153,8 @@ func (*marketHolidayStore) Delete(ctx *gofr.Context, id int) error {
 	if err != nil {
 		return datasource.ErrorDB{Err: err}
 	}
+
+	invalidateCache(ctx, &MarketHoliday{})
 
 	return nil
 }
@@ -171,4 +177,11 @@ func (f *MarketHolidayFilter) buildWhereClause() (clause string, values []any) {
 	}
 
 	return clause, values
+}
+
+func (*MarketHoliday) cacheInvalidations() []string {
+	return []string{
+		SecuritiesClientCachePattern,
+		SecurityMetricsServerCachePattern,
+	}
 }

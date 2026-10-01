@@ -3,7 +3,7 @@ package stores
 import "gofr.dev/pkg/gofr"
 
 type MetricStore interface {
-	Index(ctx *gofr.Context) []*Metric
+	List(ctx *gofr.Context) []*Metric
 }
 
 type Metric struct {
@@ -19,7 +19,7 @@ func NewMetricStore() *metricStore {
 	return &metricStore{}
 }
 
-func (*metricStore) Index(_ *gofr.Context) []*Metric {
+func (*metricStore) List(_ *gofr.Context) []*Metric {
 	metrics := []*Metric{
 		{ID: 100, Type: SMA, Period: 5, Indicator: Trend},
 		{ID: 101, Type: SMA, Period: 10, Indicator: Trend},

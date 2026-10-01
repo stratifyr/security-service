@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"strconv"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -47,27 +46,6 @@ type MarketDataMetric struct {
 	NormalizedValue float64 `json:"normalizedValue"`
 }
 
-type SecurityCreate struct {
-	ISIN            string  `json:"isin"`
-	Symbol          string  `json:"symbol"`
-	Industry        string  `json:"industry"`
-	Name            string  `json:"name"`
-	Image           string  `json:"image"`
-	LTP             float64 `json:"ltp"`
-	Volume          int     `json:"volume"`
-	FreeFloatShares int     `json:"freeFloatShares"`
-}
-
-type SecurityUpdate struct {
-	Symbol          string  `json:"symbol"`
-	Industry        string  `json:"industry"`
-	Name            string  `json:"name"`
-	Image           string  `json:"image"`
-	LTP             float64 `json:"ltp"`
-	Volume          int     `json:"volume"`
-	FreeFloatShares int     `json:"freeFloatShares"`
-}
-
 type securityHandler struct {
 	svc services.SecurityService
 }
@@ -76,7 +54,7 @@ func NewSecurityHandler(svc services.SecurityService) *securityHandler {
 	return &securityHandler{svc: svc}
 }
 
-func (h *securityHandler) Index(ctx *gofr.Context) (any, error) {
+func (h *securityHandler) List(ctx *gofr.Context) (any, error) {
 	var (
 		filter services.SecurityFilter
 		err    error
@@ -89,7 +67,7 @@ func (h *securityHandler) Index(ctx *gofr.Context) (any, error) {
 		}
 	}
 
-	securities, err := h.svc.Index(ctx, &filter)
+	securities, err := h.svc.List(ctx, &filter)
 	if err != nil {
 		return nil, err
 	}
@@ -105,82 +83,6 @@ func (h *securityHandler) Index(ctx *gofr.Context) (any, error) {
 		"meta": map[string]any{
 			"total": len(securities),
 		},
-	}}, nil
-}
-
-func (h *securityHandler) Read(ctx *gofr.Context) (any, error) {
-	id, err := strconv.Atoi(ctx.PathParam("id"))
-	if err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
-	}
-
-	security, err := h.svc.Read(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Raw{Data: map[string]any{
-		"data": h.buildResp(security),
-	}}, nil
-}
-
-func (h *securityHandler) Create(ctx *gofr.Context) (any, error) {
-	var payload SecurityCreate
-
-	if err := ctx.Bind(&payload); err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"request-body"}}
-	}
-
-	model := &services.SecurityCreate{
-		ISIN:            payload.ISIN,
-		Symbol:          payload.Symbol,
-		Industry:        payload.Industry,
-		Name:            payload.Name,
-		Image:           payload.Image,
-		LTP:             payload.LTP,
-		Volume:          payload.Volume,
-		FreeFloatShares: payload.FreeFloatShares,
-	}
-
-	security, err := h.svc.Create(ctx, model)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Raw{Data: map[string]any{
-		"data": h.buildResp(security),
-	}}, nil
-}
-
-func (h *securityHandler) Patch(ctx *gofr.Context) (any, error) {
-	id, err := strconv.Atoi(ctx.PathParam("id"))
-	if err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
-	}
-
-	var payload SecurityUpdate
-
-	if err := ctx.Bind(&payload); err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"request-body"}}
-	}
-
-	model := &services.SecurityUpdate{
-		Symbol:          payload.Symbol,
-		Industry:        payload.Industry,
-		Name:            payload.Name,
-		Image:           payload.Image,
-		LTP:             payload.LTP,
-		Volume:          payload.Volume,
-		FreeFloatShares: payload.FreeFloatShares,
-	}
-
-	security, err := h.svc.Patch(ctx, id, model)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Raw{Data: map[string]any{
-		"data": h.buildResp(security),
 	}}, nil
 }
 

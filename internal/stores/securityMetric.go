@@ -9,7 +9,7 @@ import (
 )
 
 type SecurityMetricStore interface {
-	Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error)
+	List(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error)
 	Create(ctx *gofr.Context, securityMetrics []*SecurityMetric, date time.Time) error
 }
 
@@ -33,7 +33,7 @@ func NewSecurityMetricStore() *securityMetricStore {
 	return &securityMetricStore{}
 }
 
-func (*securityMetricStore) Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
+func (*securityMetricStore) List(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
 	keys := make([]string, len(securityIDs))
 
 	for i, securityID := range securityIDs {
