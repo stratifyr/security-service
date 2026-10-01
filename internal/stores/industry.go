@@ -1,13 +1,6 @@
 package stores
 
-import (
-	"gofr.dev/pkg/gofr"
-	"gofr.dev/pkg/gofr/http"
-)
-
-type IndustryStore interface {
-	Index(ctx *gofr.Context) []Industry
-}
+import "gofr.dev/pkg/gofr/http"
 
 const (
 	AutomobileAndAutoComponents Industry = iota
@@ -40,44 +33,6 @@ const (
 )
 
 type Industry int
-
-type industryStore struct{}
-
-func NewIndustryStore() IndustryStore {
-	return &industryStore{}
-}
-
-func (*industryStore) Index(_ *gofr.Context) []Industry {
-	return []Industry{
-		AutomobileAndAutoComponents,
-		CapitalGoods,
-		Chemicals,
-		Construction,
-		ConstructionMaterials,
-		ConsumerDurables,
-		ConsumerServices,
-		Diversified,
-		FastMovingConsumerGoods,
-		FinancialServices,
-		ForestMaterials,
-		Healthcare,
-		InformationTechnology,
-		MediaEntertainmentAndPublication,
-		MetalsAndMining,
-		OilGasAndConsumableFuels,
-		Power,
-		Realty,
-		Services,
-		Telecommunication,
-		Textiles,
-		MarketIndex,
-		Bond,
-		Gold,
-		Silver,
-		Utilities,
-		Metals,
-	}
-}
 
 func (ex Industry) String() string {
 	var conversionMap = map[Industry]string{

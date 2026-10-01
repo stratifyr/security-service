@@ -14,7 +14,7 @@ import (
 )
 
 type SecurityStore interface {
-	Index(ctx *gofr.Context, f *SecurityFilter, limit, offset int) ([]*Security, error)
+	List(ctx *gofr.Context, f *SecurityFilter, limit, offset int) ([]*Security, error)
 	Retrieve(ctx *gofr.Context, id int) (*Security, error)
 	Create(ctx *gofr.Context, security *Security) (*Security, error)
 	Update(ctx *gofr.Context, id int, security *Security) (*Security, error)
@@ -44,7 +44,7 @@ func NewSecurityStore() *securityStore {
 	return &securityStore{}
 }
 
-func (*securityStore) Index(ctx *gofr.Context, filter *SecurityFilter, limit, offset int) ([]*Security, error) {
+func (*securityStore) List(ctx *gofr.Context, filter *SecurityFilter, limit, offset int) ([]*Security, error) {
 	whereClause, values := filter.buildWhereClause()
 
 	query := `SELECT id, isin, symbol, industry, name, image, ltp, volume, free_float_shares, created_at, updated_at

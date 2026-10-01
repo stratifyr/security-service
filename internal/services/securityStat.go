@@ -9,15 +9,7 @@ import (
 )
 
 type SecurityStatService interface {
-	Index(ctx *gofr.Context, f *SecurityStatFilter, page, perPage int) ([]*SecurityStat, int, error)
-	Read(ctx *gofr.Context, id int) (*SecurityStat, error)
-	Create(ctx *gofr.Context, payload *SecurityStatCreate) (*SecurityStat, error)
-	Patch(ctx *gofr.Context, id int, payload *SecurityStatUpdate) (*SecurityStat, error)
-}
-
-type SecurityStatFilter struct {
-	Date       time.Time
-	SecurityID int
+	Upsert(ctx *gofr.Context, payload *SecurityStatUpsert) (*SecurityStat, error)
 }
 
 type SecurityStat struct {
@@ -33,7 +25,7 @@ type SecurityStat struct {
 	UpdatedAt  time.Time
 }
 
-type SecurityStatCreate struct {
+type SecurityStatUpsert struct {
 	SecurityID int
 	Date       time.Time
 	Open       float64
@@ -41,14 +33,6 @@ type SecurityStatCreate struct {
 	High       float64
 	Low        float64
 	Volume     int
-}
-
-type SecurityStatUpdate struct {
-	Open   float64
-	Close  float64
-	High   float64
-	Low    float64
-	Volume int
 }
 
 type securityStatService struct {
@@ -63,64 +47,17 @@ func NewSecurityStatService(marketDayService MarketDayService, store stores.Secu
 	}
 }
 
-func (s *securityStatService) Index(ctx *gofr.Context, f *SecurityStatFilter, page, perPage int) ([]*SecurityStat, int, error) {
-	limit := perPage
-	offset := limit * (page - 1)
-
-	var filter stores.SecurityStatFilter
-
-	if f.SecurityID != 0 {
-		filter.SecurityIDs = []int{f.SecurityID}
-	}
-
-	if f.Date != (time.Time{}) {
-		filter.Date = f.Date
-	}
-
-	securityStats, err := s.store.Index(ctx, &filter, limit, offset)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	count, err := s.store.Count(ctx, &filter)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if count == 0 {
-		return nil, 0, nil
-	}
-
-	var resp = make([]*SecurityStat, len(securityStats))
-
-	for i := range securityStats {
-		resp[i] = s.buildResp(securityStats[i])
-	}
-
-	return resp, count, nil
-}
-
-func (s *securityStatService) Read(ctx *gofr.Context, id int) (*SecurityStat, error) {
-	securityStat, err := s.store.Retrieve(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildResp(securityStat), nil
-}
-
-func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCreate) (*SecurityStat, error) {
-	securityStats, err := s.store.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{payload.SecurityID}, Date: payload.Date}, 1, 0)
+func (s *securityStatService) Upsert(ctx *gofr.Context, payload *SecurityStatUpsert) (*SecurityStat, error) {
+	securityStats, err := s.store.List(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{payload.SecurityID}, Date: payload.Date}, 1, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(securityStats) > 0 {
-		return s.Patch(ctx, securityStats[0].ID, &SecurityStatUpdate{Open: payload.Open,
-			Close: payload.Close, High: payload.High, Low: payload.Low, Volume: payload.Volume})
+		return s.patch(ctx, securityStats[0].ID, payload)
 	}
 
-	marketDays, count, err := s.marketDayService.Index(ctx,
+	marketDays, count, err := s.marketDayService.List(ctx,
 		&MarketDayFilter{DateBetween: &struct {
 			StartDate time.Time
 			EndDate   time.Time
@@ -153,7 +90,7 @@ func (s *securityStatService) Create(ctx *gofr.Context, payload *SecurityStatCre
 	return s.buildResp(securityStat), nil
 }
 
-func (s *securityStatService) Patch(ctx *gofr.Context, id int, payload *SecurityStatUpdate) (*SecurityStat, error) {
+func (s *securityStatService) patch(ctx *gofr.Context, id int, payload *SecurityStatUpsert) (*SecurityStat, error) {
 	securityStat, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err

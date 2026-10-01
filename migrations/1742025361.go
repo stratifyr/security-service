@@ -9,8 +9,8 @@ func setupInitialSchemas() migration.Migrate {
 		UP: func(d migration.Datasource) error {
 			if _, err := d.SQL.Exec(`CREATE TABLE securities (
 										id INT PRIMARY KEY AUTO_INCREMENT,
-										isin VARCHAR(50) NOT NULL UNIQUE,
-										symbol VARCHAR(50) NOT NULL,
+										isin VARCHAR(50) NOT NULL,
+										symbol VARCHAR(50) NOT NULL UNIQUE,
 										industry INT NOT NULL,
 										name VARCHAR(100) NOT NULL,
 										image VARCHAR(200) NOT NULL,

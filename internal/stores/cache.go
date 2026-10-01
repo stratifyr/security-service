@@ -11,6 +11,7 @@ const (
 	SecuritiesClientCacheKey                    = "security-service:client-cache:securities:date:%s"
 	SecuritiesClientCachePattern                = "security-service:client-cache:securities:date:*"
 	SecurityMetricsServerCacheKey               = "security-service:server-cache:security-metrics:security-id:%d:date:%s"
+	SecurityMetricsServerCachePattern           = "security-service:server-cache:security-metrics:security-id:*:date:*"
 	SecurityMetricsServerCachePatternBySecurity = "security-service:server-cache:security-metrics:security-id:%d:date:*"
 )
 

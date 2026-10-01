@@ -18,7 +18,7 @@ func NewMarketDataJobGRPCHandler(svc services.MarketDataJobService) *marketDataJ
 	return &marketDataJobGRPCHandler{svc: svc}
 }
 
-func (h *marketDataJobGRPCHandler) Index(ctx *gofr.Context) (any, error) {
+func (h *marketDataJobGRPCHandler) List(ctx *gofr.Context) (any, error) {
 	var payload pb.GetMarketDataJobsRequest
 
 	if err := ctx.Bind(&payload); err != nil {
@@ -29,7 +29,7 @@ func (h *marketDataJobGRPCHandler) Index(ctx *gofr.Context) (any, error) {
 		Status: payload.Status,
 	}
 
-	marketDataJobs, count, err := h.svc.Index(ctx, filter, 0, 0)
+	marketDataJobs, count, err := h.svc.List(ctx, filter, 0, 0)
 	if err != nil {
 		return nil, err
 	}

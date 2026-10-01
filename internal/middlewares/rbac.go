@@ -7,26 +7,17 @@ import (
 )
 
 const (
-	RoleSuperAdmin = "SUPER_ADMIN"
-	RoleAdmin      = "ADMIN"
+	RoleAdmin = "ADMIN"
 )
 
 var restrictedAPIs = map[string]string{ //nolint:gochecknoglobals // static route-role mapping
-	"POST /securities":       RoleSuperAdmin,
-	"PATCH /securities/{id}": RoleSuperAdmin,
-
-	"POST /security-stats":       RoleSuperAdmin,
-	"PATCH /security-stats/{id}": RoleSuperAdmin,
-
-	"POST /market-holidays":   RoleAdmin,
-	"PATCH /market-holidays":  RoleAdmin,
-	"DELETE /market-holidays": RoleAdmin,
-
-	"GET /market-data-job-types": RoleAdmin,
-
+	"GET /market-holidays":          RoleAdmin,
+	"POST /market-holidays":         RoleAdmin,
+	"PATCH /market-holidays/{id}":   RoleAdmin,
+	"DELETE /market-holidays/{id}":  RoleAdmin,
+	"GET /market-data-job-types":    RoleAdmin,
 	"GET /market-data-jobs":         RoleAdmin,
 	"POST /market-data-jobs":        RoleAdmin,
-	"GET /market-data-jobs/{id}":    RoleAdmin,
 	"PATCH /market-data-jobs/{id}":  RoleAdmin,
 	"DELETE /market-data-jobs/{id}": RoleAdmin,
 }

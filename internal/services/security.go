@@ -10,10 +10,8 @@ import (
 )
 
 type SecurityService interface {
-	Index(ctx *gofr.Context, f *SecurityFilter) ([]*Security, error)
-	Read(ctx *gofr.Context, id int) (*Security, error)
-	Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error)
-	Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error)
+	List(ctx *gofr.Context, f *SecurityFilter) ([]*Security, error)
+	Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*Security, error)
 }
 
 type SecurityFilter struct {
@@ -37,18 +35,8 @@ type Security struct {
 	SecurityMetrics []*SecurityMetric
 }
 
-type SecurityCreate struct {
+type SecurityUpsert struct {
 	ISIN            string
-	Symbol          string
-	Industry        string
-	Name            string
-	Image           string
-	LTP             float64
-	Volume          int
-	FreeFloatShares int
-}
-
-type SecurityUpdate struct {
 	Symbol          string
 	Industry        string
 	Name            string
@@ -75,12 +63,12 @@ func NewSecurityService(marketDayService MarketDayService, securityMetricService
 	}
 }
 
-func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter) ([]*Security, error) {
+func (s *securityService) List(ctx *gofr.Context, f *SecurityFilter) ([]*Security, error) {
 	if f.Date.IsZero() {
 		f.Date = time.Now()
 	}
 
-	securities, err := s.store.Index(ctx, &stores.SecurityFilter{}, 0, 0)
+	securities, err := s.store.List(ctx, &stores.SecurityFilter{}, 0, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -136,31 +124,16 @@ func (s *securityService) Index(ctx *gofr.Context, f *SecurityFilter) ([]*Securi
 	return resp, nil
 }
 
-func (s *securityService) Read(ctx *gofr.Context, id int) (*Security, error) {
-	security, err := s.store.Retrieve(ctx, id)
+func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*Security, error) {
+	securities, err := s.store.List(ctx, &stores.SecurityFilter{Symbol: payload.Symbol}, 1, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx, time.Now())
-	if err != nil {
-		return nil, err
+	if len(securities) > 0 {
+		return s.patch(ctx, securities[0].ID, payload)
 	}
 
-	securityStats, err := s.getStatsMap(ctx, []int{security.ID}, prevMarketDay)
-	if err != nil {
-		return nil, err
-	}
-
-	securityMetrics, err := s.getSecurityMetricsMap(ctx, []int{security.ID}, prevMarketDay)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildResp(security, securityStats, securityMetrics), nil
-}
-
-func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*Security, error) {
 	industry, err := stores.IndustryFromString(payload.Industry)
 	if err != nil {
 		return nil, err
@@ -203,14 +176,14 @@ func (s *securityService) Create(ctx *gofr.Context, payload *SecurityCreate) (*S
 }
 
 //nolint:gocyclo // patch logic requires multiple validations
-func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpdate) (*Security, error) {
+func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpsert) (*Security, error) {
 	security, err := s.store.Retrieve(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if payload.Symbol != "" {
-		security.Symbol = payload.Symbol
+	if payload.ISIN != "" {
+		security.ISIN = payload.ISIN
 	}
 
 	if payload.Industry != "" {
@@ -264,7 +237,7 @@ func (s *securityService) Patch(ctx *gofr.Context, id int, payload *SecurityUpda
 }
 
 func (s *securityService) getPrevMarketDay(ctx *gofr.Context, referenceDate time.Time) (time.Time, error) {
-	dates, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
+	dates, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
 		N         int
 		Reference time.Time
 	}{N: 2, Reference: referenceDate}})
@@ -281,7 +254,7 @@ func (s *securityService) getPrevMarketDay(ctx *gofr.Context, referenceDate time
 }
 
 func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int]*stores.SecurityStat, error) {
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Date: date}, 0, 0)
+	securityStats, err := s.securityStatStore.List(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs, Date: date}, 0, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +269,7 @@ func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date
 }
 
 func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
-	securityMetrics, err := s.securityMetricService.Index(ctx, securityIDs, date)
+	securityMetrics, err := s.securityMetricService.List(ctx, securityIDs, date)
 	if err != nil {
 		return nil, err
 	}

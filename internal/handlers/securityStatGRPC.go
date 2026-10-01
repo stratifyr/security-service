@@ -17,8 +17,8 @@ func NewSecurityStatGRPCHandler(svc services.SecurityStatService) *securityStatG
 	return &securityStatGRPCHandler{svc: svc}
 }
 
-func (h *securityStatGRPCHandler) Create(ctx *gofr.Context) (any, error) {
-	var payload pb.CreateOrUpdateSecurityStatRequest
+func (h *securityStatGRPCHandler) Upsert(ctx *gofr.Context) (any, error) {
+	var payload pb.UpsertSecurityStatRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (h *securityStatGRPCHandler) Create(ctx *gofr.Context) (any, error) {
 
 	date, _ := time.Parse(time.DateOnly, payload.Date)
 
-	model := &services.SecurityStatCreate{
+	model := &services.SecurityStatUpsert{
 		SecurityID: int(payload.SecurityId),
 		Date:       date,
 		Open:       payload.Open,
@@ -36,12 +36,12 @@ func (h *securityStatGRPCHandler) Create(ctx *gofr.Context) (any, error) {
 		Volume:     int(payload.Volume),
 	}
 
-	securityStat, err := h.svc.Create(ctx, model)
+	securityStat, err := h.svc.Upsert(ctx, model)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.CreateOrUpdateSecurityStatResponse{
+	return &pb.UpsertSecurityStatResponse{
 		SecurityStat: h.buildResponse(securityStat),
 	}, nil
 }

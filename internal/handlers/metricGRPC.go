@@ -15,14 +15,14 @@ func NewMetricGRPCHandler(svc services.MetricService) *metricGRPCHandler {
 	return &metricGRPCHandler{svc: svc}
 }
 
-func (h *metricGRPCHandler) Index(ctx *gofr.Context) (any, error) {
+func (h *metricGRPCHandler) List(ctx *gofr.Context) (any, error) {
 	var payload pb.GetMetricsRequest
 
 	if err := ctx.Bind(&payload); err != nil {
 		return nil, err
 	}
 
-	metrics := h.svc.Index(ctx)
+	metrics := h.svc.List(ctx)
 
 	return h.buildResponse(metrics), nil
 }

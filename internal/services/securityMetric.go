@@ -11,7 +11,7 @@ import (
 )
 
 type SecurityMetricService interface {
-	Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error)
+	List(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error)
 }
 
 type SecurityMetric struct {
@@ -39,8 +39,8 @@ func NewSecurityMetricService(marketDayService MarketDayService, metricService M
 	}
 }
 
-func (s *securityMetricService) Index(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
-	securityMetrics, err := s.securityMetricStore.Index(ctx, securityIDs, date)
+func (s *securityMetricService) List(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
+	securityMetrics, err := s.securityMetricStore.List(ctx, securityIDs, date)
 	if err != nil {
 		ctx.Logger.Warnf("failed to get security metrics from store: %v", map[string]any{
 			"error":       err,
@@ -75,7 +75,7 @@ func (s *securityMetricService) Index(ctx *gofr.Context, securityIDs []int, date
 
 func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context,
 	securityIDs []int, date time.Time) ([]*stores.SecurityMetric, error) {
-	metrics := s.metricService.Index(ctx)
+	metrics := s.metricService.List(ctx)
 
 	maxPeriod := 0
 	for i := range metrics {
@@ -84,7 +84,7 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context,
 		}
 	}
 
-	marketDays, _, err := s.marketDayService.Index(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
+	marketDays, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
 		N         int
 		Reference time.Time
 	}{N: maxPeriod, Reference: date}})
@@ -97,7 +97,7 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context,
 		startDate, endDate = endDate, startDate
 	}
 
-	securityStats, err := s.securityStatStore.Index(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs,
+	securityStats, err := s.securityStatStore.List(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs,
 		DateBetween: &struct {
 			Start time.Time
 			End   time.Time
@@ -145,7 +145,7 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context,
 }
 
 func (s *securityMetricService) buildResponse(ctx *gofr.Context, models []*stores.SecurityMetric) []*SecurityMetric {
-	metrics := s.metricService.Index(ctx)
+	metrics := s.metricService.List(ctx)
 
 	var metricsMap = make(map[int]*Metric)
 

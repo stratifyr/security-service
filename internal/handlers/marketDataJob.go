@@ -40,7 +40,7 @@ func NewMarketDataJobHandler(svc services.MarketDataJobService) *marketDataJobHa
 }
 
 //nolint:gocyclo // handler logic is inherently complex
-func (h *marketDataJobHandler) Index(ctx *gofr.Context) (any, error) {
+func (h *marketDataJobHandler) List(ctx *gofr.Context) (any, error) {
 	var (
 		filter services.MarketDataJobFilter
 		err    error
@@ -70,7 +70,7 @@ func (h *marketDataJobHandler) Index(ctx *gofr.Context) (any, error) {
 		}
 	}
 
-	marketDataJobs, count, err := h.svc.Index(ctx, &filter, page, perPage)
+	marketDataJobs, count, err := h.svc.List(ctx, &filter, page, perPage)
 	if err != nil {
 		return nil, err
 	}
@@ -88,22 +88,6 @@ func (h *marketDataJobHandler) Index(ctx *gofr.Context) (any, error) {
 			"perPage": perPage,
 			"total":   count,
 		},
-	}}, nil
-}
-
-func (h *marketDataJobHandler) Read(ctx *gofr.Context) (any, error) {
-	id, err := strconv.Atoi(ctx.PathParam("id"))
-	if err != nil {
-		return nil, http.ErrorInvalidParam{Params: []string{"id"}}
-	}
-
-	marketDataJob, err := h.svc.Read(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Raw{Data: map[string]any{
-		"data": h.buildResp(marketDataJob),
 	}}, nil
 }
 
