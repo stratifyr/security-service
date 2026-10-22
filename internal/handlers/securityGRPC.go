@@ -24,19 +24,7 @@ func (h *securityGRPCHandler) List(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	var (
-		filter services.SecurityFilter
-		err    error
-	)
-
-	if payload.Date != "" {
-		filter.Date, err = time.Parse(time.DateOnly, payload.Date)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	securities, err := h.svc.List(ctx, &filter)
+	securities, err := h.svc.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -81,45 +69,75 @@ func (h *securityGRPCHandler) Upsert(ctx *gofr.Context) (any, error) {
 	}, nil
 }
 
-func (*securityGRPCHandler) buildResponse(securitiy *services.Security) *pb.Security {
-	var resp = &pb.Security{
-		Id:              int32(securitiy.ID),
-		Isin:            securitiy.ISIN,
-		Symbol:          securitiy.Symbol,
-		Industry:        securitiy.Industry,
-		Name:            securitiy.Name,
-		Image:           securitiy.Image,
-		Ltp:             securitiy.LTP,
-		Volume:          int64(securitiy.Volume),
-		FreeFloatShares: int64(securitiy.FreeFloatShares),
-		PreviousClose:   securitiy.PreviousClose,
-		CreatedAt:       securitiy.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:       securitiy.UpdatedAt.Format(time.RFC3339),
+func (h *securityGRPCHandler) GetHistoricalData(ctx *gofr.Context) (any, error) {
+	var payload pb.GetHistoricalDataRequest
+
+	if err := ctx.Bind(&payload); err != nil {
+		return nil, err
 	}
 
-	if securitiy.SecurityStat == nil {
+	marketData, err := h.svc.GetHistoricalData(ctx, int(payload.SecurityId))
+	if err != nil {
+		return nil, err
+	}
+
+	var resp = make([]*pb.MarketData, len(marketData))
+
+	for i := range marketData {
+		resp[i] = h.buildMarketDateResp(marketData[i])
+	}
+
+	return &pb.GetHistoricalDataResponse{
+		MarketData: resp,
+		Total:      int32(len(marketData)),
+	}, nil
+}
+
+func (h *securityGRPCHandler) buildResponse(security *services.Security) *pb.Security {
+	var resp = &pb.Security{
+		Id:              int32(security.ID),
+		Isin:            security.ISIN,
+		Symbol:          security.Symbol,
+		Industry:        security.Industry,
+		Name:            security.Name,
+		Image:           security.Image,
+		Ltp:             security.LTP,
+		Volume:          int64(security.Volume),
+		FreeFloatShares: int64(security.FreeFloatShares),
+		PreviousClose:   security.PreviousClose,
+		CreatedAt:       security.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:       security.UpdatedAt.Format(time.RFC3339),
+	}
+
+	if security.SecurityStat == nil {
 		return resp
 	}
 
-	resp.MarketData = &pb.MarketData{
-		Date:    securitiy.SecurityStat.Date.Format(time.DateOnly),
-		Open:    securitiy.SecurityStat.Open,
-		Close:   securitiy.SecurityStat.Close,
-		High:    securitiy.SecurityStat.High,
-		Low:     securitiy.SecurityStat.Low,
-		Volume:  int32(securitiy.SecurityStat.Volume),
-		Metrics: make([]*pb.SecurityMetric, len(securitiy.SecurityMetrics)),
+	resp.MarketData = h.buildMarketDateResp(security.MarketData)
+
+	return resp
+}
+
+func (*securityGRPCHandler) buildMarketDateResp(model *services.MarketData) *pb.MarketData {
+	resp := &pb.MarketData{
+		Date:    model.SecurityStat.Date.Format(time.DateOnly),
+		Open:    model.SecurityStat.Open,
+		Close:   model.SecurityStat.Close,
+		High:    model.SecurityStat.High,
+		Low:     model.SecurityStat.Low,
+		Volume:  int32(model.SecurityStat.Volume),
+		Metrics: make([]*pb.SecurityMetric, len(model.SecurityMetrics)),
 	}
 
-	for j := range resp.MarketData.Metrics {
-		resp.MarketData.Metrics[j] = &pb.SecurityMetric{
-			Id:              int32(securitiy.SecurityMetrics[j].Metric.ID),
-			Name:            securitiy.SecurityMetrics[j].Metric.Name,
-			Type:            securitiy.SecurityMetrics[j].Metric.Type.String(),
-			Period:          int32(securitiy.SecurityMetrics[j].Metric.Period),
-			Indicator:       securitiy.SecurityMetrics[j].Metric.Indicator.String(),
-			Value:           securitiy.SecurityMetrics[j].Value,
-			NormalizedValue: securitiy.SecurityMetrics[j].ZValue,
+	for i := range model.SecurityMetrics {
+		resp.Metrics[i] = &pb.SecurityMetric{
+			Id:              int32(model.SecurityMetrics[i].Metric.ID),
+			Name:            model.SecurityMetrics[i].Metric.Name,
+			Type:            model.SecurityMetrics[i].Metric.Type.String(),
+			Period:          int32(model.SecurityMetrics[i].Metric.Period),
+			Indicator:       model.SecurityMetrics[i].Metric.Indicator.String(),
+			Value:           model.SecurityMetrics[i].Value,
+			NormalizedValue: model.SecurityMetrics[i].ZValue,
 		}
 	}
 

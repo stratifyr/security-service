@@ -39,6 +39,10 @@ func (h *SecurityServiceGoFrGRPCHandler) GetSecurities(ctx *gofr.Context) (any, 
 	return h.securityGRPCHandler.List(ctx)
 }
 
+func (h *SecurityServiceGoFrGRPCHandler) GetHistoricalData(ctx *gofr.Context) (any, error) {
+	return h.securityGRPCHandler.GetHistoricalData(ctx)
+}
+
 func (h *SecurityServiceGoFrGRPCHandler) UpsertSecurity(ctx *gofr.Context) (any, error) {
 	return h.securityGRPCHandler.Upsert(ctx)
 }

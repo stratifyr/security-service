@@ -159,6 +159,6 @@ func (f *SecurityFilter) buildWhereClause() (clause string, values []any) {
 
 func (*Security) cacheInvalidations() []string {
 	return []string{
-		SecuritiesClientCachePattern,
+		SecuritiesClientCacheKey,
 	}
 }
