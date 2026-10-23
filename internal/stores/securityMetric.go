@@ -29,8 +29,6 @@ type SecurityMetric struct {
 	ZValue     float64
 }
 
-// SecurityMetricCacheEntry is a single cache write for one security and date. Metrics may be empty,
-// which stores an empty value so that days without computable metrics are not recomputed on every request.
 type SecurityMetricCacheEntry struct {
 	SecurityID int
 	Date       time.Time
