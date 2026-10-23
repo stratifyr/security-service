@@ -191,17 +191,27 @@ func (s *securityService) GetHistoricalData(ctx *gofr.Context, id int) ([]*Marke
 		return nil, err
 	}
 
+	if len(securityStats) == 0 {
+		return nil, nil
+	}
+
+	dates := make([]time.Time, len(securityStats))
+
+	for i := range securityStats {
+		dates[i] = securityStats[i].Date
+	}
+
+	securityMetricsByDate, err := s.securityMetricService.GetBySecurityID(ctx, id, dates)
+	if err != nil {
+		return nil, err
+	}
+
 	var historicalData = make([]*MarketData, len(securityStats))
 
-	for i, ss := range securityStats {
-		securityMetrics, err := s.securityMetricService.List(ctx, []int{id}, ss.Date)
-		if err != nil {
-			return nil, err
-		}
-
+	for i := range securityStats {
 		historicalData[i] = &MarketData{
 			SecurityStat:    securityStats[i],
-			SecurityMetrics: securityMetrics,
+			SecurityMetrics: securityMetricsByDate[securityStats[i].Date],
 		}
 	}
 

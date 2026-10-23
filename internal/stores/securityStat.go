@@ -178,6 +178,6 @@ func (s *SecurityStat) cacheInvalidations() []string {
 	return []string{
 		SecuritiesClientCacheKey,
 		fmt.Sprintf(SecurityMetricsServerCachePatternBySecurity, s.SecurityID),
-		fmt.Sprintf(HistoricalDataCacheKey, s.SecurityID),
+		fmt.Sprintf(HistoricalDataClientCacheKey, s.SecurityID),
 	}
 }
