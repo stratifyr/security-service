@@ -10,12 +10,9 @@ import (
 )
 
 type SecurityService interface {
-	List(ctx *gofr.Context, f *SecurityFilter) ([]*Security, error)
+	List(ctx *gofr.Context) ([]*Security, error)
 	Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*Security, error)
-}
-
-type SecurityFilter struct {
-	Date time.Time
+	GetHistoricalData(ctx *gofr.Context, id int) ([]*MarketData, error)
 }
 
 type Security struct {
@@ -31,7 +28,11 @@ type Security struct {
 	PreviousClose   float64
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-	SecurityStat    *SecurityStat
+	*MarketData
+}
+
+type MarketData struct {
+	SecurityStat    *stores.SecurityStat
 	SecurityMetrics []*SecurityMetric
 }
 
@@ -63,11 +64,7 @@ func NewSecurityService(marketDayService MarketDayService, securityMetricService
 	}
 }
 
-func (s *securityService) List(ctx *gofr.Context, f *SecurityFilter) ([]*Security, error) {
-	if f.Date.IsZero() {
-		f.Date = time.Now()
-	}
-
+func (s *securityService) List(ctx *gofr.Context) ([]*Security, error) {
 	securities, err := s.store.List(ctx, &stores.SecurityFilter{}, 0, 0)
 	if err != nil {
 		return nil, err
@@ -83,7 +80,7 @@ func (s *securityService) List(ctx *gofr.Context, f *SecurityFilter) ([]*Securit
 		securityIDs[i] = securities[i].ID
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx, f.Date)
+	prevMarketDay, err := s.getPrevMarketDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +154,7 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		return nil, err
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx, time.Now())
+	prevMarketDay, err := s.getPrevMarketDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +170,42 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 	}
 
 	return s.buildResp(security, securityStats, securityMetrics), nil
+}
+
+func (s *securityService) GetHistoricalData(ctx *gofr.Context, id int) ([]*MarketData, error) {
+	today := time.Now()
+	threeYearsEarlier := today.AddDate(-3, 0, 0)
+	startDate, endDate := threeYearsEarlier, today.AddDate(0, 0, -1)
+
+	if _, err := s.store.Retrieve(ctx, id); err != nil {
+		return nil, err
+	}
+
+	dateRange := &struct {
+		Start time.Time
+		End   time.Time
+	}{Start: startDate, End: endDate}
+
+	securityStats, err := s.securityStatStore.List(ctx, &stores.SecurityStatFilter{SecurityIDs: []int{id}, DateBetween: dateRange}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var historicalData = make([]*MarketData, len(securityStats))
+
+	for i, ss := range securityStats {
+		securityMetrics, err := s.securityMetricService.List(ctx, []int{id}, ss.Date)
+		if err != nil {
+			return nil, err
+		}
+
+		historicalData[i] = &MarketData{
+			SecurityStat:    securityStats[i],
+			SecurityMetrics: securityMetrics,
+		}
+	}
+
+	return historicalData, nil
 }
 
 //nolint:gocyclo // patch logic requires multiple validations
@@ -218,7 +251,7 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		return nil, err
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx, time.Now())
+	prevMarketDay, err := s.getPrevMarketDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -236,11 +269,11 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 	return s.buildResp(security, securityStats, securityMetrics), nil
 }
 
-func (s *securityService) getPrevMarketDay(ctx *gofr.Context, referenceDate time.Time) (time.Time, error) {
+func (s *securityService) getPrevMarketDay(ctx *gofr.Context) (time.Time, error) {
 	dates, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
 		N         int
 		Reference time.Time
-	}{N: 2, Reference: referenceDate}})
+	}{N: 2, Reference: time.Now()}})
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -301,8 +334,7 @@ func (s *securityService) buildResp(model *stores.Security, securityStats map[in
 		FreeFloatShares: model.FreeFloatShares,
 		CreatedAt:       model.CreatedAt,
 		UpdatedAt:       model.CreatedAt,
-		SecurityStat:    nil,
-		SecurityMetrics: nil,
+		MarketData:      new(MarketData),
 	}
 
 	s.bindSecurityStat(resp, securityStats)
@@ -317,17 +349,7 @@ func (*securityService) bindSecurityStat(resp *Security, securityStats map[int]*
 		return
 	}
 
-	resp.SecurityStat = &SecurityStat{
-		ID:         securityStat.ID,
-		SecurityID: securityStat.SecurityID,
-		Date:       securityStat.Date,
-		Open:       securityStat.Open,
-		Close:      securityStat.Close,
-		High:       securityStat.High,
-		Low:        securityStat.Low,
-		Volume:     securityStat.Volume,
-	}
-
+	resp.SecurityStat = securityStat
 	resp.PreviousClose = securityStat.Close
 }
 

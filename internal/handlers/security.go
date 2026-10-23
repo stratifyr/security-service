@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"gofr.dev/pkg/gofr"
-	"gofr.dev/pkg/gofr/http"
 	"gofr.dev/pkg/gofr/http/response"
 
 	"github.com/stratifyr/security-service/internal/services"
@@ -55,19 +54,7 @@ func NewSecurityHandler(svc services.SecurityService) *securityHandler {
 }
 
 func (h *securityHandler) List(ctx *gofr.Context) (any, error) {
-	var (
-		filter services.SecurityFilter
-		err    error
-	)
-
-	if ctx.Param("date") != "" {
-		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
-		if err != nil {
-			return nil, http.ErrorInvalidParam{Params: []string{"date"}}
-		}
-	}
-
-	securities, err := h.svc.List(ctx, &filter)
+	securities, err := h.svc.List(ctx)
 	if err != nil {
 		return nil, err
 	}
