@@ -182,7 +182,7 @@ func (f *MarketHolidayFilter) buildWhereClause() (clause string, values []any) {
 func (*MarketHoliday) cacheInvalidations() []string {
 	return []string{
 		SecuritiesClientCacheKey,
-		HistoricalDataCachePattern,
+		HistoricalDataClientCachePattern,
 		SecurityMetricsServerCachePattern,
 	}
 }

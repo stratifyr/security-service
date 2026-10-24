@@ -8,8 +8,8 @@ import (
 
 const (
 	SecuritiesClientCacheKey                    = "security-service:client-cache:securities"
-	HistoricalDataCacheKey                      = "security-service:client-cache:securities:%d:historical-data"
-	HistoricalDataCachePattern                  = "security-service:client-cache:securities:*:historical-data"
+	HistoricalDataClientCacheKey                = "security-service:client-cache:securities:%d:historical-data"
+	HistoricalDataClientCachePattern            = "security-service:client-cache:securities:*:historical-data"
 	SecurityMetricsServerCacheKey               = "security-service:server-cache:security-metrics:security-id:%d:date:%s"
 	SecurityMetricsServerCachePattern           = "security-service:server-cache:security-metrics:security-id:*:date:*"
 	SecurityMetricsServerCachePatternBySecurity = "security-service:server-cache:security-metrics:security-id:%d:date:*"
