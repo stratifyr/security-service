@@ -61,6 +61,10 @@ func (s *marketDayService) List(ctx *gofr.Context, f *MarketDayFilter) ([]time.T
 		return nil, 0, ErrDateRangeTooLong
 	}
 
+	if n < 1 {
+		return nil, 0, ErrInvalidDateRange
+	}
+
 	if startDate.IsZero() {
 		lookBackDays := max(n*2, 14) //nolint:mnd // lookback multiplier
 		startDate = endDate.Add(-time.Duration(lookBackDays) * 24 * time.Hour)

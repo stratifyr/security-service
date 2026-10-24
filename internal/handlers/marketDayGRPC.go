@@ -5,6 +5,7 @@ import (
 
 	"github.com/stratifyr/security-service-proto/go/pb"
 	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/http"
 
 	"github.com/stratifyr/security-service/internal/services"
 )
@@ -26,12 +27,16 @@ func (h *marketDayGRPCHandler) List(ctx *gofr.Context) (any, error) {
 
 	startDate, err := time.Parse(time.DateOnly, payload.StartDate)
 	if err != nil {
-		return nil, err
+		return nil, http.ErrorInvalidParam{Params: []string{"startDate"}}
 	}
 
 	endDate, err := time.Parse(time.DateOnly, payload.EndDate)
 	if err != nil {
-		return nil, err
+		return nil, http.ErrorInvalidParam{Params: []string{"endDate"}}
+	}
+
+	if startDate.After(endDate) {
+		return nil, http.ErrorInvalidParam{Params: []string{"startDate", "endDate"}}
 	}
 
 	filter := &services.MarketDayFilter{

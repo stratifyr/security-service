@@ -4,6 +4,7 @@ var (
 	ErrDateRangeTooLong    = &Error{400, "date range is too long"}
 	ErrInvalidStatusChange = &Error{400, "invalid status change"}
 	ErrMarketHolidayStat   = &Error{400, "cannot add stat for market holiday"}
+	ErrInvalidDateRange    = &Error{400, "invalid date range"}
 )
 
 type Error struct {
