@@ -65,7 +65,7 @@ func (h *marketDataJobHandler) List(ctx *gofr.Context) (any, error) {
 	perPage := 20
 	if ctx.Param("perPage") != "" {
 		perPage, err = strconv.Atoi(ctx.Param("perPage"))
-		if err != nil || perPage < 1 {
+		if err != nil || perPage < 1 || perPage > 100 {
 			return nil, http.ErrorInvalidParam{Params: []string{"perPage"}}
 		}
 	}
