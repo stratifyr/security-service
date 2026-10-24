@@ -136,6 +136,8 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		return nil, err
 	}
 
+	now := time.Now().UTC()
+
 	model := &stores.Security{
 		ISIN:            payload.ISIN,
 		Symbol:          payload.Symbol,
@@ -145,8 +147,8 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		LTP:             payload.LTP,
 		Volume:          payload.Volume,
 		FreeFloatShares: payload.FreeFloatShares,
-		CreatedAt:       time.Now().UTC(),
-		UpdatedAt:       time.Now().UTC(),
+		CreatedAt:       now,
+		UpdatedAt:       now,
 	}
 
 	security, err := s.store.Create(ctx, model)

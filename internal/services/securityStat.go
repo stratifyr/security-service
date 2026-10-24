@@ -70,6 +70,8 @@ func (s *securityStatService) Upsert(ctx *gofr.Context, payload *SecurityStatUps
 		return nil, ErrMarketHolidayStat
 	}
 
+	now := time.Now().UTC()
+
 	model := &stores.SecurityStat{
 		SecurityID: payload.SecurityID,
 		Date:       payload.Date,
@@ -78,8 +80,8 @@ func (s *securityStatService) Upsert(ctx *gofr.Context, payload *SecurityStatUps
 		High:       payload.High,
 		Low:        payload.Low,
 		Volume:     payload.Volume,
-		CreatedAt:  time.Now().UTC(),
-		UpdatedAt:  time.Now().UTC(),
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 
 	securityStat, err := s.store.Create(ctx, model)

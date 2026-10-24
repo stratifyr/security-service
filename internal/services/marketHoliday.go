@@ -82,11 +82,13 @@ func (s *marketHolidayService) List(ctx *gofr.Context, f *MarketHolidayFilter, p
 }
 
 func (s *marketHolidayService) Create(ctx *gofr.Context, payload *MarketHolidayCreate) (*MarketHoliday, error) {
+	now := time.Now().UTC()
+
 	model := &stores.MarketHoliday{
 		Date:        payload.Date,
 		Description: payload.Description,
-		CreatedAt:   time.Now().UTC(),
-		UpdatedAt:   time.Now().UTC(),
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
 	marketHoliday, err := s.store.Create(ctx, model)

@@ -119,11 +119,13 @@ func (s *indexService) Upsert(ctx *gofr.Context, payload *IndexUpsert) (*Index, 
 		return s.patch(ctx, indices[0].ID, payload)
 	}
 
+	now := time.Now()
+
 	model := &stores.Index{
 		Name:         payload.Name,
 		Value:        payload.Value,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		CreatedAt:    now,
+		UpdatedAt:    now,
 		Constituents: make([]*stores.IndexConstituent, len(payload.SecurityIDs)),
 	}
 
