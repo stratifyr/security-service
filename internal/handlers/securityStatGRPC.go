@@ -5,6 +5,7 @@ import (
 
 	"github.com/stratifyr/security-service-proto/go/pb"
 	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/http"
 
 	"github.com/stratifyr/security-service/internal/services"
 )
@@ -24,7 +25,10 @@ func (h *securityStatGRPCHandler) Upsert(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	date, _ := time.Parse(time.DateOnly, payload.Date)
+	date, err := time.Parse(time.DateOnly, payload.Date)
+	if err != nil {
+		return nil, http.ErrorInvalidParam{Params: []string{"date"}}
+	}
 
 	model := &services.SecurityStatUpsert{
 		SecurityID: int(payload.SecurityId),
