@@ -126,10 +126,6 @@ func (*securityGRPCHandler) buildMarketDateResp(model *services.MarketData) *pb.
 	for i := range model.SecurityMetrics {
 		resp.Metrics[i] = &pb.SecurityMetric{
 			Id:              int32(model.SecurityMetrics[i].Metric.ID),
-			Name:            model.SecurityMetrics[i].Metric.Name,
-			Type:            model.SecurityMetrics[i].Metric.Type.String(),
-			Period:          int32(model.SecurityMetrics[i].Metric.Period),
-			Indicator:       model.SecurityMetrics[i].Metric.Indicator.String(),
 			Value:           model.SecurityMetrics[i].Value,
 			NormalizedValue: model.SecurityMetrics[i].ZValue,
 		}
