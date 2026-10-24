@@ -1,0 +1,15 @@
+.git
+.gitignore
+.idea
+.vscode
+.opencode
+*.DS_Store
+*.local.env
+configs/*.local.env
+tmp/
+vendor/
+coverage.out
+Dockerfile
+.dockerignore
+README.md
+AGENTS.md
