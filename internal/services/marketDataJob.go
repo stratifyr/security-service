@@ -92,12 +92,14 @@ func (s *marketDataJobService) Create(ctx *gofr.Context, payload *MarketDataJobC
 		return nil, err
 	}
 
+	now := time.Now().UTC()
+
 	model := &stores.MarketDataJob{
 		Type:      jobType,
 		Status:    "CREATED",
 		Logs:      nil,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	marketDataJob, err := s.store.Create(ctx, model)

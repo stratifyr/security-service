@@ -111,6 +111,8 @@ func (s *indexStatService) Upsert(ctx *gofr.Context, payload *IndexStatUpsert) (
 		return nil, ErrMarketHolidayStat
 	}
 
+	now := time.Now().UTC()
+
 	model := &stores.IndexStat{
 		IndexID:   payload.IndexID,
 		Date:      payload.Date,
@@ -118,8 +120,8 @@ func (s *indexStatService) Upsert(ctx *gofr.Context, payload *IndexStatUpsert) (
 		Close:     payload.Close,
 		High:      payload.High,
 		Low:       payload.Low,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	indexStat, err := s.store.Create(ctx, model)
