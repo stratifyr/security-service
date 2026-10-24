@@ -10,14 +10,14 @@ const (
 
 type MetricType int
 
-func (m MetricType) String() string {
-	var conversionMap = map[MetricType]string{
-		SMA: "SMA",
-		EMA: "EMA",
-		ROC: "ROC",
-		ATR: "ATR",
-		VMA: "VMA",
-	}
+var metricTypeNames = map[MetricType]string{ //nolint:gochecknoglobals // static display-name lookup
+	SMA: "SMA",
+	EMA: "EMA",
+	ROC: "ROC",
+	ATR: "ATR",
+	VMA: "VMA",
+}
 
-	return conversionMap[m]
+func (m MetricType) String() string {
+	return metricTypeNames[m]
 }

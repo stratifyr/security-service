@@ -9,13 +9,13 @@ const (
 
 type MetricIndicator int
 
-func (m MetricIndicator) String() string {
-	var conversionMap = map[MetricIndicator]string{
-		Trend:      "Trend",
-		Momentum:   "Momentum",
-		Volatility: "Volatility",
-		Volume:     "Volume",
-	}
+var metricIndicatorNames = map[MetricIndicator]string{ //nolint:gochecknoglobals // static display-name lookup
+	Trend:      "Trend",
+	Momentum:   "Momentum",
+	Volatility: "Volatility",
+	Volume:     "Volume",
+}
 
-	return conversionMap[m]
+func (m MetricIndicator) String() string {
+	return metricIndicatorNames[m]
 }
