@@ -7,12 +7,10 @@ import (
 )
 
 const (
-	SecuritiesClientCacheKey                    = "security-service:client-cache:securities"
-	HistoricalDataClientCacheKey                = "security-service:client-cache:securities:%d:historical-data"
-	HistoricalDataClientCachePattern            = "security-service:client-cache:securities:*:historical-data"
-	SecurityMetricsServerCacheKey               = "security-service:server-cache:security-metrics:security-id:%d:date:%s"
-	SecurityMetricsServerCachePattern           = "security-service:server-cache:security-metrics:security-id:*:date:*"
-	SecurityMetricsServerCachePatternBySecurity = "security-service:server-cache:security-metrics:security-id:%d:date:*"
+	SecuritiesClientCacheKey         = "security-service:client-cache:securities"
+	HistoricalDataClientCacheKey     = "security-service:client-cache:securities:%d:historical-data"
+	HistoricalDataClientCachePattern = "security-service:client-cache:securities:*:historical-data"
+	SecurityMetricsServerCacheKey    = "security-service:server-cache:security-metrics"
 )
 
 type cacheInvalidator interface {

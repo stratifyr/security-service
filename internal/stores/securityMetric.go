@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/vmihailenco/msgpack/v5"
 	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/datasource"
 )
 
 const (
@@ -16,9 +18,8 @@ const (
 var ErrUnexpectedCacheValueType = errors.New("unexpected security metrics cache value type")
 
 type SecurityMetricStore interface {
-	List(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error)
-	GetBySecurityID(ctx *gofr.Context, securityID int, dates []time.Time) (map[time.Time][]*SecurityMetric, []time.Time, error)
-	Create(ctx *gofr.Context, entries []*SecurityMetricCacheEntry) error
+	List(ctx *gofr.Context, securityIDs []int) ([]*SecurityMetric, error)
+	Create(ctx *gofr.Context, securityMetrics []*SecurityMetric) error
 }
 
 type SecurityMetric struct {
@@ -35,142 +36,62 @@ type SecurityMetricCacheEntry struct {
 	Metrics    []*SecurityMetric
 }
 
-type securityMetricCacheValue struct {
-	MetricID int
-	Value    float64
-	ZValue   float64
-}
-
 type securityMetricStore struct{}
 
 func NewSecurityMetricStore() *securityMetricStore {
 	return &securityMetricStore{}
 }
 
-func (*securityMetricStore) List(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
-	keys := make([]string, len(securityIDs))
-
-	for i, securityID := range securityIDs {
-		keys[i] = fmt.Sprintf(SecurityMetricsServerCacheKey, securityID, date.Format(time.DateOnly))
-	}
-
-	vals, err := ctx.Redis.MGet(ctx, keys...).Result()
+func (*securityMetricStore) List(ctx *gofr.Context, securityIDs []int) ([]*SecurityMetric, error) {
+	val, err := ctx.Redis.Get(ctx, SecurityMetricsServerCacheKey).Result()
 	if err != nil {
-		return nil, err
+		if errors.Is(err, redis.Nil) {
+			ctx.Logger.Warnf("cache miss: %s", SecurityMetricsServerCacheKey)
+		}
+
+		return nil, datasource.ErrorDB{Err: err}
 	}
 
-	var securityMetrics []*SecurityMetric
+	securityMetrics, err := decodeSecurityMetricCacheValue(val)
+	if err != nil {
+		return nil, datasource.ErrorDB{Err: err}
+	}
 
-	for i, val := range vals {
-		if val == nil {
-			ctx.Logger.Warnf("cache miss: %s", keys[i])
-			continue
-		}
+	var requiredSecurities = make(map[int]struct{})
 
-		metricVals, err := decodeSecurityMetricCacheValue(val)
-		if err != nil {
-			return nil, err
-		}
+	for i := range securityIDs {
+		requiredSecurities[securityIDs[i]] = struct{}{}
+	}
 
-		for _, mv := range metricVals {
-			securityMetrics = append(securityMetrics, &SecurityMetric{
-				SecurityID: securityIDs[i],
-				MetricID:   mv.MetricID,
-				Date:       date,
-				Value:      mv.Value,
-				ZValue:     mv.ZValue,
-			})
+	var filteredMetrics []*SecurityMetric
+
+	for _, securityMetric := range securityMetrics {
+		if _, ok := requiredSecurities[securityMetric.SecurityID]; ok {
+			filteredMetrics = append(filteredMetrics, securityMetric)
 		}
 	}
 
-	return securityMetrics, nil
+	return filteredMetrics, nil
 }
 
-func (*securityMetricStore) GetBySecurityID(ctx *gofr.Context, securityID int,
-	dates []time.Time) (map[time.Time][]*SecurityMetric, []time.Time, error) {
-	keys := make([]string, len(dates))
-
-	for i, date := range dates {
-		keys[i] = fmt.Sprintf(SecurityMetricsServerCacheKey, securityID, date.Format(time.DateOnly))
-	}
-
-	vals, err := ctx.Redis.MGet(ctx, keys...).Result()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var (
-		cached       = make(map[time.Time][]*SecurityMetric, len(dates))
-		missingDates = make([]time.Time, 0)
-	)
-
-	for i, val := range vals {
-		if val == nil {
-			ctx.Logger.Warnf("cache miss: %s", keys[i])
-			missingDates = append(missingDates, dates[i])
-
-			continue
-		}
-
-		metricVals, err := decodeSecurityMetricCacheValue(val)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		metrics := make([]*SecurityMetric, len(metricVals))
-
-		for j := range metricVals {
-			metrics[j] = &SecurityMetric{
-				SecurityID: securityID,
-				MetricID:   metricVals[j].MetricID,
-				Date:       dates[i],
-				Value:      metricVals[j].Value,
-				ZValue:     metricVals[j].ZValue,
-			}
-		}
-
-		cached[dates[i]] = metrics
-	}
-
-	return cached, missingDates, nil
-}
-
-func (*securityMetricStore) Create(ctx *gofr.Context, entries []*SecurityMetricCacheEntry) error {
-	if len(entries) == 0 {
+func (*securityMetricStore) Create(ctx *gofr.Context, securityMetrics []*SecurityMetric) error {
+	if len(securityMetrics) == 0 {
 		return nil
 	}
 
-	pipe := ctx.Redis.Pipeline()
-
-	for _, entry := range entries {
-		metricVals := make([]*securityMetricCacheValue, len(entry.Metrics))
-
-		for i := range entry.Metrics {
-			metricVals[i] = &securityMetricCacheValue{
-				MetricID: entry.Metrics[i].MetricID,
-				Value:    entry.Metrics[i].Value,
-				ZValue:   entry.Metrics[i].ZValue,
-			}
-		}
-
-		bytes, err := msgpack.Marshal(metricVals)
-		if err != nil {
-			return err
-		}
-
-		key := fmt.Sprintf(SecurityMetricsServerCacheKey, entry.SecurityID, entry.Date.Format(time.DateOnly))
-
-		pipe.SetEx(ctx, key, bytes, SecurityMetricCacheTTL)
+	bytes, err := msgpack.Marshal(securityMetrics)
+	if err != nil {
+		return datasource.ErrorDB{Err: err}
 	}
 
-	if _, err := pipe.Exec(ctx); err != nil {
-		return err
+	if err = ctx.Redis.SetEx(ctx, SecurityMetricsServerCacheKey, bytes, SecurityMetricCacheTTL).Err(); err != nil {
+		return datasource.ErrorDB{Err: err}
 	}
 
 	return nil
 }
 
-func decodeSecurityMetricCacheValue(val any) ([]*securityMetricCacheValue, error) {
+func decodeSecurityMetricCacheValue(val any) ([]*SecurityMetric, error) {
 	var bytes []byte
 
 	switch value := val.(type) {
@@ -182,7 +103,7 @@ func decodeSecurityMetricCacheValue(val any) ([]*securityMetricCacheValue, error
 		return nil, fmt.Errorf("%w: %T", ErrUnexpectedCacheValueType, val)
 	}
 
-	var metricVals []*securityMetricCacheValue
+	var metricVals []*SecurityMetric
 	if err := msgpack.Unmarshal(bytes, &metricVals); err != nil {
 		return nil, err
 	}

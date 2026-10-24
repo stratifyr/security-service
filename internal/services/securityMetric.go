@@ -11,7 +11,7 @@ import (
 )
 
 type SecurityMetricService interface {
-	List(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error)
+	List(ctx *gofr.Context, securityIDs []int) ([]*SecurityMetric, error)
 	GetBySecurityID(ctx *gofr.Context, securityID int, dates []time.Time) (map[time.Time][]*SecurityMetric, error)
 }
 
@@ -40,29 +40,29 @@ func NewSecurityMetricService(marketDayService MarketDayService, metricService M
 	}
 }
 
-func (s *securityMetricService) List(ctx *gofr.Context, securityIDs []int, date time.Time) ([]*SecurityMetric, error) {
-	securityMetrics, err := s.securityMetricStore.List(ctx, securityIDs, date)
-	if err != nil {
-		ctx.Logger.Warnf("failed to get security metrics from store: %v", err)
-	}
-
-	missingSecurityIDs := findMissingSecurityIDs(securityIDs, securityMetrics)
+func (s *securityMetricService) List(ctx *gofr.Context, securityIDs []int) ([]*SecurityMetric, error) {
 	metricsMap := s.getMetricsMap(ctx)
 
-	if len(missingSecurityIDs) == 0 {
+	securityMetrics, err := s.securityMetricStore.List(ctx, securityIDs)
+	if err == nil {
 		return s.buildSecurityMetrics(metricsMap, securityMetrics), nil
 	}
 
-	computedSecurityMetrics, err := s.computeSecurityMetrics(ctx, missingSecurityIDs, date)
+	ctx.Logger.Warnf("failed to get security metrics from store: %v", err)
+
+	date, err := s.getPrevMarketDay(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = s.securityMetricStore.Create(ctx, buildCacheEntries(missingSecurityIDs, date, computedSecurityMetrics)); err != nil {
-		ctx.Logger.Warnf("failed to save security metrics in store: %v", err)
+	securityMetrics, err = s.computeSecurityMetrics(ctx, securityIDs, date)
+	if err != nil {
+		return nil, err
 	}
 
-	securityMetrics = append(securityMetrics, computedSecurityMetrics...)
+	if err = s.securityMetricStore.Create(ctx, securityMetrics); err != nil {
+		ctx.Logger.Warnf("failed to save security metrics in store: %v", err)
+	}
 
 	return s.buildSecurityMetrics(metricsMap, securityMetrics), nil
 }
@@ -73,46 +73,17 @@ func (s *securityMetricService) GetBySecurityID(ctx *gofr.Context,
 		return make(map[time.Time][]*SecurityMetric), nil
 	}
 
-	cachedMetrics, missingDates, err := s.securityMetricStore.GetBySecurityID(ctx, securityID, dates)
+	securityMetricsByDate, err := s.computeSecurityMetricsForDates(ctx, securityID, dates)
 	if err != nil {
-		ctx.Logger.Warnf("failed to get security metrics from store: %v", err)
-
-		cachedMetrics, missingDates = make(map[time.Time][]*stores.SecurityMetric), dates
+		return nil, err
 	}
 
-	computedMetrics := make(map[time.Time][]*stores.SecurityMetric, len(missingDates))
-
-	if len(missingDates) > 0 {
-		computedMetrics, err = s.computeSecurityMetricsForDates(ctx, securityID, missingDates)
-		if err != nil {
-			return nil, err
-		}
-
-		entries := make([]*stores.SecurityMetricCacheEntry, 0, len(missingDates))
-
-		for _, date := range missingDates {
-			entries = append(entries, &stores.SecurityMetricCacheEntry{
-				SecurityID: securityID,
-				Date:       date,
-				Metrics:    computedMetrics[date],
-			})
-		}
-
-		if err = s.securityMetricStore.Create(ctx, entries); err != nil {
-			ctx.Logger.Warnf("failed to save security metrics in store: %v", err)
-		}
-	}
-
-	resp := make(map[time.Time][]*SecurityMetric, len(dates))
 	metricsMap := s.getMetricsMap(ctx)
 
-	for _, date := range dates {
-		if metrics, ok := cachedMetrics[date]; ok {
-			resp[date] = s.buildSecurityMetrics(metricsMap, metrics)
-			continue
-		}
+	resp := make(map[time.Time][]*SecurityMetric, len(dates))
 
-		resp[date] = s.buildSecurityMetrics(metricsMap, computedMetrics[date])
+	for _, date := range dates {
+		resp[date] = s.buildSecurityMetrics(metricsMap, securityMetricsByDate[date])
 	}
 
 	return resp, nil
@@ -262,6 +233,23 @@ func (s *securityMetricService) computeMetricsForWindow(securityID int, date tim
 	return securityMetrics
 }
 
+func (s *securityMetricService) getPrevMarketDay(ctx *gofr.Context) (time.Time, error) {
+	dates, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
+		N         int
+		Reference time.Time
+	}{N: 2, Reference: time.Now()}})
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	marketDay := dates[0]
+	if dates[0].Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
+		marketDay = dates[1]
+	}
+
+	return marketDay, nil
+}
+
 func (s *securityMetricService) getMetricsMap(ctx *gofr.Context) map[int]*Metric {
 	metrics := s.metricService.List(ctx)
 
@@ -387,48 +375,6 @@ func (*securityMetricService) computeVMA(lastNStats []*stores.SecurityStat) floa
 	}
 
 	return sumVolume / float64(n)
-}
-
-func buildCacheEntries(securityIDs []int, date time.Time, securityMetrics []*stores.SecurityMetric) []*stores.SecurityMetricCacheEntry {
-	grouped := make(map[int][]*stores.SecurityMetric, len(securityIDs))
-
-	for _, metric := range securityMetrics {
-		grouped[metric.SecurityID] = append(grouped[metric.SecurityID], metric)
-	}
-
-	entries := make([]*stores.SecurityMetricCacheEntry, 0, len(securityIDs))
-
-	for _, securityID := range securityIDs {
-		if len(grouped[securityID]) == 0 {
-			continue
-		}
-
-		entries = append(entries, &stores.SecurityMetricCacheEntry{
-			SecurityID: securityID,
-			Date:       date,
-			Metrics:    grouped[securityID],
-		})
-	}
-
-	return entries
-}
-
-func findMissingSecurityIDs(requestedIDs []int, storedMetrics []*stores.SecurityMetric) []int {
-	found := make(map[int]struct{}, len(storedMetrics))
-
-	for _, metric := range storedMetrics {
-		found[metric.SecurityID] = struct{}{}
-	}
-
-	missing := make([]int, 0)
-
-	for _, securityID := range requestedIDs {
-		if _, ok := found[securityID]; !ok {
-			missing = append(missing, securityID)
-		}
-	}
-
-	return missing
 }
 
 func getMaxPeriod(metrics []*Metric) int {

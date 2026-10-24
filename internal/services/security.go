@@ -103,7 +103,7 @@ func (s *securityService) List(ctx *gofr.Context) ([]*Security, error) {
 	g.Go(func() error {
 		var err error
 
-		securityMetrics, err = s.getSecurityMetricsMap(ctx, securityIDs, prevMarketDay)
+		securityMetrics, err = s.getSecurityMetricsMap(ctx, securityIDs)
 
 		return err
 	})
@@ -166,7 +166,7 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		return nil, err
 	}
 
-	securityMetrics, err := s.getSecurityMetricsMap(ctx, []int{security.ID}, prevMarketDay)
+	securityMetrics, err := s.getSecurityMetricsMap(ctx, []int{security.ID})
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		return nil, err
 	}
 
-	securityMetrics, err := s.getSecurityMetricsMap(ctx, []int{security.ID}, prevMarketDay)
+	securityMetrics, err := s.getSecurityMetricsMap(ctx, []int{security.ID})
 	if err != nil {
 		return nil, err
 	}
@@ -315,8 +315,8 @@ func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date
 	return securityStatsMap, nil
 }
 
-func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
-	securityMetrics, err := s.securityMetricService.List(ctx, securityIDs, date)
+func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs []int) (map[int][]*SecurityMetric, error) {
+	securityMetrics, err := s.securityMetricService.List(ctx, securityIDs)
 	if err != nil {
 		return nil, err
 	}
