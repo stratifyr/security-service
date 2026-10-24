@@ -126,6 +126,8 @@ func (s *marketDataJobService) Patch(ctx *gofr.Context, id int, payload *MarketD
 		marketDataJob.Logs = payload.Logs
 	}
 
+	marketDataJob.UpdatedAt = time.Now()
+
 	marketDataJob, err = s.store.Update(ctx, id, marketDataJob)
 	if err != nil {
 		return nil, err

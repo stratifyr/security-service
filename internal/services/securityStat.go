@@ -116,6 +116,8 @@ func (s *securityStatService) patch(ctx *gofr.Context, id int, payload *Security
 		securityStat.Volume = payload.Volume
 	}
 
+	securityStat.UpdatedAt = time.Now()
+
 	securityStat, err = s.store.Update(ctx, id, securityStat)
 	if err != nil {
 		return nil, err

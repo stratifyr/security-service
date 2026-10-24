@@ -256,6 +256,8 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		security.FreeFloatShares = payload.FreeFloatShares
 	}
 
+	security.UpdatedAt = time.Now()
+
 	security, err = s.store.Update(ctx, id, security)
 	if err != nil {
 		return nil, err
@@ -343,7 +345,7 @@ func (s *securityService) buildResp(model *stores.Security, securityStats map[in
 		Volume:          model.Volume,
 		FreeFloatShares: model.FreeFloatShares,
 		CreatedAt:       model.CreatedAt,
-		UpdatedAt:       model.CreatedAt,
+		UpdatedAt:       model.UpdatedAt,
 		MarketData:      new(MarketData),
 	}
 
