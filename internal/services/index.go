@@ -164,17 +164,14 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 
 	if payload.Name != "" {
 		index.Name = payload.Name
-		index.UpdatedAt = time.Now()
 	}
 
 	if payload.Value != 0 {
 		index.Value = payload.Value
-		index.UpdatedAt = time.Now()
 	}
 
 	if len(payload.SecurityIDs) > 0 {
 		index.Constituents = make([]*stores.IndexConstituent, len(payload.SecurityIDs))
-		index.UpdatedAt = time.Now()
 
 		for i := range payload.SecurityIDs {
 			index.Constituents[i] = &stores.IndexConstituent{
@@ -183,6 +180,8 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 			}
 		}
 	}
+
+	index.UpdatedAt = time.Now()
 
 	index, err = s.store.Update(ctx, index.ID, index)
 	if err != nil {

@@ -152,6 +152,8 @@ func (s *indexStatService) patch(ctx *gofr.Context, id int, payload *IndexStatUp
 		indexStat.Low = payload.Low
 	}
 
+	indexStat.UpdatedAt = time.Now()
+
 	indexStat, err = s.store.Update(ctx, id, indexStat)
 	if err != nil {
 		return nil, err

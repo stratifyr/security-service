@@ -111,6 +111,8 @@ func (s *marketHolidayService) Patch(ctx *gofr.Context, id int, payload *MarketH
 		marketHoliday.Description = payload.Description
 	}
 
+	marketHoliday.UpdatedAt = time.Now()
+
 	marketHoliday, err = s.store.Update(ctx, id, marketHoliday)
 	if err != nil {
 		return nil, err
