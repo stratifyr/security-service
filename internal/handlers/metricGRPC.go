@@ -16,12 +16,6 @@ func NewMetricGRPCHandler(svc services.MetricService) *metricGRPCHandler {
 }
 
 func (h *metricGRPCHandler) List(ctx *gofr.Context) (any, error) {
-	var payload pb.GetMetricsRequest
-
-	if err := ctx.Bind(&payload); err != nil {
-		return nil, err
-	}
-
 	metrics := h.svc.List(ctx)
 
 	return h.buildResponse(metrics), nil
