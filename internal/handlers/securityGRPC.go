@@ -18,12 +18,6 @@ func NewSecurityGRPCHandler(svc services.SecurityService) *securityGRPCHandler {
 }
 
 func (h *securityGRPCHandler) List(ctx *gofr.Context) (any, error) {
-	var payload pb.GetSecuritiesRequest
-
-	if err := ctx.Bind(&payload); err != nil {
-		return nil, err
-	}
-
 	securities, err := h.svc.List(ctx)
 	if err != nil {
 		return nil, err
