@@ -103,24 +103,17 @@ func (s *marketDayService) List(ctx *gofr.Context, f *MarketDayFilter) ([]time.T
 }
 
 func (s *marketDayService) GetPreviousDay(ctx *gofr.Context) (time.Time, error) {
-	now := time.Now()
-
 	dates, _, err := s.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
 		N         int
 		Reference time.Time
-	}{N: 2, Reference: now}})
+	}{N: 2, Reference: time.Now()}})
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	if len(dates) == 0 {
+	if len(dates) != 2 { //nolint:mnd // expected to return T-1
 		return time.Time{}, ErrMarketDayNotFound
 	}
 
-	marketDay := dates[0]
-	if len(dates) > 1 && dates[0].Format(time.DateOnly) == now.Format(time.DateOnly) {
-		marketDay = dates[1]
-	}
-
-	return marketDay, nil
+	return dates[1], nil
 }
