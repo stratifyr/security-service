@@ -11,7 +11,7 @@ import (
 )
 
 type SecurityMetricService interface {
-	List(ctx *gofr.Context, securityIDs []int) ([]*SecurityMetric, error)
+	List(ctx *gofr.Context, date time.Time) ([]*SecurityMetric, error)
 	GetBySecurityID(ctx *gofr.Context, securityID int, dates []time.Time) (map[time.Time][]*SecurityMetric, error)
 }
 
@@ -28,29 +28,32 @@ type securityMetricService struct {
 	metricService       MetricService
 	securityMetricStore stores.SecurityMetricStore
 	securityStatStore   stores.SecurityStatStore
+	securityStore       stores.SecurityStore
 }
 
 func NewSecurityMetricService(marketDayService MarketDayService, metricService MetricService,
-	securityStatStore stores.SecurityStatStore, securityMetricStore stores.SecurityMetricStore) *securityMetricService {
+	securityStatStore stores.SecurityStatStore, securityMetricStore stores.SecurityMetricStore,
+	securityStore stores.SecurityStore) *securityMetricService {
 	return &securityMetricService{
 		marketDayService:    marketDayService,
 		metricService:       metricService,
 		securityMetricStore: securityMetricStore,
 		securityStatStore:   securityStatStore,
+		securityStore:       securityStore,
 	}
 }
 
-func (s *securityMetricService) List(ctx *gofr.Context, securityIDs []int) ([]*SecurityMetric, error) {
+func (s *securityMetricService) List(ctx *gofr.Context, date time.Time) ([]*SecurityMetric, error) {
 	metricsMap := s.getMetricsMap(ctx)
 
-	securityMetrics, err := s.securityMetricStore.List(ctx, securityIDs)
+	securityMetrics, err := s.securityMetricStore.List(ctx, date)
 	if err == nil {
 		return s.buildSecurityMetrics(metricsMap, securityMetrics), nil
 	}
 
 	ctx.Logger.Warnf("failed to get security metrics from store: %v", err)
 
-	date, err := s.getPrevMarketDay(ctx)
+	securityIDs, err := s.getSecurityIDs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +63,7 @@ func (s *securityMetricService) List(ctx *gofr.Context, securityIDs []int) ([]*S
 		return nil, err
 	}
 
-	if err = s.securityMetricStore.Create(ctx, securityMetrics); err != nil {
+	if err = s.securityMetricStore.Create(ctx, date, securityMetrics); err != nil {
 		ctx.Logger.Warnf("failed to save security metrics in store: %v", err)
 	}
 
@@ -233,21 +236,19 @@ func (s *securityMetricService) computeMetricsForWindow(securityID int, date tim
 	return securityMetrics
 }
 
-func (s *securityMetricService) getPrevMarketDay(ctx *gofr.Context) (time.Time, error) {
-	dates, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
-		N         int
-		Reference time.Time
-	}{N: 2, Reference: time.Now()}})
+func (s *securityMetricService) getSecurityIDs(ctx *gofr.Context) ([]int, error) {
+	securities, err := s.securityStore.List(ctx, &stores.SecurityFilter{}, 0, 0)
 	if err != nil {
-		return time.Time{}, err
+		return nil, err
 	}
 
-	marketDay := dates[0]
-	if dates[0].Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
-		marketDay = dates[1]
+	securityIDs := make([]int, len(securities))
+
+	for i := range securities {
+		securityIDs[i] = securities[i].ID
 	}
 
-	return marketDay, nil
+	return securityIDs, nil
 }
 
 func (s *securityMetricService) getMetricsMap(ctx *gofr.Context) map[int]*Metric {

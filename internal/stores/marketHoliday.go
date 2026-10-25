@@ -183,6 +183,6 @@ func (*MarketHoliday) cacheInvalidations() []string {
 	return []string{
 		SecuritiesClientCacheKey,
 		HistoricalDataClientCachePattern,
-		SecurityMetricsServerCacheKey,
+		SecurityMetricsServerCachePattern,
 	}
 }
