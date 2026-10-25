@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"gofr.dev/pkg/gofr"
-	"gofr.dev/pkg/gofr/http"
 	"gofr.dev/pkg/gofr/http/response"
 
 	"github.com/stratifyr/security-service/internal/services"
@@ -53,19 +52,7 @@ func NewIndexHandler(svc services.IndexService) *indexHandler {
 }
 
 func (h *indexHandler) List(ctx *gofr.Context) (any, error) {
-	var (
-		filter services.IndexFilter
-		err    error
-	)
-
-	if ctx.Param("date") != "" {
-		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
-		if err != nil {
-			return nil, http.ErrorInvalidParam{Params: []string{"date"}}
-		}
-	}
-
-	indices, err := h.svc.List(ctx, &filter)
+	indices, err := h.svc.List(ctx)
 	if err != nil {
 		return nil, err
 	}

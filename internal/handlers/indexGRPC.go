@@ -18,25 +18,7 @@ func NewIndexGRPCHandler(svc services.IndexService) *indexGRPCHandler {
 }
 
 func (h *indexGRPCHandler) List(ctx *gofr.Context) (any, error) {
-	var payload pb.GetIndicesRequest
-
-	if err := ctx.Bind(&payload); err != nil {
-		return nil, err
-	}
-
-	var (
-		filter services.IndexFilter
-		err    error
-	)
-
-	if payload.Date != "" {
-		filter.Date, err = time.Parse(time.DateOnly, payload.Date)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	indices, err := h.svc.List(ctx, &filter)
+	indices, err := h.svc.List(ctx)
 	if err != nil {
 		return nil, err
 	}

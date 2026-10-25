@@ -80,7 +80,7 @@ func (s *securityService) List(ctx *gofr.Context) ([]*Security, error) {
 		securityIDs[i] = securities[i].ID
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx)
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		return nil, err
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx)
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		return nil, err
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx)
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -281,23 +281,6 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 	}
 
 	return s.buildResp(security, securityStats, securityMetrics), nil
-}
-
-func (s *securityService) getPrevMarketDay(ctx *gofr.Context) (time.Time, error) {
-	dates, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
-		N         int
-		Reference time.Time
-	}{N: 2, Reference: time.Now()}})
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	marketDay := dates[0]
-	if dates[0].Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
-		marketDay = dates[1]
-	}
-
-	return marketDay, nil
 }
 
 func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int]*stores.SecurityStat, error) {
