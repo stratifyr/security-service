@@ -9,12 +9,8 @@ import (
 )
 
 type IndexService interface {
-	List(ctx *gofr.Context, filter *IndexFilter) ([]*Index, error)
+	List(ctx *gofr.Context) ([]*Index, error)
 	Upsert(ctx *gofr.Context, payload *IndexUpsert) (*Index, error)
-}
-
-type IndexFilter struct {
-	Date time.Time
 }
 
 type Index struct {
@@ -66,11 +62,7 @@ func NewIndexService(marketDayService MarketDayService, securityService Security
 	}
 }
 
-func (s *indexService) List(ctx *gofr.Context, filter *IndexFilter) ([]*Index, error) {
-	if filter.Date.IsZero() {
-		filter.Date = time.Now()
-	}
-
+func (s *indexService) List(ctx *gofr.Context) ([]*Index, error) {
 	indices, err := s.store.List(ctx, &stores.IndexFilter{}, 0, 0)
 	if err != nil {
 		return nil, err
@@ -80,7 +72,7 @@ func (s *indexService) List(ctx *gofr.Context, filter *IndexFilter) ([]*Index, e
 		return nil, nil
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx, filter.Date)
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +132,7 @@ func (s *indexService) Upsert(ctx *gofr.Context, payload *IndexUpsert) (*Index, 
 		return nil, err
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx, time.Now())
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +182,7 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 		return nil, err
 	}
 
-	prevMarketDay, err := s.getPrevMarketDay(ctx, time.Now())
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -206,23 +198,6 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 	}
 
 	return s.buildResp(index, indexStats, securities), nil
-}
-
-func (s *indexService) getPrevMarketDay(ctx *gofr.Context, referenceDate time.Time) (time.Time, error) {
-	dates, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
-		N         int
-		Reference time.Time
-	}{N: 2, Reference: referenceDate}})
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	marketDay := dates[0]
-	if dates[0].Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
-		marketDay = dates[1]
-	}
-
-	return marketDay, nil
 }
 
 func (s *indexService) getStatsMap(ctx *gofr.Context, indexIDs []int, date time.Time) (map[int]*stores.IndexStat, error) {

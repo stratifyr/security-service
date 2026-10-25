@@ -12,6 +12,7 @@ import (
 
 type MarketDayService interface {
 	List(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error)
+	GetPreviousDay(ctx *gofr.Context) (time.Time, error)
 }
 
 type MarketDayFilter struct {
@@ -99,4 +100,27 @@ func (s *marketDayService) List(ctx *gofr.Context, f *MarketDayFilter) ([]time.T
 	}
 
 	return marketDays, len(marketDays), nil
+}
+
+func (s *marketDayService) GetPreviousDay(ctx *gofr.Context) (time.Time, error) {
+	now := time.Now()
+
+	dates, _, err := s.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
+		N         int
+		Reference time.Time
+	}{N: 2, Reference: now}})
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	if len(dates) == 0 {
+		return time.Time{}, ErrMarketDayNotFound
+	}
+
+	marketDay := dates[0]
+	if len(dates) > 1 && dates[0].Format(time.DateOnly) == now.Format(time.DateOnly) {
+		marketDay = dates[1]
+	}
+
+	return marketDay, nil
 }
