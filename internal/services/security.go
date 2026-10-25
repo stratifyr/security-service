@@ -316,7 +316,7 @@ func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date
 }
 
 func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int][]*SecurityMetric, error) {
-	securityMetrics, err := s.securityMetricService.List(ctx, securityIDs, date)
+	securityMetrics, err := s.securityMetricService.List(ctx, date)
 	if err != nil {
 		return nil, err
 	}
@@ -328,6 +328,10 @@ func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs [
 	}
 
 	for _, sm := range securityMetrics {
+		if _, ok := securityMetricsMap[sm.SecurityID]; !ok {
+			continue
+		}
+
 		securityMetricsMap[sm.SecurityID] = append(securityMetricsMap[sm.SecurityID], sm)
 	}
 

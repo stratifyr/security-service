@@ -177,7 +177,7 @@ func (f *SecurityStatFilter) buildWhereClause() (clause string, values []any) {
 func (s *SecurityStat) cacheInvalidations() []string {
 	return []string{
 		SecuritiesClientCacheKey,
-		fmt.Sprintf(SecurityMetricsServerCachePatternBySecurity, s.SecurityID),
+		SecurityMetricsServerCachePattern,
 		fmt.Sprintf(HistoricalDataClientCacheKey, s.SecurityID),
 	}
 }
