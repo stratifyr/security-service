@@ -18,6 +18,7 @@ func main() {
 	app.Migrate(migrations.All())
 
 	metricStore := stores.NewMetricStore()
+	exchangeStore := stores.NewExchangeStore()
 	securityStore := stores.NewSecurityStore()
 	marketHolidayStore := stores.NewMarketHolidayStore()
 	securityStatStore := stores.NewSecurityStatStore()
@@ -34,7 +35,7 @@ func main() {
 	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore)
 	securityMetricService := services.NewSecurityMetricService(marketDayService, metricService,
 		securityStatStore, securityMetricStore, securityStore)
-	securityService := services.NewSecurityService(marketDayService, securityMetricService, securityStatStore, securityStore)
+	securityService := services.NewSecurityService(marketDayService, securityMetricService, exchangeStore, securityStatStore, securityStore)
 	marketDataJobTypeService := services.NewMarketDataJobTypeService(marketDataJobTypeStore)
 	marketDataJobService := services.NewMarketDataJobService(marketDataJobStore)
 	indexStatService := services.NewIndexStatService(marketDayService, indexStatStore)

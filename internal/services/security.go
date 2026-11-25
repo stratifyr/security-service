@@ -17,6 +17,7 @@ type SecurityService interface {
 
 type Security struct {
 	ID              int
+	ExchangeID      int
 	ISIN            string
 	Symbol          string
 	Industry        string
@@ -28,6 +29,7 @@ type Security struct {
 	PreviousClose   float64
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	Exchange        *stores.Exchange
 	*MarketData
 }
 
@@ -37,6 +39,7 @@ type MarketData struct {
 }
 
 type SecurityUpsert struct {
+	ExchangeID      int
 	ISIN            string
 	Symbol          string
 	Industry        string
@@ -50,15 +53,17 @@ type SecurityUpsert struct {
 type securityService struct {
 	marketDayService      MarketDayService
 	securityMetricService SecurityMetricService
+	exchangeStore         stores.ExchangeStore
 	securityStatStore     stores.SecurityStatStore
 	store                 stores.SecurityStore
 }
 
 func NewSecurityService(marketDayService MarketDayService, securityMetricService SecurityMetricService,
-	securityStatStore stores.SecurityStatStore, store stores.SecurityStore) *securityService {
+	exchangeStore stores.ExchangeStore, securityStatStore stores.SecurityStatStore, store stores.SecurityStore) *securityService {
 	return &securityService{
 		marketDayService:      marketDayService,
 		securityMetricService: securityMetricService,
+		exchangeStore:         exchangeStore,
 		securityStatStore:     securityStatStore,
 		store:                 store,
 	}
@@ -74,15 +79,20 @@ func (s *securityService) List(ctx *gofr.Context) ([]*Security, error) {
 		return nil, nil
 	}
 
-	var securityIDs = make([]int, len(securities))
-
-	for i := range securities {
-		securityIDs[i] = securities[i].ID
+	exchanges, err := s.getExchangesMap(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	var securityIDs = make([]int, len(securities))
+
+	for i := range securities {
+		securityIDs[i] = securities[i].ID
 	}
 
 	var (
@@ -115,7 +125,7 @@ func (s *securityService) List(ctx *gofr.Context) ([]*Security, error) {
 	resp := make([]*Security, len(securities))
 
 	for i := range securities {
-		resp[i] = s.buildResp(securities[i], securityStats, securityMetrics)
+		resp[i] = s.buildResp(securities[i], exchanges, securityStats, securityMetrics)
 	}
 
 	return resp, nil
@@ -136,9 +146,15 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		return nil, err
 	}
 
+	exchange, err := s.exchangeStore.Retrieve(ctx, payload.ExchangeID)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now().UTC()
 
 	model := &stores.Security{
+		ExchangeID:      exchange.ID,
 		ISIN:            payload.ISIN,
 		Symbol:          payload.Symbol,
 		Industry:        industry,
@@ -152,6 +168,11 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 	}
 
 	security, err := s.store.Create(ctx, model)
+	if err != nil {
+		return nil, err
+	}
+
+	exchanges, err := s.getExchangesMap(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +192,7 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		return nil, err
 	}
 
-	return s.buildResp(security, securityStats, securityMetrics), nil
+	return s.buildResp(security, exchanges, securityStats, securityMetrics), nil
 }
 
 func (s *securityService) GetHistoricalData(ctx *gofr.Context, id int) ([]*MarketData, error) {
@@ -227,6 +248,15 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		return nil, err
 	}
 
+	if payload.ExchangeID != 0 {
+		exchange, err := s.exchangeStore.Retrieve(ctx, payload.ExchangeID)
+		if err != nil {
+			return nil, err
+		}
+
+		security.ExchangeID = exchange.ID
+	}
+
 	if payload.ISIN != "" {
 		security.ISIN = payload.ISIN
 	}
@@ -265,6 +295,11 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		return nil, err
 	}
 
+	exchanges, err := s.getExchangesMap(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
 	if err != nil {
 		return nil, err
@@ -280,7 +315,22 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		return nil, err
 	}
 
-	return s.buildResp(security, securityStats, securityMetrics), nil
+	return s.buildResp(security, exchanges, securityStats, securityMetrics), nil
+}
+
+func (s *securityService) getExchangesMap(ctx *gofr.Context) (map[int]*stores.Exchange, error) {
+	exchanges, err := s.exchangeStore.List(ctx, &stores.ExchangeFilter{}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var exchangeByID = make(map[int]*stores.Exchange)
+
+	for i := range exchanges {
+		exchangeByID[exchanges[i].ID] = exchanges[i]
+	}
+
+	return exchangeByID, nil
 }
 
 func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int]*stores.SecurityStat, error) {
@@ -321,10 +371,11 @@ func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs [
 	return securityMetricsMap, nil
 }
 
-func (s *securityService) buildResp(model *stores.Security, securityStats map[int]*stores.SecurityStat,
-	securityMetrics map[int][]*SecurityMetric) *Security {
+func (s *securityService) buildResp(model *stores.Security, exchanges map[int]*stores.Exchange,
+	securityStats map[int]*stores.SecurityStat, securityMetrics map[int][]*SecurityMetric) *Security {
 	resp := &Security{
 		ID:              model.ID,
+		ExchangeID:      model.ExchangeID,
 		ISIN:            model.ISIN,
 		Symbol:          model.Symbol,
 		Industry:        model.Industry.String(),
@@ -337,6 +388,8 @@ func (s *securityService) buildResp(model *stores.Security, securityStats map[in
 		UpdatedAt:       model.UpdatedAt,
 		MarketData:      new(MarketData),
 	}
+
+	resp.Exchange = exchanges[model.ExchangeID]
 
 	s.bindSecurityStat(resp, securityStats)
 	s.bindSecurityMetricsDetails(resp, securityMetrics)

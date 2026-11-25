@@ -7,8 +7,20 @@ import (
 func setupInitialSchemas() migration.Migrate {
 	return migration.Migrate{
 		UP: func(d migration.Datasource) error {
+			if _, err := d.SQL.Exec(`CREATE TABLE exchanges (
+										id INT PRIMARY KEY AUTO_INCREMENT,
+										name VARCHAR(50) NOT NULL UNIQUE,
+										currency INT NOT NULL,
+										forex_rate DECIMAL(10,2) NOT NULL,
+										created_at TIMESTAMP NOT NULL,
+										updated_at TIMESTAMP NOT NULL
+									);`); err != nil {
+				return err
+			}
+
 			if _, err := d.SQL.Exec(`CREATE TABLE securities (
 										id INT PRIMARY KEY AUTO_INCREMENT,
+										exchange_id INT NOT NULL,
 										isin VARCHAR(50) NOT NULL,
 										symbol VARCHAR(50) NOT NULL UNIQUE,
 										industry INT NOT NULL,
@@ -18,7 +30,9 @@ func setupInitialSchemas() migration.Migrate {
 										volume BIGINT NOT NULL,
 										free_float_shares BIGINT NOT NULL,
 										created_at TIMESTAMP NOT NULL,
-										updated_at TIMESTAMP NOT NULL
+										updated_at TIMESTAMP NOT NULL,
+										
+										CONSTRAINT fk_securities_exchange_id FOREIGN KEY (exchange_id) REFERENCES exchanges(id)
 									);`); err != nil {
 				return err
 			}

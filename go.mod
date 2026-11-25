@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/redis/go-redis/v9 v9.21.0
-	github.com/stratifyr/security-service-proto v0.0.0-20261025102328-965b55be43db
+	github.com/stratifyr/security-service-proto v0.0.0-20261125181726-4ec125b4a98c
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	gofr.dev v1.59.0
 	golang.org/x/sync v0.22.0
