@@ -18,6 +18,7 @@ func main() {
 	app.Migrate(migrations.All())
 
 	metricStore := stores.NewMetricStore()
+	exchangeStore := stores.NewExchangeStore()
 	securityStore := stores.NewSecurityStore()
 	marketHolidayStore := stores.NewMarketHolidayStore()
 	securityStatStore := stores.NewSecurityStatStore()
@@ -29,16 +30,17 @@ func main() {
 	indexStore := stores.NewIndexStore(indexConstituentStore)
 
 	metricService := services.NewMetricService(metricStore)
-	marketHolidayService := services.NewMarketHolidayService(marketHolidayStore)
-	marketDayService := services.NewMarketDayService(marketHolidayStore)
-	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore)
+	exchangeService := services.NewExchangeService(exchangeStore)
+	marketHolidayService := services.NewMarketHolidayService(exchangeService, marketHolidayStore)
+	marketDayService := services.NewMarketDayService(exchangeService, marketHolidayStore)
+	securityStatService := services.NewSecurityStatService(marketDayService, securityStatStore, securityStore)
 	securityMetricService := services.NewSecurityMetricService(marketDayService, metricService,
 		securityStatStore, securityMetricStore, securityStore)
-	securityService := services.NewSecurityService(marketDayService, securityMetricService, securityStatStore, securityStore)
+	securityService := services.NewSecurityService(marketDayService, securityMetricService, exchangeService, securityStatStore, securityStore)
 	marketDataJobTypeService := services.NewMarketDataJobTypeService(marketDataJobTypeStore)
 	marketDataJobService := services.NewMarketDataJobService(marketDataJobStore)
-	indexStatService := services.NewIndexStatService(marketDayService, indexStatStore)
-	indexService := services.NewIndexService(marketDayService, securityService, indexStatStore, indexStore)
+	indexStatService := services.NewIndexStatService(marketDayService, indexStatStore, indexStore)
+	indexService := services.NewIndexService(marketDayService, securityService, exchangeService, indexStatStore, indexStore)
 
 	metricHandler := handlers.NewMetricHandler(metricService)
 	marketHolidayHandler := handlers.NewMarketHolidayHandler(marketHolidayService)
@@ -54,8 +56,10 @@ func main() {
 	marketDataJobGRPCHandler := handlers.NewMarketDataJobGRPCHandler(marketDataJobService)
 	indexStatGRPCHandler := handlers.NewIndexStatGRPCHandler(indexStatService)
 	indexGRPCHandler := handlers.NewIndexGRPCHandler(indexService)
+	exchangeGRPCHandler := handlers.NewExchangeGRPCHandler(exchangeService)
 	securityServiceGRPCHandler := handlers.NewSecurityServiceGoFrGRPCHandler(marketDayGRPCHandler, metricGRPCHandler,
-		securityGRPCHandler, securityStatGRPCHandler, indexGRPCHandler, indexStatGRPCHandler, marketDataJobGRPCHandler)
+		securityGRPCHandler, securityStatGRPCHandler, indexGRPCHandler, indexStatGRPCHandler, marketDataJobGRPCHandler,
+		exchangeGRPCHandler)
 
 	gofrWrapper.RegisterSecurityServiceServerWithGofr(app, securityServiceGRPCHandler)
 

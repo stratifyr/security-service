@@ -40,6 +40,7 @@ func (h *marketDayGRPCHandler) List(ctx *gofr.Context) (any, error) {
 	}
 
 	filter := &services.MarketDayFilter{
+		Exchange: payload.Exchange,
 		DateBetween: &struct {
 			StartDate time.Time
 			EndDate   time.Time

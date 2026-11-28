@@ -14,6 +14,7 @@ import (
 
 type MarketHoliday struct {
 	ID          int    `json:"id"`
+	Exchange    string `json:"exchange"`
 	Date        string `json:"date"`
 	Description string `json:"description"`
 	CreatedAt   string `json:"createdAt"`
@@ -21,11 +22,13 @@ type MarketHoliday struct {
 }
 
 type MarketHolidayCreate struct {
+	Exchange    string `json:"exchange"`
 	Date        string `json:"date"`
 	Description string `json:"description"`
 }
 
 type MarketHolidayUpdate struct {
+	Exchange    string `json:"exchange"`
 	Date        string `json:"date"`
 	Description string `json:"description"`
 }
@@ -44,6 +47,11 @@ func (h *marketHolidayHandler) List(ctx *gofr.Context) (any, error) {
 		filter services.MarketHolidayFilter
 		err    error
 	)
+
+	filter.Exchange = ctx.Param("exchange")
+	if filter.Exchange == "" {
+		return nil, http.ErrorMissingParam{Params: []string{"exchange"}}
+	}
 
 	if ctx.Param("date") != "" {
 		filter.Date, err = time.Parse(time.DateOnly, ctx.Param("date"))
@@ -118,12 +126,17 @@ func (h *marketHolidayHandler) Create(ctx *gofr.Context) (any, error) {
 		return nil, http.ErrorInvalidParam{Params: []string{"request-body"}}
 	}
 
+	if payload.Exchange == "" {
+		return nil, http.ErrorMissingParam{Params: []string{"exchange"}}
+	}
+
 	date, err := time.Parse(time.DateOnly, payload.Date)
 	if err != nil {
 		return nil, http.ErrorInvalidParam{Params: []string{"date"}}
 	}
 
 	model := &services.MarketHolidayCreate{
+		Exchange:    payload.Exchange,
 		Date:        date,
 		Description: payload.Description,
 	}
@@ -160,6 +173,7 @@ func (h *marketHolidayHandler) Patch(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.MarketHolidayUpdate{
+		Exchange:    payload.Exchange,
 		Date:        date,
 		Description: payload.Description,
 	}
@@ -191,6 +205,7 @@ func (h *marketHolidayHandler) Delete(ctx *gofr.Context) (any, error) {
 func (*marketHolidayHandler) buildResp(model *services.MarketHoliday) *MarketHoliday {
 	resp := &MarketHoliday{
 		ID:          model.ID,
+		Exchange:    model.Exchange,
 		Date:        model.Date.Format(time.DateOnly),
 		Description: model.Description,
 		CreatedAt:   model.CreatedAt.Format(time.RFC3339),

@@ -53,12 +53,7 @@ func (s *securityMetricService) List(ctx *gofr.Context, date time.Time) ([]*Secu
 
 	ctx.Logger.Warnf("failed to get security metrics from store: %v", err)
 
-	securityIDs, err := s.getSecurityIDs(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	securityMetrics, err = s.computeSecurityMetrics(ctx, securityIDs, date)
+	securityMetrics, err = s.computeSecurityMetrics(ctx, date)
 	if err != nil {
 		return nil, err
 	}
@@ -92,39 +87,68 @@ func (s *securityMetricService) GetBySecurityID(ctx *gofr.Context,
 	return resp, nil
 }
 
-func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context,
-	securityIDs []int, date time.Time) ([]*stores.SecurityMetric, error) {
+func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context, date time.Time) ([]*stores.SecurityMetric, error) {
 	metrics := s.metricService.List(ctx)
 	maxPeriod := getMaxPeriod(metrics)
 
-	marketDays, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
-		N         int
-		Reference time.Time
-	}{N: maxPeriod, Reference: date}})
+	securityIDsByExchange, err := s.getSecurityIDsByExchange(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	startDate, endDate := marketDays[len(marketDays)-1], marketDays[0]
-	if startDate.After(endDate) {
-		startDate, endDate = endDate, startDate
+	var securityMetrics = make([]*stores.SecurityMetric, 0)
+
+	for exchangeID, ids := range securityIDsByExchange {
+		marketDays, _, err := s.marketDayService.List(ctx, &MarketDayFilter{
+			ExchangeID: exchangeID,
+			LastNDaysFromReference: &struct {
+				N         int
+				Reference time.Time
+			}{N: maxPeriod, Reference: date},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if len(marketDays) == 0 {
+			continue
+		}
+
+		startDate, endDate := marketDays[len(marketDays)-1], marketDays[0]
+		if startDate.After(endDate) {
+			startDate, endDate = endDate, startDate
+		}
+
+		// This exchange did not trade on the requested date, so it has no
+		// metrics for it.
+		if endDate.Format(time.DateOnly) != date.Format(time.DateOnly) {
+			continue
+		}
+
+		securityStats, err := s.securityStatStore.List(ctx, &stores.SecurityStatFilter{SecurityIDs: ids,
+			DateBetween: &struct {
+				Start time.Time
+				End   time.Time
+			}{Start: startDate, End: endDate}}, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		securityStatsMap := make(map[int][]*stores.SecurityStat, len(ids))
+
+		for _, stat := range securityStats {
+			securityStatsMap[stat.SecurityID] = append(securityStatsMap[stat.SecurityID], stat)
+		}
+
+		securityMetrics = append(securityMetrics,
+			s.computeMetricsForSecurities(ctx, metrics, ids, securityStatsMap, date)...)
 	}
 
-	securityStats, err := s.securityStatStore.List(ctx, &stores.SecurityStatFilter{SecurityIDs: securityIDs,
-		DateBetween: &struct {
-			Start time.Time
-			End   time.Time
-		}{Start: startDate, End: endDate}}, 0, 0)
-	if err != nil {
-		return nil, err
-	}
+	return securityMetrics, nil
+}
 
-	securityStatsMap := make(map[int][]*stores.SecurityStat, len(securityIDs))
-
-	for _, stat := range securityStats {
-		securityStatsMap[stat.SecurityID] = append(securityStatsMap[stat.SecurityID], stat)
-	}
-
+func (s *securityMetricService) computeMetricsForSecurities(ctx *gofr.Context, metrics []*Metric,
+	securityIDs []int, securityStatsMap map[int][]*stores.SecurityStat, date time.Time) []*stores.SecurityMetric {
 	var securityMetrics = make([]*stores.SecurityMetric, 0)
 
 	for _, securityID := range securityIDs {
@@ -154,21 +178,47 @@ func (s *securityMetricService) computeSecurityMetrics(ctx *gofr.Context,
 		}
 	}
 
-	return securityMetrics, nil
+	return securityMetrics
+}
+
+func (s *securityMetricService) getSecurityIDsByExchange(ctx *gofr.Context) (map[int][]int, error) {
+	securityIDsByExchange := make(map[int][]int)
+
+	securities, err := s.securityStore.List(ctx, &stores.SecurityFilter{}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, security := range securities {
+		securityIDsByExchange[security.ExchangeID] = append(securityIDsByExchange[security.ExchangeID], security.ID)
+	}
+
+	return securityIDsByExchange, nil
 }
 
 func (s *securityMetricService) computeSecurityMetricsForDates(ctx *gofr.Context,
 	securityID int, dates []time.Time) (map[time.Time][]*stores.SecurityMetric, error) {
+	security, err := s.securityStore.Retrieve(ctx, securityID)
+	if err != nil {
+		return nil, err
+	}
+
 	metrics := s.metricService.List(ctx)
 	maxPeriod := getMaxPeriod(metrics)
 	startDate, endDate := minMaxDates(dates)
 
-	marketDays, _, err := s.marketDayService.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
-		N         int
-		Reference time.Time
-	}{N: maxPeriod, Reference: startDate}})
+	marketDays, _, err := s.marketDayService.List(ctx, &MarketDayFilter{
+		ExchangeID: security.ExchangeID,
+		LastNDaysFromReference: &struct {
+			N         int
+			Reference time.Time
+		}{N: maxPeriod, Reference: startDate}})
 	if err != nil {
 		return nil, err
+	}
+
+	if len(marketDays) == 0 {
+		return make(map[time.Time][]*stores.SecurityMetric), nil
 	}
 
 	statsStartDate, statsEndDate := marketDays[len(marketDays)-1], endDate
@@ -234,21 +284,6 @@ func (s *securityMetricService) computeMetricsForWindow(securityID int, date tim
 	}
 
 	return securityMetrics
-}
-
-func (s *securityMetricService) getSecurityIDs(ctx *gofr.Context) ([]int, error) {
-	securities, err := s.securityStore.List(ctx, &stores.SecurityFilter{}, 0, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	securityIDs := make([]int, len(securities))
-
-	for i := range securities {
-		securityIDs[i] = securities[i].ID
-	}
-
-	return securityIDs, nil
 }
 
 func (s *securityMetricService) getMetricsMap(ctx *gofr.Context) map[int]*Metric {

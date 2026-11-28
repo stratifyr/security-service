@@ -11,6 +11,7 @@ import (
 
 type Index struct {
 	ID            int                 `json:"id"`
+	Exchange      string              `json:"exchange"`
 	Name          string              `json:"name"`
 	Value         float64             `json:"value"`
 	PreviousClose float64             `json:"previousClose"`
@@ -74,6 +75,7 @@ func (h *indexHandler) List(ctx *gofr.Context) (any, error) {
 func (*indexHandler) buildResp(model *services.Index) *Index {
 	resp := &Index{
 		ID:            model.ID,
+		Exchange:      model.Exchange,
 		Name:          model.Name,
 		Value:         model.Value,
 		PreviousClose: model.PreviousClose,

@@ -12,10 +12,12 @@ import (
 
 type MarketDayService interface {
 	List(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error)
-	GetPreviousDay(ctx *gofr.Context) (time.Time, error)
+	GetPreviousDay(ctx *gofr.Context, exchangeID int) (time.Time, error)
 }
 
 type MarketDayFilter struct {
+	Exchange               string
+	ExchangeID             int
 	LastNDays              int
 	LastNDaysFromReference *struct {
 		N         int
@@ -28,15 +30,20 @@ type MarketDayFilter struct {
 }
 
 type marketDayService struct {
+	exchangeService    ExchangeService
 	marketHolidayStore stores.MarketHolidayStore
 }
 
-func NewMarketDayService(marketHolidayStore stores.MarketHolidayStore) *marketDayService {
-	return &marketDayService{marketHolidayStore: marketHolidayStore}
+func NewMarketDayService(exchangeService ExchangeService, marketHolidayStore stores.MarketHolidayStore) *marketDayService {
+	return &marketDayService{exchangeService: exchangeService, marketHolidayStore: marketHolidayStore}
 }
 
 //nolint:gocyclo // filter logic requires branching
 func (s *marketDayService) List(ctx *gofr.Context, f *MarketDayFilter) ([]time.Time, int, error) {
+	if f.Exchange == "" && f.ExchangeID == 0 {
+		return nil, 0, ErrInvalidExchange
+	}
+
 	var (
 		startDate time.Time
 		endDate   time.Time
@@ -71,7 +78,19 @@ func (s *marketDayService) List(ctx *gofr.Context, f *MarketDayFilter) ([]time.T
 		startDate = endDate.Add(-time.Duration(lookBackDays) * 24 * time.Hour)
 	}
 
+	exchangeID := f.ExchangeID
+
+	if f.Exchange != "" {
+		exchange, err := s.exchangeService.GetByName(ctx, f.Exchange)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		exchangeID = exchange.ID
+	}
+
 	marketHolidays, err := s.marketHolidayStore.List(ctx, &stores.MarketHolidayFilter{
+		ExchangeID: exchangeID,
 		DateBetween: &struct {
 			StartDate time.Time
 			EndDate   time.Time
@@ -102,11 +121,14 @@ func (s *marketDayService) List(ctx *gofr.Context, f *MarketDayFilter) ([]time.T
 	return marketDays, len(marketDays), nil
 }
 
-func (s *marketDayService) GetPreviousDay(ctx *gofr.Context) (time.Time, error) {
-	dates, _, err := s.List(ctx, &MarketDayFilter{LastNDaysFromReference: &struct {
-		N         int
-		Reference time.Time
-	}{N: 2, Reference: time.Now()}})
+func (s *marketDayService) GetPreviousDay(ctx *gofr.Context, exchangeID int) (time.Time, error) {
+	dates, _, err := s.List(ctx, &MarketDayFilter{
+		ExchangeID: exchangeID,
+		LastNDaysFromReference: &struct {
+			N         int
+			Reference time.Time
+		}{N: 2, Reference: time.Now()},
+	})
 	if err != nil {
 		return time.Time{}, err
 	}

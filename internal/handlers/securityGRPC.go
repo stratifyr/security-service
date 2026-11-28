@@ -43,6 +43,7 @@ func (h *securityGRPCHandler) Upsert(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityUpsert{
+		Exchange:        payload.Exchange,
 		ISIN:            payload.Isin,
 		Symbol:          payload.Symbol,
 		Industry:        payload.Industry,
@@ -101,6 +102,13 @@ func (h *securityGRPCHandler) buildResponse(security *services.Security) *pb.Sec
 		PreviousClose:   security.PreviousClose,
 		CreatedAt:       security.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       security.UpdatedAt.Format(time.RFC3339),
+		MarketData:      nil,
+	}
+
+	if security.Exchange != nil {
+		resp.Exchange = security.Exchange.Name
+		resp.Currency = security.Exchange.Currency.String()
+		resp.ForexRate = security.Exchange.ForexRate
 	}
 
 	if security.SecurityStat == nil {

@@ -11,6 +11,7 @@ import (
 
 type Security struct {
 	ID              int         `json:"id"`
+	ExchangeID      int         `json:"exchangeId"`
 	ISIN            string      `json:"isin"`
 	Symbol          string      `json:"symbol"`
 	Industry        string      `json:"industry"`
@@ -20,6 +21,9 @@ type Security struct {
 	Volume          int         `json:"volume"`
 	FreeFloatShares int         `json:"freeFloatShares"`
 	PreviousClose   float64     `json:"previousClose"`
+	Exchange        string      `json:"exchange"`
+	Currency        string      `json:"currency"`
+	ForexRate       float64     `json:"forexRate"`
 	CreatedAt       string      `json:"createdAt"`
 	UpdatedAt       string      `json:"updatedAt"`
 	MarketData      *MarketData `json:"marketData"`
@@ -76,6 +80,7 @@ func (h *securityHandler) List(ctx *gofr.Context) (any, error) {
 func (*securityHandler) buildResp(model *services.Security) *Security {
 	resp := &Security{
 		ID:              model.ID,
+		ExchangeID:      model.ExchangeID,
 		ISIN:            model.ISIN,
 		Symbol:          model.Symbol,
 		Industry:        model.Industry,
@@ -88,6 +93,12 @@ func (*securityHandler) buildResp(model *services.Security) *Security {
 		CreatedAt:       model.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       model.UpdatedAt.Format(time.RFC3339),
 		MarketData:      nil,
+	}
+
+	if model.Exchange != nil {
+		resp.Exchange = model.Exchange.Name
+		resp.Currency = model.Exchange.Currency.String()
+		resp.ForexRate = model.Exchange.ForexRate
 	}
 
 	if model.SecurityStat == nil {
