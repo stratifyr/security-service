@@ -43,7 +43,7 @@ func (h *securityGRPCHandler) Upsert(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.SecurityUpsert{
-		ExchangeID:      int(payload.ExchangeId),
+		Exchange:        payload.Exchange,
 		ISIN:            payload.Isin,
 		Symbol:          payload.Symbol,
 		Industry:        payload.Industry,

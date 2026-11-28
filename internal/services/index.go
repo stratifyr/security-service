@@ -15,6 +15,7 @@ type IndexService interface {
 
 type Index struct {
 	ID            int
+	Exchange      string
 	Name          string
 	Value         float64
 	PreviousClose float64
@@ -40,6 +41,7 @@ type IndexConstituent struct {
 }
 
 type IndexUpsert struct {
+	Exchange    string
 	Name        string
 	Value       float64
 	SecurityIDs []int
@@ -48,15 +50,18 @@ type IndexUpsert struct {
 type indexService struct {
 	marketDayService MarketDayService
 	securityService  SecurityService
+	exchangeService  ExchangeService
 	indexStatStore   stores.IndexStatStore
 	store            stores.IndexStore
 }
 
 func NewIndexService(marketDayService MarketDayService, securityService SecurityService,
-	indexStatStore stores.IndexStatStore, store stores.IndexStore) *indexService {
+	exchangeService ExchangeService, indexStatStore stores.IndexStatStore,
+	store stores.IndexStore) *indexService {
 	return &indexService{
 		marketDayService: marketDayService,
 		securityService:  securityService,
+		exchangeService:  exchangeService,
 		indexStatStore:   indexStatStore,
 		store:            store,
 	}
@@ -72,17 +77,12 @@ func (s *indexService) List(ctx *gofr.Context) ([]*Index, error) {
 		return nil, nil
 	}
 
-	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
+	indexStats, err := s.getStatsMap(ctx, indices)
 	if err != nil {
 		return nil, err
 	}
 
-	var indexIDs = make([]int, len(indices))
-	for i, index := range indices {
-		indexIDs[i] = index.ID
-	}
-
-	indexStats, err := s.getStatsMap(ctx, indexIDs, prevMarketDay)
+	exchanges, err := s.getExchangesMap(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (s *indexService) List(ctx *gofr.Context) ([]*Index, error) {
 	resp := make([]*Index, len(indices))
 
 	for i := range indices {
-		resp[i] = s.buildResp(indices[i], indexStats, securities)
+		resp[i] = s.buildResp(indices[i], indexStats, exchanges, securities)
 	}
 
 	return resp, nil
@@ -111,9 +111,15 @@ func (s *indexService) Upsert(ctx *gofr.Context, payload *IndexUpsert) (*Index, 
 		return s.patch(ctx, indices[0].ID, payload)
 	}
 
+	exchange, err := s.exchangeService.GetByName(ctx, payload.Exchange)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 
 	model := &stores.Index{
+		ExchangeID:   exchange.ID,
 		Name:         payload.Name,
 		Value:        payload.Value,
 		CreatedAt:    now,
@@ -132,12 +138,17 @@ func (s *indexService) Upsert(ctx *gofr.Context, payload *IndexUpsert) (*Index, 
 		return nil, err
 	}
 
-	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx, index.ExchangeID)
 	if err != nil {
 		return nil, err
 	}
 
-	indexStats, err := s.getStatsMap(ctx, []int{index.ID}, prevMarketDay)
+	indexStats, err := s.getStatsForDate(ctx, []int{index.ID}, prevMarketDay)
+	if err != nil {
+		return nil, err
+	}
+
+	exchanges, err := s.getExchangesMap(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -147,9 +158,10 @@ func (s *indexService) Upsert(ctx *gofr.Context, payload *IndexUpsert) (*Index, 
 		return nil, err
 	}
 
-	return s.buildResp(index, indexStats, securities), nil
+	return s.buildResp(index, indexStats, exchanges, securities), nil
 }
 
+//nolint:gocyclo // patch logic requires multiple validations
 func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*Index, error) {
 	index, err := s.store.Retrieve(ctx, id)
 	if err != nil {
@@ -162,6 +174,15 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 
 	if payload.Value != 0 {
 		index.Value = payload.Value
+	}
+
+	if payload.Exchange != "" {
+		exchange, err := s.exchangeService.GetByName(ctx, payload.Exchange)
+		if err != nil {
+			return nil, err
+		}
+
+		index.ExchangeID = exchange.ID
 	}
 
 	if len(payload.SecurityIDs) > 0 {
@@ -182,12 +203,17 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 		return nil, err
 	}
 
-	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx, index.ExchangeID)
 	if err != nil {
 		return nil, err
 	}
 
-	indexStats, err := s.getStatsMap(ctx, []int{id}, prevMarketDay)
+	indexStats, err := s.getStatsForDate(ctx, []int{id}, prevMarketDay)
+	if err != nil {
+		return nil, err
+	}
+
+	exchanges, err := s.getExchangesMap(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -197,10 +223,46 @@ func (s *indexService) patch(ctx *gofr.Context, id int, payload *IndexUpsert) (*
 		return nil, err
 	}
 
-	return s.buildResp(index, indexStats, securities), nil
+	return s.buildResp(index, indexStats, exchanges, securities), nil
 }
 
-func (s *indexService) getStatsMap(ctx *gofr.Context, indexIDs []int, date time.Time) (map[int]*stores.IndexStat, error) {
+func (s *indexService) getStatsMap(ctx *gofr.Context, indices []*stores.Index) (map[int]*stores.IndexStat, error) {
+	indexIDsByDate := make(map[time.Time][]int)
+	prevDayByExchange := make(map[int]time.Time)
+
+	for _, index := range indices {
+		prevMarketDay, ok := prevDayByExchange[index.ExchangeID]
+		if !ok {
+			var err error
+
+			prevMarketDay, err = s.marketDayService.GetPreviousDay(ctx, index.ExchangeID)
+			if err != nil {
+				return nil, err
+			}
+
+			prevDayByExchange[index.ExchangeID] = prevMarketDay
+		}
+
+		indexIDsByDate[prevMarketDay] = append(indexIDsByDate[prevMarketDay], index.ID)
+	}
+
+	indexStats := make(map[int]*stores.IndexStat)
+
+	for date, indexIDs := range indexIDsByDate {
+		stats, err := s.getStatsForDate(ctx, indexIDs, date)
+		if err != nil {
+			return nil, err
+		}
+
+		for indexID, stat := range stats {
+			indexStats[indexID] = stat
+		}
+	}
+
+	return indexStats, nil
+}
+
+func (s *indexService) getStatsForDate(ctx *gofr.Context, indexIDs []int, date time.Time) (map[int]*stores.IndexStat, error) {
 	indexStats, err := s.indexStatStore.List(ctx, &stores.IndexStatFilter{IndexIDs: indexIDs, Date: date}, 0, 0)
 	if err != nil {
 		return nil, err
@@ -215,9 +277,26 @@ func (s *indexService) getStatsMap(ctx *gofr.Context, indexIDs []int, date time.
 	return indexStatsMap, nil
 }
 
-func (s *indexService) buildResp(model *stores.Index, indexStats map[int]*stores.IndexStat, securities []*Security) *Index {
+func (s *indexService) getExchangesMap(ctx *gofr.Context) (map[int]*Exchange, error) {
+	exchanges, err := s.exchangeService.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var exchangeByID = make(map[int]*Exchange)
+
+	for i := range exchanges {
+		exchangeByID[exchanges[i].ID] = exchanges[i]
+	}
+
+	return exchangeByID, nil
+}
+
+func (s *indexService) buildResp(model *stores.Index, indexStats map[int]*stores.IndexStat,
+	exchanges map[int]*Exchange, securities []*Security) *Index {
 	resp := &Index{
 		ID:            model.ID,
+		Exchange:      exchanges[model.ExchangeID].Name,
 		Name:          model.Name,
 		Value:         model.Value,
 		PreviousClose: 0,

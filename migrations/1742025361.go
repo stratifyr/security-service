@@ -58,10 +58,13 @@ func setupInitialSchemas() migration.Migrate {
 
 			if _, err := d.SQL.Exec(`CREATE TABLE indices (
 										id INT PRIMARY KEY AUTO_INCREMENT,
+										exchange_id INT NULL,
 										name VARCHAR(100) NOT NULL UNIQUE,
 										value DECIMAL(10,2) NOT NULL,
 										created_at TIMESTAMP NOT NULL,
-										updated_at TIMESTAMP NOT NULL
+										updated_at TIMESTAMP NOT NULL,
+										
+										CONSTRAINT fk_indices_exchange_id FOREIGN KEY (exchange_id) REFERENCES exchanges(id)
 									);`); err != nil {
 				return err
 			}
@@ -98,12 +101,14 @@ func setupInitialSchemas() migration.Migrate {
 
 			if _, err := d.SQL.Exec(`CREATE TABLE market_holidays (
 										id INT PRIMARY KEY AUTO_INCREMENT,
+										exchange_id INT NULL,
 										date DATE NOT NULL,
 										description VARCHAR(100) NOT NULL,
 										created_at TIMESTAMP NOT NULL,
 										updated_at TIMESTAMP NOT NULL,
 										
-                             			CONSTRAINT uk_market_holidays_date UNIQUE (date)
+                             			CONSTRAINT uk_market_holidays_exchange_id_date UNIQUE (exchange_id, date),
+                             			CONSTRAINT fk_market_holidays_exchange_id FOREIGN KEY (exchange_id) REFERENCES exchanges(id)
 									);`); err != nil {
 				return err
 			}

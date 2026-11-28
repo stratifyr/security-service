@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"gofr.dev/pkg/gofr"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/stratifyr/security-service/internal/stores"
 )
@@ -29,7 +28,7 @@ type Security struct {
 	PreviousClose   float64
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-	Exchange        *stores.Exchange
+	Exchange        *Exchange
 	*MarketData
 }
 
@@ -39,7 +38,7 @@ type MarketData struct {
 }
 
 type SecurityUpsert struct {
-	ExchangeID      int
+	Exchange        string
 	ISIN            string
 	Symbol          string
 	Industry        string
@@ -53,17 +52,17 @@ type SecurityUpsert struct {
 type securityService struct {
 	marketDayService      MarketDayService
 	securityMetricService SecurityMetricService
-	exchangeStore         stores.ExchangeStore
+	exchangeService       ExchangeService
 	securityStatStore     stores.SecurityStatStore
 	store                 stores.SecurityStore
 }
 
 func NewSecurityService(marketDayService MarketDayService, securityMetricService SecurityMetricService,
-	exchangeStore stores.ExchangeStore, securityStatStore stores.SecurityStatStore, store stores.SecurityStore) *securityService {
+	exchangeService ExchangeService, securityStatStore stores.SecurityStatStore, store stores.SecurityStore) *securityService {
 	return &securityService{
 		marketDayService:      marketDayService,
 		securityMetricService: securityMetricService,
-		exchangeStore:         exchangeStore,
+		exchangeService:       exchangeService,
 		securityStatStore:     securityStatStore,
 		store:                 store,
 	}
@@ -84,41 +83,8 @@ func (s *securityService) List(ctx *gofr.Context) ([]*Security, error) {
 		return nil, err
 	}
 
-	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
+	securityStats, securityMetrics, err := s.getMarketDataMaps(ctx, securities)
 	if err != nil {
-		return nil, err
-	}
-
-	var securityIDs = make([]int, len(securities))
-
-	for i := range securities {
-		securityIDs[i] = securities[i].ID
-	}
-
-	var (
-		securityStats   map[int]*stores.SecurityStat
-		securityMetrics map[int][]*SecurityMetric
-	)
-
-	var g errgroup.Group
-
-	g.Go(func() error {
-		var err error
-
-		securityStats, err = s.getStatsMap(ctx, securityIDs, prevMarketDay)
-
-		return err
-	})
-
-	g.Go(func() error {
-		var err error
-
-		securityMetrics, err = s.getSecurityMetricsMap(ctx, securityIDs, prevMarketDay)
-
-		return err
-	})
-
-	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -146,7 +112,7 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		return nil, err
 	}
 
-	exchange, err := s.exchangeStore.Retrieve(ctx, payload.ExchangeID)
+	exchange, err := s.exchangeService.GetByName(ctx, payload.Exchange)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +143,7 @@ func (s *securityService) Upsert(ctx *gofr.Context, payload *SecurityUpsert) (*S
 		return nil, err
 	}
 
-	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx, security.ExchangeID)
 	if err != nil {
 		return nil, err
 	}
@@ -248,8 +214,8 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		return nil, err
 	}
 
-	if payload.ExchangeID != 0 {
-		exchange, err := s.exchangeStore.Retrieve(ctx, payload.ExchangeID)
+	if payload.Exchange != "" {
+		exchange, err := s.exchangeService.GetByName(ctx, payload.Exchange)
 		if err != nil {
 			return nil, err
 		}
@@ -300,7 +266,7 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 		return nil, err
 	}
 
-	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx)
+	prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx, security.ExchangeID)
 	if err != nil {
 		return nil, err
 	}
@@ -318,19 +284,64 @@ func (s *securityService) patch(ctx *gofr.Context, id int, payload *SecurityUpse
 	return s.buildResp(security, exchanges, securityStats, securityMetrics), nil
 }
 
-func (s *securityService) getExchangesMap(ctx *gofr.Context) (map[int]*stores.Exchange, error) {
-	exchanges, err := s.exchangeStore.List(ctx, &stores.ExchangeFilter{}, 0, 0)
+func (s *securityService) getExchangesMap(ctx *gofr.Context) (map[int]*Exchange, error) {
+	exchanges, err := s.exchangeService.List(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var exchangeByID = make(map[int]*stores.Exchange)
+	var exchangeByID = make(map[int]*Exchange)
 
 	for i := range exchanges {
 		exchangeByID[exchanges[i].ID] = exchanges[i]
 	}
 
 	return exchangeByID, nil
+}
+
+func (s *securityService) getMarketDataMaps(ctx *gofr.Context, securities []*stores.Security) (
+	securityStats map[int]*stores.SecurityStat, securityMetrics map[int][]*SecurityMetric, err error) {
+	securityIDsByExchange := make(map[int][]int)
+
+	for _, security := range securities {
+		securityIDsByExchange[security.ExchangeID] = append(securityIDsByExchange[security.ExchangeID], security.ID)
+	}
+
+	securityIDsByDate := make(map[time.Time][]int)
+
+	for exchangeID, securityIDs := range securityIDsByExchange {
+		prevMarketDay, err := s.marketDayService.GetPreviousDay(ctx, exchangeID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		securityIDsByDate[prevMarketDay] = append(securityIDsByDate[prevMarketDay], securityIDs...)
+	}
+
+	securityStats = make(map[int]*stores.SecurityStat)
+	securityMetrics = make(map[int][]*SecurityMetric)
+
+	for date, securityIDs := range securityIDsByDate {
+		stats, err := s.getStatsMap(ctx, securityIDs, date)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for securityID, stat := range stats {
+			securityStats[securityID] = stat
+		}
+
+		metrics, err := s.getSecurityMetricsMap(ctx, securityIDs, date)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for securityID, securityMetric := range metrics {
+			securityMetrics[securityID] = securityMetric
+		}
+	}
+
+	return securityStats, securityMetrics, nil
 }
 
 func (s *securityService) getStatsMap(ctx *gofr.Context, securityIDs []int, date time.Time) (map[int]*stores.SecurityStat, error) {
@@ -371,7 +382,7 @@ func (s *securityService) getSecurityMetricsMap(ctx *gofr.Context, securityIDs [
 	return securityMetricsMap, nil
 }
 
-func (s *securityService) buildResp(model *stores.Security, exchanges map[int]*stores.Exchange,
+func (s *securityService) buildResp(model *stores.Security, exchanges map[int]*Exchange,
 	securityStats map[int]*stores.SecurityStat, securityMetrics map[int][]*SecurityMetric) *Security {
 	resp := &Security{
 		ID:              model.ID,

@@ -23,6 +23,7 @@ type MarketHolidayStore interface {
 }
 
 type MarketHolidayFilter struct {
+	ExchangeID  int
 	Date        time.Time
 	DateBetween *struct {
 		StartDate time.Time
@@ -32,6 +33,7 @@ type MarketHolidayFilter struct {
 
 type MarketHoliday struct {
 	ID          int
+	ExchangeID  int
 	Date        time.Time
 	Description string
 	CreatedAt   time.Time
@@ -47,7 +49,7 @@ func NewMarketHolidayStore() *marketHolidayStore {
 func (*marketHolidayStore) List(ctx *gofr.Context, filter *MarketHolidayFilter, limit, offset int) ([]*MarketHoliday, error) {
 	whereClause, values := filter.buildWhereClause()
 
-	query := `SELECT id, date, description, created_at, updated_at
+	query := `SELECT id, exchange_id, date, description, created_at, updated_at
               FROM market_holidays %s`
 
 	if limit > 0 {
@@ -68,7 +70,7 @@ func (*marketHolidayStore) List(ctx *gofr.Context, filter *MarketHolidayFilter, 
 	for rows.Next() {
 		var mh MarketHoliday
 
-		err = rows.Scan(&mh.ID, &mh.Date, &mh.Description, &mh.CreatedAt, &mh.UpdatedAt)
+		err = rows.Scan(&mh.ID, &mh.ExchangeID, &mh.Date, &mh.Description, &mh.CreatedAt, &mh.UpdatedAt)
 		if err != nil {
 			return nil, datasource.ErrorDB{Err: err}
 		}
@@ -101,10 +103,11 @@ func (*marketHolidayStore) Count(ctx *gofr.Context, filter *MarketHolidayFilter)
 func (*marketHolidayStore) Retrieve(ctx *gofr.Context, id int) (*MarketHoliday, error) {
 	var mh MarketHoliday
 
-	query := `SELECT id, date, description, created_at, updated_at
+	query := `SELECT id, exchange_id, date, description, created_at, updated_at
               FROM market_holidays WHERE id = ?`
 
-	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&mh.ID, &mh.Date, &mh.Description, &mh.CreatedAt, &mh.UpdatedAt)
+	err := ctx.SQL.QueryRowContext(ctx, query, id).Scan(&mh.ID, &mh.ExchangeID, &mh.Date,
+		&mh.Description, &mh.CreatedAt, &mh.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, http.ErrorEntityNotFound{Name: "market-holidays", Value: strconv.Itoa(id)}
@@ -117,9 +120,9 @@ func (*marketHolidayStore) Retrieve(ctx *gofr.Context, id int) (*MarketHoliday, 
 }
 
 func (s *marketHolidayStore) Create(ctx *gofr.Context, mh *MarketHoliday) (*MarketHoliday, error) {
-	query := "INSERT INTO market_holidays (date, description, created_at, updated_at) VALUES (?, ?, ?, ?)"
+	query := "INSERT INTO market_holidays (exchange_id, date, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
 
-	result, err := ctx.SQL.ExecContext(ctx, query, mh.Date, mh.Description, mh.CreatedAt, mh.UpdatedAt)
+	result, err := ctx.SQL.ExecContext(ctx, query, mh.ExchangeID, mh.Date, mh.Description, mh.CreatedAt, mh.UpdatedAt)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -135,10 +138,10 @@ func (s *marketHolidayStore) Create(ctx *gofr.Context, mh *MarketHoliday) (*Mark
 }
 
 func (s *marketHolidayStore) Update(ctx *gofr.Context, id int, mh *MarketHoliday) (*MarketHoliday, error) {
-	query := `UPDATE market_holidays SET date = ?, description = ?, created_at = ?, updated_at = ?
+	query := `UPDATE market_holidays SET exchange_id = ?, date = ?, description = ?, created_at = ?, updated_at = ?
               WHERE id = ?`
 
-	_, err := ctx.SQL.ExecContext(ctx, query, mh.Date, mh.Description, mh.CreatedAt, mh.UpdatedAt, id)
+	_, err := ctx.SQL.ExecContext(ctx, query, mh.ExchangeID, mh.Date, mh.Description, mh.CreatedAt, mh.UpdatedAt, id)
 	if err != nil {
 		return nil, datasource.ErrorDB{Err: err}
 	}
@@ -160,6 +163,12 @@ func (*marketHolidayStore) Delete(ctx *gofr.Context, id int) error {
 }
 
 func (f *MarketHolidayFilter) buildWhereClause() (clause string, values []any) {
+	if f.ExchangeID > 0 {
+		clause += " AND exchange_id = ?"
+
+		values = append(values, f.ExchangeID)
+	}
+
 	if f.Date != (time.Time{}) {
 		clause += " AND date = ?"
 

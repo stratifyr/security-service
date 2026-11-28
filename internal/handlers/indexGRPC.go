@@ -48,6 +48,7 @@ func (h *indexGRPCHandler) Upsert(ctx *gofr.Context) (any, error) {
 	}
 
 	model := &services.IndexUpsert{
+		Exchange:    payload.Exchange,
 		Name:        payload.Name,
 		Value:       payload.Value,
 		SecurityIDs: securityIDs,

@@ -6,6 +6,7 @@ var (
 	ErrInvalidStatusChange = &Error{400, "invalid status change"}
 	ErrMarketHolidayStat   = &Error{400, "cannot add stat for market holiday"}
 	ErrInvalidDateRange    = &Error{400, "invalid date range"}
+	ErrInvalidExchange     = &Error{400, "invalid exchange or exchangeId"}
 )
 
 type Error struct {

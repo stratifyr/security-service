@@ -37,12 +37,15 @@ type SecurityStatUpsert struct {
 
 type securityStatService struct {
 	marketDayService MarketDayService
+	securityStore    stores.SecurityStore
 	store            stores.SecurityStatStore
 }
 
-func NewSecurityStatService(marketDayService MarketDayService, store stores.SecurityStatStore) *securityStatService {
+func NewSecurityStatService(marketDayService MarketDayService, store stores.SecurityStatStore,
+	securityStore stores.SecurityStore) *securityStatService {
 	return &securityStatService{
 		marketDayService: marketDayService,
+		securityStore:    securityStore,
 		store:            store,
 	}
 }
@@ -57,8 +60,13 @@ func (s *securityStatService) Upsert(ctx *gofr.Context, payload *SecurityStatUps
 		return s.patch(ctx, securityStats[0].ID, payload)
 	}
 
+	security, err := s.securityStore.Retrieve(ctx, payload.SecurityID)
+	if err != nil {
+		return nil, err
+	}
+
 	marketDays, count, err := s.marketDayService.List(ctx,
-		&MarketDayFilter{DateBetween: &struct {
+		&MarketDayFilter{ExchangeID: security.ExchangeID, DateBetween: &struct {
 			StartDate time.Time
 			EndDate   time.Time
 		}{StartDate: payload.Date, EndDate: payload.Date}})

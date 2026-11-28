@@ -5,10 +5,9 @@ go 1.26.0
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/redis/go-redis/v9 v9.21.0
-	github.com/stratifyr/security-service-proto v0.0.0-20261125181726-4ec125b4a98c
+	github.com/stratifyr/security-service-proto v0.0.0-20261128093758-acab0f467438
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	gofr.dev v1.59.0
-	golang.org/x/sync v0.22.0
 )
 
 require (
@@ -91,6 +90,7 @@ require (
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.40.0 // indirect

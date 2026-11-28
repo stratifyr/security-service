@@ -11,6 +11,7 @@ import (
 
 type Security struct {
 	ID              int         `json:"id"`
+	ExchangeID      int         `json:"exchangeId"`
 	ISIN            string      `json:"isin"`
 	Symbol          string      `json:"symbol"`
 	Industry        string      `json:"industry"`
@@ -79,6 +80,7 @@ func (h *securityHandler) List(ctx *gofr.Context) (any, error) {
 func (*securityHandler) buildResp(model *services.Security) *Security {
 	resp := &Security{
 		ID:              model.ID,
+		ExchangeID:      model.ExchangeID,
 		ISIN:            model.ISIN,
 		Symbol:          model.Symbol,
 		Industry:        model.Industry,
